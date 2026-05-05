@@ -143,7 +143,7 @@ mesmo que não esteja explicitamente no Progress.
 - [x] Converter cada campo para input controlado com `useState`
 - [x] Garantir que o usuário consegue digitar em todos os campos do formulário
 - [x] Validar: nenhum campo deve estar "congelado" ou somente leitura
-- [ ] Commit: `fix: corrige inputs controlados em NovaCampanha`
+- [x] Commit: `fix: corrige inputs controlados em NovaCampanha`
 
 Causa provável: inputs com `value` sem `onChange` — React bloqueia a edição.
 
