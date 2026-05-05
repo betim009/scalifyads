@@ -99,7 +99,7 @@ Explica o objetivo e o resultado visível.
 
 ## Pending Work (Pendências)
 
-Última atualização: [2026-05-05 13:10]
+Última atualização: [2026-05-05 13:14]
 
 Esta seção lista tudo que ainda NÃO foi implementado,
 mesmo que não esteja explicitamente no Progress.
@@ -113,8 +113,8 @@ mesmo que não esteja explicitamente no Progress.
 
 ### Problemas identificados
 
-- [ ] Botões apenas visuais (sem ação)
-- [ ] Falta de rotas para algumas telas
+- [x] Botões apenas visuais (sem ação)
+- [x] Falta de rotas para algumas telas
 - [ ] Componentes não reutilizados corretamente
 
 ### Ajustes visuais

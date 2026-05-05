@@ -98,6 +98,7 @@ export default function Dashboard() {
 
           <section aria-label="Campanhas">
             <CampaignCard
+              id={campaign.id}
               name={campaign.name}
               status={campaign.status}
               scopeLabel={campaign.scopeLabel}

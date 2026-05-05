@@ -1,6 +1,8 @@
+import { useNavigate } from "react-router-dom";
 import StatusBadge from "./StatusBadge.jsx";
 
 export default function CampaignCard({
+  id,
   name,
   status,
   scopeLabel,
@@ -8,6 +10,8 @@ export default function CampaignCard({
   createdAtLabel,
   countryFlags,
 }) {
+  const navigate = useNavigate();
+
   return (
     <div className="card campaignCard">
       <div className="campaignTopRow">
@@ -16,10 +20,18 @@ export default function CampaignCard({
           <StatusBadge>{status}</StatusBadge>
         </div>
         <div className="campaignActions">
-          <button type="button" className="pillOutline">
+          <button
+            type="button"
+            className="pillOutline"
+            onClick={() => navigate(`/campanhas/${id}`)}
+          >
             Ver Detalhes
           </button>
-          <button type="button" className="pillOutline">
+          <button
+            type="button"
+            className="pillOutline"
+            onClick={() => navigate(`/campanhas/${id}/duplicar`)}
+          >
             Duplicar
           </button>
         </div>
@@ -46,4 +58,3 @@ export default function CampaignCard({
     </div>
   );
 }
-
