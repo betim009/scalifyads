@@ -1,4 +1,9 @@
 import PageShell from "../components/PageShell.jsx";
+import {
+  PauseCircleOutlineIcon,
+  TrendingUpIcon,
+  VisibilityIcon,
+} from "../styles/icons.js";
 
 function MetricCard({ label, value, tone, hint }) {
   return (
@@ -269,10 +274,10 @@ export default function RoiOntem() {
               </div>
               <div style={{ display: "grid", gap: 12 }}>
                 <ActionPill tone="green">
-                  <span aria-hidden="true">↑</span> Escalar Positivos (7)
+                  <TrendingUpIcon fontSize="small" /> Escalar Positivos (7)
                 </ActionPill>
                 <ActionPill tone="red">
-                  <span aria-hidden="true">⏸</span> Pausar Negativos (2)
+                  <PauseCircleOutlineIcon fontSize="small" /> Pausar Negativos (2)
                 </ActionPill>
               </div>
               <div style={{ marginTop: 12, color: "#6b7280", fontWeight: 700 }}>
@@ -367,11 +372,11 @@ export default function RoiOntem() {
                       }}
                     >
                       {r.acao.tone === "green" ? (
-                        <span aria-hidden="true">↑</span>
+                        <TrendingUpIcon fontSize="small" />
                       ) : r.acao.tone === "red" ? (
-                        <span aria-hidden="true">⏸</span>
+                        <PauseCircleOutlineIcon fontSize="small" />
                       ) : (
-                        <span aria-hidden="true">👁</span>
+                        <VisibilityIcon fontSize="small" />
                       )}
                       {r.acao.label}
                     </button>

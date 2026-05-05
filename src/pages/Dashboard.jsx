@@ -5,6 +5,15 @@ import MetricCard from "../components/MetricCard.jsx";
 import { useNavigate } from "react-router-dom";
 import { mockCampaigns } from "../data/mockCampaigns.js";
 import { mockCountries } from "../data/mockCountries.js";
+import {
+  AddIcon,
+  BarChartIcon,
+  BoltIcon,
+  FilterListIcon,
+  LanguageIcon,
+  PercentIcon,
+  SortIcon,
+} from "../styles/icons.js";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -50,11 +59,11 @@ export default function Dashboard() {
               title="Criar Nova Campanha"
               description="Crie campanhas globais em minutos com automação inteligente"
               items={[
-                { icon: "⚡", text: "Automação completa" },
-                { icon: "🌐", text: "6 países simultâneos" },
+                { icon: <BoltIcon fontSize="small" />, text: "Automação completa" },
+                { icon: <LanguageIcon fontSize="small" />, text: "6 países simultâneos" },
               ]}
               buttonVariant="primary"
-              buttonIcon="+"
+              buttonIcon={<AddIcon fontSize="small" />}
               buttonText="Nova Campanha"
               onButtonClick={() => navigate("/nova-campanha")}
             />
@@ -62,11 +71,11 @@ export default function Dashboard() {
               title="Financeiro & Relatórios"
               description="Acompanhe gastos, performance e métricas em tempo real"
               items={[
-                { icon: "$", text: "Dados da Meta Ads API" },
-                { icon: "📈", text: "Análises detalhadas" },
+                { icon: <BarChartIcon fontSize="small" />, text: "Dados da Meta Ads API" },
+                { icon: <BarChartIcon fontSize="small" />, text: "Análises detalhadas" },
               ]}
               buttonVariant="secondary"
-              buttonIcon="📊"
+              buttonIcon={<BarChartIcon fontSize="small" />}
               buttonText="Ver Financeiro"
               onButtonClick={() => navigate("/financeiro")}
             />
@@ -74,11 +83,11 @@ export default function Dashboard() {
               title="ROI - Dia Anterior"
               description="Decisões baseadas em lucro real - Escale ou desative"
               items={[
-                { icon: "◎", text: "ROI por campanha" },
-                { icon: "⚡", text: "Otimização 1 clique" },
+                { icon: <PercentIcon fontSize="small" />, text: "ROI por campanha" },
+                { icon: <BoltIcon fontSize="small" />, text: "Otimização 1 clique" },
               ]}
               buttonVariant="secondary"
-              buttonIcon="◎"
+              buttonIcon={<PercentIcon fontSize="small" />}
               buttonText="Ver ROI (Ontem)"
               onButtonClick={() => navigate("/roi-ontem")}
             />
@@ -88,9 +97,11 @@ export default function Dashboard() {
             <h2 className="sectionTitle">Suas Campanhas</h2>
             <div style={{ display: "flex", gap: 12 }}>
               <button type="button" className="ghostButton">
+                <FilterListIcon fontSize="small" />
                 Filtrar
               </button>
               <button type="button" className="ghostButton">
+                <SortIcon fontSize="small" />
                 Ordenar
               </button>
             </div>

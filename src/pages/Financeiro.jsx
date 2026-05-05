@@ -6,6 +6,18 @@ import SpendLineChart from "../components/SpendLineChart.jsx";
 import { mockFinancial } from "../data/mockFinancial.js";
 import { mockCountries } from "../data/mockCountries.js";
 import PageShell from "../components/PageShell.jsx";
+import {
+  AdsClickIcon,
+  AttachMoneyIcon,
+  BarChartIcon,
+  CircleIcon,
+  DescriptionIcon,
+  LightbulbOutlinedIcon,
+  MouseIcon,
+  PauseCircleOutlineIcon,
+  TrendingUpIcon,
+  VisibilityIcon,
+} from "../styles/icons.js";
 
 export default function Financeiro() {
   const { filters, metrics, spendSeries, tableRows } = mockFinancial;
@@ -36,42 +48,42 @@ export default function Financeiro() {
             <FinanceMetricCard
               badgeBg="#dcfce7"
               badgeColor="#16a34a"
-              badgeText="$"
-              topRight="↗"
+              badgeText={<AttachMoneyIcon fontSize="small" />}
+              topRight={<TrendingUpIcon fontSize="small" style={{ color: "#22c55e" }} />}
               value={metrics.spendTotal}
-              labelIcon="💰"
+              labelIcon={<AttachMoneyIcon fontSize="small" />}
               label="Gasto Total"
             />
             <FinanceMetricCard
               badgeBg="#dbeafe"
               badgeColor="#2563eb"
-              badgeText="↗"
+              badgeText={<TrendingUpIcon fontSize="small" />}
               value={metrics.cpm}
-              labelIcon="📊"
+              labelIcon={<BarChartIcon fontSize="small" />}
               label="CPM Médio"
             />
             <FinanceMetricCard
               badgeBg="#ede9fe"
               badgeColor="#7c3aed"
-              badgeText="↖"
+              badgeText={<TrendingUpIcon fontSize="small" style={{ transform: "rotate(-45deg)" }} />}
               value={metrics.clicks}
-              labelIcon="🖱"
+              labelIcon={<AdsClickIcon fontSize="small" />}
               label="Cliques Totais"
             />
             <FinanceMetricCard
               badgeBg="#ffedd5"
               badgeColor="#f97316"
-              badgeText="👁"
+              badgeText={<VisibilityIcon fontSize="small" />}
               value={metrics.impressions}
-              labelIcon="👁"
+              labelIcon={<VisibilityIcon fontSize="small" />}
               label="Impressões"
             />
             <FinanceMetricCard
               badgeBg="#fce7f3"
               badgeColor="#db2777"
-              badgeText="↗"
+              badgeText={<MouseIcon fontSize="small" />}
               value={metrics.cpc}
-              labelIcon="📉"
+              labelIcon={<MouseIcon fontSize="small" />}
               label="CPC Médio"
             />
       </section>
@@ -80,36 +92,33 @@ export default function Financeiro() {
             <div className="chartHeaderRow">
               <div>
                 <div className="chartTitleRow">
-                  <span aria-hidden="true" style={{ color: "#7c3aed", fontSize: 22 }}>
-                    ●
-                  </span>
+                  <CircleIcon fontSize="small" style={{ color: "#7c3aed" }} />
                   <h2 className="chartTitle">Gráfico de Gastos</h2>
                 </div>
                 <p className="chartSubtitle">Evolução diária dos gastos</p>
               </div>
               <a className="chartLink" href="#" onClick={(e) => e.preventDefault()}>
-                <span aria-hidden="true">📄</span> Ver relatório completo
+                <DescriptionIcon fontSize="small" />
+                Ver relatório completo
               </a>
             </div>
 
             <SpendLineChart points={spendSeries} />
 
             <div className="tipBox" role="note">
-              <span aria-hidden="true">💡</span>
+              <LightbulbOutlinedIcon fontSize="small" />
               <span>
                 <span style={{ fontWeight: 900 }}>Dica:</span> Os dados são puxados
                 automaticamente da Meta Ads API em tempo real
               </span>
             </div>
-      </section>
+          </section>
 
       <section className="card tableCard" aria-label="Detalhamento por Campanha">
             <div className="tableHeaderRow">
               <div>
                 <div className="chartTitleRow">
-                  <span aria-hidden="true" style={{ color: "#facc15", fontSize: 22 }}>
-                    ●
-                  </span>
+                  <CircleIcon fontSize="small" style={{ color: "#facc15" }} />
                   <h2 className="chartTitle">Detalhamento por Campanha</h2>
                 </div>
                 <p className="chartSubtitle">Performance detalhada de cada país</p>
@@ -163,11 +172,11 @@ export default function Financeiro() {
                       <td>
                         {r.status === "Ativo" ? (
                           <span className="statusPillGreen">
-                            <span aria-hidden="true">●</span> Ativo
+                            <CircleIcon fontSize="small" style={{ fontSize: 10 }} /> Ativo
                           </span>
                         ) : (
                           <span className="statusPillYellow">
-                            <span aria-hidden="true">⏸</span> Pausado
+                            <PauseCircleOutlineIcon fontSize="small" /> Pausado
                           </span>
                         )}
                       </td>

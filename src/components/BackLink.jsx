@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { ArrowBackIcon } from "../styles/icons.js";
 
 export default function BackLink({ fallbackTo = "/", label = "Voltar" }) {
   const navigate = useNavigate();
@@ -27,9 +28,7 @@ export default function BackLink({ fallbackTo = "/", label = "Voltar" }) {
       }}
       aria-label="Voltar"
     >
-      <span aria-hidden="true" style={{ fontSize: 22, lineHeight: 1 }}>
-        ←
-      </span>
+      <ArrowBackIcon fontSize="small" />
       {label}
     </button>
   );

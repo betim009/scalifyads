@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import StatusBadge from "./StatusBadge.jsx";
+import { BarChartIcon, LanguageIcon, PlayArrowIcon } from "../styles/icons.js";
 
 export default function CampaignCard({
   id,
@@ -38,13 +39,13 @@ export default function CampaignCard({
       </div>
 
       <div className="campaignMetaRow">
-        <span aria-hidden="true">🌐</span>
+        <LanguageIcon fontSize="small" style={{ opacity: 0.75 }} />
         <span>{scopeLabel}</span>
         <span aria-hidden="true">·</span>
-        <span aria-hidden="true">📊</span>
+        <BarChartIcon fontSize="small" style={{ opacity: 0.75 }} />
         <span>{generatedLabel}</span>
         <span aria-hidden="true">·</span>
-        <span aria-hidden="true">▶</span>
+        <PlayArrowIcon fontSize="small" style={{ opacity: 0.75 }} />
         <span>{createdAtLabel}</span>
       </div>
 

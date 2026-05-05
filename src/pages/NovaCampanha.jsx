@@ -1,6 +1,16 @@
 import { mockCountries } from "../data/mockCountries.js";
 import PageShell from "../components/PageShell.jsx";
 import { useMemo, useState } from "react";
+import {
+  AutoAwesomeIcon,
+  CircleIcon,
+  InfoOutlinedIcon,
+  LanguageIcon,
+  PushPinIcon,
+  PublicIcon,
+  RocketLaunchIcon,
+  TaskAltIcon,
+} from "../styles/icons.js";
 
 function StepBadge({ n }) {
   return (
@@ -93,7 +103,9 @@ function SelectLike({ value, onChange, disabled, options }) {
 function InfoLine({ icon, text, tone = "muted" }) {
   return (
     <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-      <span aria-hidden="true">{icon}</span>
+      <span aria-hidden="true" style={{ marginTop: 1 }}>
+        {icon}
+      </span>
       <span style={{ color: tone === "muted" ? "#6b7280" : tone, fontWeight: 700 }}>
         {text}
       </span>
@@ -209,7 +221,12 @@ export default function NovaCampanha() {
                       />
                       <div style={{ marginTop: 10 }}>
                         <InfoLine
-                          icon="ⓘ"
+                          icon={
+                            <InfoOutlinedIcon
+                              fontSize="small"
+                              style={{ color: "#f97316" }}
+                            />
+                          }
                           tone="#f97316"
                           text="Selecione um Business Manager para ver as contas disponíveis"
                         />
@@ -301,23 +318,28 @@ export default function NovaCampanha() {
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span aria-hidden="true" style={{ fontSize: 22 }}>
-                      ✨
-                    </span>
+                    <AutoAwesomeIcon
+                      fontSize="small"
+                      style={{ color: "#166534" }}
+                    />
                     <div style={{ fontWeight: 900, fontSize: 20, color: "#166534" }}>
                       Tracking Automático
                     </div>
                   </div>
 
                   <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
-                    <InfoLine icon="✅" text="Você preenche apenas 1 campo" tone="#166534" />
                     <InfoLine
-                      icon="✅"
+                      icon={<TaskAltIcon fontSize="small" style={{ color: "#166534" }} />}
+                      text="Você preenche apenas 1 campo"
+                      tone="#166534"
+                    />
+                    <InfoLine
+                      icon={<TaskAltIcon fontSize="small" style={{ color: "#166534" }} />}
                       text="O sistema gera todos os parâmetros automaticamente"
                       tone="#166534"
                     />
                     <InfoLine
-                      icon="✅"
+                      icon={<TaskAltIcon fontSize="small" style={{ color: "#166534" }} />}
                       text="Compatível com Google Analytics e Facebook Ads"
                       tone="#166534"
                     />
@@ -326,7 +348,7 @@ export default function NovaCampanha() {
 
                 <div style={{ marginTop: 18, display: "grid", gap: 12 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span aria-hidden="true">🟢</span>
+                    <CircleIcon fontSize="small" style={{ color: "#16a34a" }} />
                     <div style={{ fontWeight: 900 }}>Parâmetro Nicho *</div>
                   </div>
                   <input
@@ -345,12 +367,12 @@ export default function NovaCampanha() {
                     placeholder="Ex: DirigirBTN4"
                   />
                   <InfoLine
-                    icon="📌"
+                    icon={<PushPinIcon fontSize="small" style={{ color: "#6b7280" }} />}
                     text="Nome usado para rastreamento no Google e identificação da campanha"
                     tone="#6b7280"
                   />
                   <InfoLine
-                    icon="ⓘ"
+                    icon={<InfoOutlinedIcon fontSize="small" style={{ color: "#f97316" }} />}
                     text="Apenas letras e números (sem espaços ou caracteres especiais)"
                     tone="#f97316"
                   />
@@ -371,14 +393,14 @@ export default function NovaCampanha() {
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <span aria-hidden="true" style={{ fontSize: 22 }}>
-                    🌐
-                  </span>
+                  <PublicIcon fontSize="small" />
                   <div style={{ fontWeight: 900, fontSize: 22 }}>Resumo Automático</div>
                 </div>
 
                 <p style={{ margin: "18px 0 0", opacity: 0.9, fontWeight: 700 }}>
-                  <span aria-hidden="true">🌎 </span>
+                  <span aria-hidden="true" style={{ display: "inline-flex", marginRight: 8 }}>
+                    <LanguageIcon fontSize="small" />
+                  </span>
                   Campanhas serão criadas automaticamente para:
                 </p>
 
@@ -445,8 +467,9 @@ export default function NovaCampanha() {
                   gap: 12,
                   boxShadow: "0 14px 28px rgba(37,99,235,0.22)",
                 }}
-              >
-                <span aria-hidden="true">🚀</span> Publicar Campanhas Globais
+                >
+                <RocketLaunchIcon fontSize="small" />
+                Publicar Campanhas Globais
               </button>
             </aside>
       </div>
