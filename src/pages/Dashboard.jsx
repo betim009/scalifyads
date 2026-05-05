@@ -56,7 +56,7 @@ export default function Dashboard() {
               buttonVariant="primary"
               buttonIcon="+"
               buttonText="Nova Campanha"
-              onButtonClick={() => {}}
+              onButtonClick={() => navigate("/nova-campanha")}
             />
             <ActionCard
               title="Financeiro & Relatórios"

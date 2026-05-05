@@ -99,14 +99,14 @@ Explica o objetivo e o resultado visível.
 
 ## Pending Work (Pendências)
 
-Última atualização: [2026-05-05 12:59]
+Última atualização: [2026-05-05 13:05]
 
 Esta seção lista tudo que ainda NÃO foi implementado,
 mesmo que não esteja explicitamente no Progress.
 
 ### Funcionalidades pendentes
 
-- [ ] Ao clicar em `+ Nova Campanha` ir para tela de nova campanha
+- [x] Ao clicar em `+ Nova Campanha` ir para tela de nova campanha
 - [ ] Ao clicar em `Ver ROI (ontem)` ir para tela de ROI
 - [ ] Os botoes precisam de ter um Refinamento de UI/UX - hover cursor pointer
 - [x] Cria a pagina `Mensal` e ao clicar no botao mensal navegar para essa pagina
