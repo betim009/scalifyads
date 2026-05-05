@@ -54,7 +54,7 @@ Explica o objetivo e o resultado visível.
 
 ## Progress
 
-Última atualização: [2026-05-05 14:27]
+Última atualização: [2026-05-05 14:29]
 
 - [x] Entendimento inicial: o XLSX era usado como sistema manual do cliente.
 - [x] Entendimento inicial: o Figma representa a futura interface do sistema.
@@ -77,7 +77,7 @@ Explica o objetivo e o resultado visível.
 ### Fase 2 — Correções críticas (em andamento)
 
 - [x] P1 — Corrigir inputs (Nova Campanha)
-- [ ] P2 — Separar Home de Mensal
+- [x] P2 — Separar Home de Mensal
 - [ ] P3 — Substituir emojis por Material UI Icons
 - [ ] P4 — Corrigir escala/tipografia global
 - [ ] P5 — Completar tela Nova Campanha fiel ao design
@@ -108,7 +108,7 @@ Explica o objetivo e o resultado visível.
 
 ## Pending Work (Pendências)
 
-Última atualização: [2026-05-05 14:27]
+Última atualização: [2026-05-05 14:29]
 
 Esta seção lista tudo que ainda NÃO foi implementado,
 mesmo que não esteja explicitamente no Progress.
@@ -163,7 +163,7 @@ Tarefas:
 - [x] Corrigir a rota `/` para renderizar o Dashboard correto (Home) — não deve ser redirecionado para `/mensal`
 - [x] Corrigir `src/pages/Mensal.jsx` para refletir fielmente o design de `screens/Desktop/mensal/`
 - [x] Garantir que a navegação da navbar distingue Home de Mensal
-- [ ] Commit: `fix: separa rotas home e mensal conforme design`
+- [x] Commit: `fix: separa rotas home e mensal conforme design`
 
 ---
 
