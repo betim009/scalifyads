@@ -54,7 +54,7 @@ Explica o objetivo e o resultado visível.
 
 ## Progress
 
-Última atualização: [2026-05-05 09:51]
+Última atualização: [2026-05-05 09:53]
 
 - [x] Entendimento inicial: o XLSX era usado como sistema manual do cliente.
 - [x] Entendimento inicial: o Figma representa a futura interface do sistema.
@@ -69,14 +69,14 @@ Explica o objetivo e o resultado visível.
 - [x] Implementar tela Configurações.
 - [x] Criar dados mockados baseados no XLSX.
 - [x] Componentizar cards, botões, listas, filtros e seções.
-- [ ] Validar responsividade mínima.
+- [x] Validar responsividade mínima.
 - [ ] Revisar fidelidade visual com o Figma.
 - [ ] Registrar pendências para backend e Meta Ads API.
 - [ ] Atualizar este ExecPlan com tudo que foi feito.
 
 ## Data Progress
 
-Última atualização: [2026-05-05 09:51]
+Última atualização: [2026-05-05 09:53]
 
 - [2026-05-04] Entendimento do projeto baseado no XLSX
 - [2026-05-04] Definição do escopo do frontend
@@ -92,6 +92,7 @@ Explica o objetivo e o resultado visível.
 - [x] [2026-05-05 09:48] Implementação inicial de Configurações (países fixos + outras configs)
 - [x] [2026-05-05 09:50] Dados mockados em `src/data/*` (campanhas/paises/financeiro)
 - [x] [2026-05-05 09:51] Componentização extra (Financeiro: filtros/metric cards/export button)
+- [x] [2026-05-05 09:53] Ajustes de responsividade (grids + overflow da tabela do Financeiro)
 
 ## Surprises & Discoveries
 

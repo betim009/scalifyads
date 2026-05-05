@@ -130,57 +130,61 @@ export default function Financeiro() {
               </div>
             </div>
 
-            <table className="dataTable">
-              <thead>
-                <tr>
-                  <th>Campanha</th>
-                  <th>País</th>
-                  <th>Gasto</th>
-                  <th>Impressões</th>
-                  <th>Cliques</th>
-                  <th>CPC</th>
-                  <th>CPM</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tableRows.map((r) => (
-                  <tr key={`${r.countryCode}-${r.status}`}>
-                    <td style={{ fontWeight: 900 }}>{r.campaign}</td>
-                    <td>
-                      <span className="countryCell">
-                        <span aria-hidden="true">{flagByCode[r.countryCode]}</span>
-                        {r.country}
-                      </span>
-                    </td>
-                    <td style={{ fontWeight: 900 }}>{r.spend}</td>
-                    <td className="muted" style={{ fontWeight: 800 }}>
-                      {r.impressions}
-                    </td>
-                    <td className="muted" style={{ fontWeight: 800 }}>
-                      {r.clicks}
-                    </td>
-                    <td className="muted" style={{ fontWeight: 800 }}>
-                      {r.cpc}
-                    </td>
-                    <td className="muted" style={{ fontWeight: 800 }}>
-                      {r.cpm}
-                    </td>
-                    <td>
-                      {r.status === "Ativo" ? (
-                        <span className="statusPillGreen">
-                          <span aria-hidden="true">●</span> Ativo
-                        </span>
-                      ) : (
-                        <span className="statusPillYellow">
-                          <span aria-hidden="true">⏸</span> Pausado
-                        </span>
-                      )}
-                    </td>
+            <div style={{ overflowX: "auto" }}>
+              <table className="dataTable">
+                <thead>
+                  <tr>
+                    <th>Campanha</th>
+                    <th>País</th>
+                    <th>Gasto</th>
+                    <th>Impressões</th>
+                    <th>Cliques</th>
+                    <th>CPC</th>
+                    <th>CPM</th>
+                    <th>Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {tableRows.map((r) => (
+                    <tr key={`${r.countryCode}-${r.status}`}>
+                      <td style={{ fontWeight: 900 }}>{r.campaign}</td>
+                      <td>
+                        <span className="countryCell">
+                          <span aria-hidden="true">
+                            {flagByCode[r.countryCode]}
+                          </span>
+                          {r.country}
+                        </span>
+                      </td>
+                      <td style={{ fontWeight: 900 }}>{r.spend}</td>
+                      <td className="muted" style={{ fontWeight: 800 }}>
+                        {r.impressions}
+                      </td>
+                      <td className="muted" style={{ fontWeight: 800 }}>
+                        {r.clicks}
+                      </td>
+                      <td className="muted" style={{ fontWeight: 800 }}>
+                        {r.cpc}
+                      </td>
+                      <td className="muted" style={{ fontWeight: 800 }}>
+                        {r.cpm}
+                      </td>
+                      <td>
+                        {r.status === "Ativo" ? (
+                          <span className="statusPillGreen">
+                            <span aria-hidden="true">●</span> Ativo
+                          </span>
+                        ) : (
+                          <span className="statusPillYellow">
+                            <span aria-hidden="true">⏸</span> Pausado
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </section>
         </div>
       </section>

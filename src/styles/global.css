@@ -605,6 +605,25 @@ body {
   }
 }
 
+@media (max-width: 640px) {
+  .gridFinanceMetrics {
+    grid-template-columns: 1fr;
+  }
+
+  .filtersCard {
+    padding: 18px;
+  }
+
+  .periodPills {
+    grid-template-columns: repeat(2, 1fr);
+    height: auto;
+  }
+
+  .dataTable {
+    min-width: 980px;
+  }
+}
+
 .settingsCard {
   padding: 0;
   overflow: hidden;
@@ -767,5 +786,25 @@ body {
 
   .brandTitle {
     font-size: 28px;
+  }
+
+  .gridMetrics {
+    grid-template-columns: 1fr;
+  }
+
+  .campaignTopRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .campaignNameRow {
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  .campaignActions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
 }
