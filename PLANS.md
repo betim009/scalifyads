@@ -54,7 +54,7 @@ Explica o objetivo e o resultado visível.
 
 ## Progress
 
-Última atualização: [2026-05-05 09:42]
+Última atualização: [2026-05-05 09:43]
 
 - [x] Entendimento inicial: o XLSX era usado como sistema manual do cliente.
 - [x] Entendimento inicial: o Figma representa a futura interface do sistema.
@@ -64,7 +64,7 @@ Explica o objetivo e o resultado visível.
 - [x] Criar layout base da aplicação.
 - [x] Criar navegação entre telas.
 - [x] Implementar Dashboard.
-- [ ] Implementar listagem de campanhas.
+- [x] Implementar listagem de campanhas.
 - [ ] Implementar tela Financeiro.
 - [ ] Implementar tela Configurações.
 - [ ] Criar dados mockados baseados no XLSX.
@@ -76,7 +76,7 @@ Explica o objetivo e o resultado visível.
 
 ## Data Progress
 
-Última atualização: [2026-05-05 09:42]
+Última atualização: [2026-05-05 09:43]
 
 - [2026-05-04] Entendimento do projeto baseado no XLSX
 - [2026-05-04] Definição do escopo do frontend
@@ -87,6 +87,7 @@ Explica o objetivo e o resultado visível.
 - [x] [2026-05-05 09:37] Layout base (Header + estilos globais + container/cards)
 - [x] [2026-05-05 09:40] Navegação SPA (React Router) entre Dashboard/Financeiro/Configurações
 - [x] [2026-05-05 09:42] Implementação inicial do Dashboard (métricas + cards de ação + card de campanha)
+- [x] [2026-05-05 09:43] Seção “Suas Campanhas” (listagem visual + ações Filtrar/Ordenar)
 
 ## Surprises & Discoveries
 
