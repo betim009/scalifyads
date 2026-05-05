@@ -1,4 +1,4 @@
-import BackLink from "../components/BackLink.jsx";
+import PageShell from "../components/PageShell.jsx";
 
 function MetricCard({ label, value, tone, hint }) {
   return (
@@ -188,61 +188,45 @@ export default function RoiOntem() {
   ];
 
   return (
-    <>
-      <main style={{ background: "#ffffff" }}>
-        <div className="container" style={{ paddingTop: 24 }}>
-          <BackLink fallbackTo="/mensal" label="Voltar ao Dashboard" />
-
-          <div
-            style={{
-              marginTop: 18,
-              display: "flex",
-              alignItems: "flex-start",
-              justifyContent: "space-between",
-              gap: 18,
-            }}
-          >
-            <div>
-              <h1 className="pageTitle" style={{ fontSize: 44 }}>
-                ROI - Dia Anterior (D-1)
-              </h1>
-              <p className="pageSubtitle" style={{ fontSize: 16 }}>
-                Última atualização: <b>Hoje</b> às 09:00 • Facebook Ads + Google
-                Analytics
-              </p>
-            </div>
-
-            <button
-              type="button"
-              style={{
-                height: 54,
-                padding: "0 20px",
-                borderRadius: 14,
-                border: 0,
-                background: "#0b0b0d",
-                color: "#ffffff",
-                fontWeight: 900,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 12,
-              }}
-            >
-              <span aria-hidden="true">⚡</span> Aplicar Otimização Geral
-            </button>
-          </div>
-        </div>
-      </main>
-
-      <section className="page" style={{ marginTop: 22 }}>
-        <div className="container">
-          <section
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-              gap: 22,
-            }}
-            aria-label="Métricas ROI"
-          >
+    <PageShell
+      title="ROI - Dia Anterior (D-1)"
+      subtitle={
+        <>
+          Última atualização: <b>Hoje</b> às 09:00 • Facebook Ads + Google Analytics
+        </>
+      }
+      backLabel="Voltar ao Dashboard"
+      backFallbackTo="/mensal"
+      titleStyle={{ fontSize: 44 }}
+      subtitleStyle={{ fontSize: 16 }}
+      headerRight={
+        <button
+          type="button"
+          style={{
+            height: 54,
+            padding: "0 20px",
+            borderRadius: 14,
+            border: 0,
+            background: "#0b0b0d",
+            color: "#ffffff",
+            fontWeight: 900,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
+          <span aria-hidden="true">⚡</span> Aplicar Otimização Geral
+        </button>
+      }
+    >
+      <section
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+          gap: 22,
+        }}
+        aria-label="Métricas ROI"
+      >
             <MetricCard label="Gasto Total" value="R$ 12.430" tone="red" />
             <MetricCard label="Receita Total" value="R$ 28.900" />
             <MetricCard label="Lucro" value="R$ 16.470" tone="green" />
@@ -252,18 +236,18 @@ export default function RoiOntem() {
               tone="green"
               hint="Retorno total sobre investimento"
             />
-          </section>
+      </section>
 
-          <section
-            style={{
-              marginTop: 22,
-              display: "grid",
-              gridTemplateColumns: "1.35fr 0.75fr",
-              gap: 22,
-              alignItems: "start",
-            }}
-            aria-label="Filtros e ações"
-          >
+      <section
+        style={{
+          marginTop: 22,
+          display: "grid",
+          gridTemplateColumns: "1.35fr 0.75fr",
+          gap: 22,
+          alignItems: "start",
+        }}
+        aria-label="Filtros e ações"
+      >
             <div className="card" style={{ padding: 22 }}>
               <div style={{ fontWeight: 900, marginBottom: 14 }}>Filtros</div>
               <div
@@ -295,17 +279,17 @@ export default function RoiOntem() {
                 Aplica ação para todos os itens filtrados
               </div>
             </div>
-          </section>
+      </section>
 
-          <div
-            style={{
-              marginTop: 18,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 16,
-            }}
-          >
+      <div
+        style={{
+          marginTop: 18,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 16,
+        }}
+      >
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <div style={{ color: "#6b7280", fontWeight: 800 }}>Agrupar por:</div>
               <div style={{ display: "flex", gap: 10 }}>
@@ -314,93 +298,90 @@ export default function RoiOntem() {
               </div>
             </div>
             <div style={{ color: "#6b7280", fontWeight: 800 }}>12 resultados</div>
-          </div>
+      </div>
 
-          <div className="card" style={{ padding: 0, marginTop: 18 }}>
-            <div style={{ overflowX: "auto" }}>
-              <table className="dataTable" style={{ marginTop: 0 }}>
-                <thead>
-                  <tr>
-                    <th>Campanha</th>
-                    <th>Nicho</th>
-                    <th>Conta de Anúncios</th>
-                    <th>Gasto</th>
-                    <th>Receita</th>
-                    <th>ROI</th>
-                    <th>Status</th>
-                    <th>Ação</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r) => (
-                    <tr key={r.campanha}>
-                      <td style={{ fontWeight: 900 }}>{r.campanha}</td>
-                      <td className="muted" style={{ fontWeight: 800 }}>
-                        {r.nicho}
-                      </td>
-                      <td>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <span aria-hidden="true" style={{ color: "#2563eb", fontWeight: 900 }}>
-                            ƒ
-                          </span>
-                          <div>
-                            <div style={{ fontWeight: 900 }}>{r.conta}</div>
-                            <div className="muted" style={{ fontWeight: 800, fontSize: 14 }}>
-                              {r.act}
-                            </div>
-                          </div>
+      <div className="card" style={{ padding: 0, marginTop: 18 }}>
+        <div style={{ overflowX: "auto" }}>
+          <table className="dataTable" style={{ marginTop: 0 }}>
+            <thead>
+              <tr>
+                <th>Campanha</th>
+                <th>Nicho</th>
+                <th>Conta de Anúncios</th>
+                <th>Gasto</th>
+                <th>Receita</th>
+                <th>ROI</th>
+                <th>Status</th>
+                <th>Ação</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.campanha}>
+                  <td style={{ fontWeight: 900 }}>{r.campanha}</td>
+                  <td className="muted" style={{ fontWeight: 800 }}>
+                    {r.nicho}
+                  </td>
+                  <td>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span aria-hidden="true" style={{ color: "#2563eb", fontWeight: 900 }}>
+                        ƒ
+                      </span>
+                      <div>
+                        <div style={{ fontWeight: 900 }}>{r.conta}</div>
+                        <div className="muted" style={{ fontWeight: 800, fontSize: 14 }}>
+                          {r.act}
                         </div>
-                      </td>
-                      <td className="muted" style={{ fontWeight: 900 }}>
-                        {r.gasto}
-                      </td>
-                      <td style={{ fontWeight: 900 }}>{r.receita}</td>
-                      <td style={{ fontWeight: 900, fontSize: 22 }}>{r.roi}</td>
-                      <td>
-                        <StatusChip tone={r.status.tone}>{r.status.label}</StatusChip>
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          style={{
-                            height: 36,
-                            padding: "0 14px",
-                            borderRadius: 12,
-                            border: 0,
-                            background:
-                              r.acao.tone === "green"
-                                ? "#16a34a"
-                                : r.acao.tone === "red"
-                                  ? "#dc2626"
-                                  : "#b45309",
-                            color: "#ffffff",
-                            fontWeight: 900,
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 10,
-                            minWidth: 110,
-                            justifyContent: "center",
-                          }}
-                        >
-                          {r.acao.tone === "green" ? (
-                            <span aria-hidden="true">↑</span>
-                          ) : r.acao.tone === "red" ? (
-                            <span aria-hidden="true">⏸</span>
-                          ) : (
-                            <span aria-hidden="true">👁</span>
-                          )}
-                          {r.acao.label}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="muted" style={{ fontWeight: 900 }}>
+                    {r.gasto}
+                  </td>
+                  <td style={{ fontWeight: 900 }}>{r.receita}</td>
+                  <td style={{ fontWeight: 900, fontSize: 22 }}>{r.roi}</td>
+                  <td>
+                    <StatusChip tone={r.status.tone}>{r.status.label}</StatusChip>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      style={{
+                        height: 36,
+                        padding: "0 14px",
+                        borderRadius: 12,
+                        border: 0,
+                        background:
+                          r.acao.tone === "green"
+                            ? "#16a34a"
+                            : r.acao.tone === "red"
+                              ? "#dc2626"
+                              : "#b45309",
+                        color: "#ffffff",
+                        fontWeight: 900,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 10,
+                        minWidth: 110,
+                        justifyContent: "center",
+                      }}
+                    >
+                      {r.acao.tone === "green" ? (
+                        <span aria-hidden="true">↑</span>
+                      ) : r.acao.tone === "red" ? (
+                        <span aria-hidden="true">⏸</span>
+                      ) : (
+                        <span aria-hidden="true">👁</span>
+                      )}
+                      {r.acao.label}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      </section>
-    </>
+      </div>
+    </PageShell>
   );
 }
-

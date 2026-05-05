@@ -99,7 +99,7 @@ Explica o objetivo e o resultado visível.
 
 ## Pending Work (Pendências)
 
-Última atualização: [2026-05-05 13:14]
+Última atualização: [2026-05-05 13:18]
 
 Esta seção lista tudo que ainda NÃO foi implementado,
 mesmo que não esteja explicitamente no Progress.
@@ -115,7 +115,7 @@ mesmo que não esteja explicitamente no Progress.
 
 - [x] Botões apenas visuais (sem ação)
 - [x] Falta de rotas para algumas telas
-- [ ] Componentes não reutilizados corretamente
+- [x] Componentes não reutilizados corretamente
 
 ### Ajustes visuais
 
@@ -178,6 +178,9 @@ Esta seção deve ser atualizada sempre que:
 
 - Decisão: tornar `/mensal` a rota principal e redirecionar `/` para `/mensal`.
   Motivo: o design e o `Pending Work` tratam “Mensal” como uma página; manter o dashboard acessível via essa rota evita ambiguidade.
+
+- Decisão: criar o componente `PageShell` para padronizar headers/containers de páginas.
+  Motivo: reduzir duplicação e manter consistência visual entre telas.
 
 
 Última atualização: [2026-05-05 09:46]

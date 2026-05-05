@@ -1,4 +1,3 @@
-import BackLink from "../components/BackLink.jsx";
 import ExportButton from "../components/ExportButton.jsx";
 import FinanceMetricCard from "../components/FinanceMetricCard.jsx";
 import PeriodPills from "../components/PeriodPills.jsx";
@@ -6,6 +5,7 @@ import SelectLike from "../components/SelectLike.jsx";
 import SpendLineChart from "../components/SpendLineChart.jsx";
 import { mockFinancial } from "../data/mockFinancial.js";
 import { mockCountries } from "../data/mockCountries.js";
+import PageShell from "../components/PageShell.jsx";
 
 export default function Financeiro() {
   const { filters, metrics, spendSeries, tableRows } = mockFinancial;
@@ -14,22 +14,12 @@ export default function Financeiro() {
   );
 
   return (
-    <>
-      <main style={{ background: "#ffffff" }}>
-        <div className="container" style={{ paddingTop: 24 }}>
-          <BackLink />
-          <div style={{ marginTop: 26 }}>
-            <h1 className="pageTitle">Financeiro</h1>
-            <p className="pageSubtitle">
-              Acompanhe os gastos e performance das campanhas
-            </p>
-          </div>
-        </div>
-      </main>
-
-      <section className="page" style={{ marginTop: 22 }}>
-        <div className="container">
-          <div className="card filtersCard">
+    <PageShell
+      title="Financeiro"
+      subtitle="Acompanhe os gastos e performance das campanhas"
+      backFallbackTo="/mensal"
+    >
+      <div className="card filtersCard">
             <div className="filtersGrid">
               <SelectLike label="Conta de anúncio" value={filters.account} />
               <SelectLike label="Business Manager" value={filters.businessManager} />
@@ -39,9 +29,9 @@ export default function Financeiro() {
                 active={filters.activePeriod}
               />
             </div>
-          </div>
+      </div>
 
-          <section className="gridFinanceMetrics" aria-label="Métricas financeiras">
+      <section className="gridFinanceMetrics" aria-label="Métricas financeiras">
             <FinanceMetricCard
               badgeBg="#dcfce7"
               badgeColor="#16a34a"
@@ -83,9 +73,9 @@ export default function Financeiro() {
               labelIcon="📉"
               label="CPC Médio"
             />
-          </section>
+      </section>
 
-          <section className="card chartCard" aria-label="Gráfico de Gastos">
+      <section className="card chartCard" aria-label="Gráfico de Gastos">
             <div className="chartHeaderRow">
               <div>
                 <div className="chartTitleRow">
@@ -110,9 +100,9 @@ export default function Financeiro() {
                 automaticamente da Meta Ads API em tempo real
               </span>
             </div>
-          </section>
+      </section>
 
-          <section className="card tableCard" aria-label="Detalhamento por Campanha">
+      <section className="card tableCard" aria-label="Detalhamento por Campanha">
             <div className="tableHeaderRow">
               <div>
                 <div className="chartTitleRow">
@@ -185,9 +175,7 @@ export default function Financeiro() {
                 </tbody>
               </table>
             </div>
-          </section>
-        </div>
       </section>
-    </>
+    </PageShell>
   );
 }

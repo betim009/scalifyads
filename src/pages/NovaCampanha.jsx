@@ -1,5 +1,5 @@
-import BackLink from "../components/BackLink.jsx";
 import { mockCountries } from "../data/mockCountries.js";
+import PageShell from "../components/PageShell.jsx";
 
 function StepBadge({ n }) {
   return (
@@ -102,30 +102,19 @@ function InfoLine({ icon, text, tone = "muted" }) {
 
 export default function NovaCampanha() {
   return (
-    <>
-      <main style={{ background: "#ffffff" }}>
-        <div className="container" style={{ paddingTop: 24 }}>
-          <BackLink />
-
-          <div style={{ marginTop: 26 }}>
-            <h1 className="pageTitle">Criar Nova Campanha</h1>
-            <p className="pageSubtitle">
-              Preencha as informações para gerar campanhas globais automaticamente
-            </p>
-          </div>
-        </div>
-      </main>
-
-      <section className="page" style={{ marginTop: 22 }}>
-        <div className="container">
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1.55fr 0.75fr",
-              gap: 24,
-              alignItems: "start",
-            }}
-          >
+    <PageShell
+      title="Criar Nova Campanha"
+      subtitle="Preencha as informações para gerar campanhas globais automaticamente"
+      backFallbackTo="/mensal"
+    >
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1.55fr 0.75fr",
+          gap: 24,
+          alignItems: "start",
+        }}
+      >
             <div style={{ display: "grid", gap: 22 }}>
               <section className="card" style={{ padding: 22 }}>
                 <SectionTitle step={1} title="Configuração" />
@@ -370,10 +359,7 @@ export default function NovaCampanha() {
                 <span aria-hidden="true">🚀</span> Publicar Campanhas Globais
               </button>
             </aside>
-          </div>
-        </div>
-      </section>
-    </>
+      </div>
+    </PageShell>
   );
 }
-
