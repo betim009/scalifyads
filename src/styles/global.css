@@ -125,6 +125,219 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
+.gridMetrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.metricCard {
+  padding: 22px 22px 24px;
+  min-height: 144px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.metricLabel {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #6b7280;
+  text-transform: uppercase;
+}
+
+.metricValue {
+  font-size: 48px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  margin-top: 12px;
+}
+
+.metricValueGreen {
+  color: #22c55e;
+}
+
+.metricHintRow {
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.dotGreen {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #22c55e;
+  display: inline-block;
+}
+
+.gridActions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+  margin-top: 22px;
+}
+
+.actionCard {
+  padding: 26px;
+  min-height: 286px;
+  display: flex;
+  flex-direction: column;
+}
+
+.actionTitle {
+  font-size: 34px;
+  margin: 0;
+  letter-spacing: -0.03em;
+}
+
+.actionDesc {
+  margin: 10px 0 0;
+  color: #6b7280;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.actionList {
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.actionListItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.actionButtonRow {
+  margin-top: auto;
+  padding-top: 18px;
+}
+
+.primaryButton {
+  width: 100%;
+  height: 58px;
+  border-radius: 14px;
+  border: 1px solid #0b0b0d;
+  background: #0b0b0d;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.secondaryButton {
+  width: 100%;
+  height: 58px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: #ffffff;
+  color: #111827;
+  font-weight: 800;
+  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.pillOutline {
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #ffffff;
+  color: #111827;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.statusBadge {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 2px solid #86efac;
+  background: #ffffff;
+  color: #16a34a;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.campaignCard {
+  padding: 22px;
+}
+
+.campaignTopRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.campaignNameRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 420px;
+}
+
+.campaignName {
+  font-size: 34px;
+  margin: 0;
+  letter-spacing: -0.03em;
+}
+
+.campaignActions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.campaignMetaRow {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  color: #6b7280;
+  font-weight: 700;
+  flex-wrap: wrap;
+}
+
+.campaignFlags {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+}
+
+@media (max-width: 1100px) {
+  .gridMetrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gridActions {
+    grid-template-columns: 1fr;
+  }
+}
+
 .sectionTitleRow {
   display: flex;
   align-items: center;

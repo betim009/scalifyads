@@ -1,17 +1,105 @@
 import Header from "../components/Header.jsx";
+import ActionCard from "../components/ActionCard.jsx";
+import CampaignCard from "../components/CampaignCard.jsx";
+import MetricCard from "../components/MetricCard.jsx";
+import { useNavigate } from "react-router-dom";
 
 export default function Dashboard() {
+  const navigate = useNavigate();
+
   return (
     <>
       <Header />
       <main className="page">
         <div className="container">
-          <div className="card" style={{ padding: 24 }}>
-            <h2 style={{ margin: 0 }}>Dashboard</h2>
-            <p className="muted" style={{ margin: "10px 0 0" }}>
-              Em construção.
-            </p>
+          <section className="gridMetrics" aria-label="Métricas">
+            <MetricCard label="Total de campanhas" value="1" />
+            <MetricCard
+              label="Campanhas ativas"
+              value="1"
+              valueTone="green"
+              hint={
+                <>
+                  <span className="dotGreen" aria-hidden="true" />
+                  Publicadas
+                </>
+              }
+            />
+            <MetricCard label="Rascunhos" value="0" />
+            <MetricCard
+              label="ROI (Ontem)"
+              value="132%"
+              valueTone="green"
+              hint={
+                <span style={{ fontWeight: 700 }}>
+                  Baseado em faturamento vs gasto
+                </span>
+              }
+            />
+            <MetricCard label="Países configurados" value="6" />
+          </section>
+
+          <section className="gridActions" aria-label="Ações">
+            <ActionCard
+              title="Criar Nova Campanha"
+              description="Crie campanhas globais em minutos com automação inteligente"
+              items={[
+                { icon: "⚡", text: "Automação completa" },
+                { icon: "🌐", text: "6 países simultâneos" },
+              ]}
+              buttonVariant="primary"
+              buttonIcon="+"
+              buttonText="Nova Campanha"
+              onButtonClick={() => {}}
+            />
+            <ActionCard
+              title="Financeiro & Relatórios"
+              description="Acompanhe gastos, performance e métricas em tempo real"
+              items={[
+                { icon: "$", text: "Dados da Meta Ads API" },
+                { icon: "📈", text: "Análises detalhadas" },
+              ]}
+              buttonVariant="secondary"
+              buttonIcon="📊"
+              buttonText="Ver Financeiro"
+              onButtonClick={() => navigate("/financeiro")}
+            />
+            <ActionCard
+              title="ROI - Dia Anterior"
+              description="Decisões baseadas em lucro real - Escale ou desative"
+              items={[
+                { icon: "◎", text: "ROI por campanha" },
+                { icon: "⚡", text: "Otimização 1 clique" },
+              ]}
+              buttonVariant="secondary"
+              buttonIcon="◎"
+              buttonText="Ver ROI (Ontem)"
+              onButtonClick={() => {}}
+            />
+          </section>
+
+          <div className="sectionTitleRow">
+            <h2 className="sectionTitle">Suas Campanhas</h2>
+            <div style={{ display: "flex", gap: 12 }}>
+              <button type="button" className="ghostButton">
+                Filtrar
+              </button>
+              <button type="button" className="ghostButton">
+                Ordenar
+              </button>
+            </div>
           </div>
+
+          <section aria-label="Campanhas">
+            <CampaignCard
+              name="DirigirBTN4"
+              status="Publicado"
+              scopeLabel="Global"
+              generatedLabel="6 campanhas geradas"
+              createdAtLabel="Criado em 2026-04-24"
+              countryFlags={["🇧🇷", "🇺🇸", "🇲🇽", "🇦🇪", "🇫🇷", "🇪🇸"]}
+            />
+          </section>
         </div>
       </main>
     </>
