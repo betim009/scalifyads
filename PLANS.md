@@ -97,6 +97,38 @@ Explica o objetivo e o resultado visível.
 - [x] [2026-05-05 09:55] Registro de pendências (backend/db/Meta Ads API + telas futuras)
 - [x] [2026-05-05 09:55] ExecPlan atualizado e consistente com o código atual
 
+## Pending Work (Pendências)
+
+Última atualização: [2026-05-05 12:59]
+
+Esta seção lista tudo que ainda NÃO foi implementado,
+mesmo que não esteja explicitamente no Progress.
+
+### Funcionalidades pendentes
+
+- [ ] Ao clicar em `+ Nova Campanha` ir para tela de nova campanha
+- [ ] Ao clicar em `Ver ROI (ontem)` ir para tela de ROI
+- [ ] Os botoes precisam de ter um Refinamento de UI/UX - hover cursor pointer
+- [x] Cria a pagina `Mensal` e ao clicar no botao mensal navegar para essa pagina
+
+### Problemas identificados
+
+- [ ] Botões apenas visuais (sem ação)
+- [ ] Falta de rotas para algumas telas
+- [ ] Componentes não reutilizados corretamente
+
+### Ajustes visuais
+
+- [ ] Ajustar/Refinar o design. A impressão ao analisar o design é que todos components e textos estão com o dobro do tamanho, peso da fonte...
+
+### Observação
+
+Esta seção deve ser atualizada sempre que:
+
+- Algo não for implementado pelo Codex
+- Um bug for encontrado
+- Um fluxo estiver incompleto
+
 ## Surprises & Discoveries
 
 - O XLSX não é apenas uma base de dados complementar. Ele representa o fluxo operacional que o cliente já usava como sistema manual.
@@ -112,6 +144,8 @@ Explica o objetivo e o resultado visível.
 - [2026-05-05 09:33] Screens Desktop incluem tabela “Detalhamento por Campanha” no Financeiro (além de filtros/cards/gráfico); ExecPlan anterior mencionava apenas gráfico.
 - [2026-05-05 09:33] XLSX tem abas: `Observação`, `VISUALIZAÇÃO`, `BOTÃO`, `Parametro`, `Preencher`; campanhas do XLSX aparecem como “Ingles [PAÍS/REGIÃO]” e o exemplo visual “DirigirBTN4” não aparece no arquivo.
 - [2026-05-05 09:36] `npm install` reportou 2 vulnerabilidades moderadas via `npm audit` (não corrigido ainda para evitar alterações não relacionadas).
+- [2026-05-05 12:59] A seção `Pending Work` estava com data futura `[2026-05-05 23:00]` em relação ao horário real do sistema (corrigido para refletir o estado atual).
+- [2026-05-05 13:01] Arquivos locais de prompt (`PROMPT.*.txt`) estavam na raiz e apareciam como untracked; adicionados ao `.gitignore` para evitar commits acidentais.
 
 ## Decision Log
 
@@ -141,6 +175,9 @@ Explica o objetivo e o resultado visível.
 
 - Decisão: implementar o gráfico do Financeiro com SVG simples (sem biblioteca externa) nesta fase.
   Motivo: reduzir dependências e manter o build estável enquanto a fidelidade visual é validada.
+
+- Decisão: tornar `/mensal` a rota principal e redirecionar `/` para `/mensal`.
+  Motivo: o design e o `Pending Work` tratam “Mensal” como uma página; manter o dashboard acessível via essa rota evita ambiguidade.
 
 
 Última atualização: [2026-05-05 09:46]
@@ -235,6 +272,8 @@ Estrutura:
             configuracoes/
             financeiro/
             mensal/
+            nova-campanha
+            roi
         Mobile/
             home/
             configuracoes/
