@@ -18,6 +18,7 @@ export default function Financeiro() {
       title="Financeiro"
       subtitle="Acompanhe os gastos e performance das campanhas"
       backFallbackTo="/mensal"
+      titleStyle={{ fontSize: 56 }}
     >
       <div className="card filtersCard">
             <div className="filtersGrid">

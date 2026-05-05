@@ -99,7 +99,7 @@ Explica o objetivo e o resultado visível.
 
 ## Pending Work (Pendências)
 
-Última atualização: [2026-05-05 13:18]
+Última atualização: [2026-05-05 13:20]
 
 Esta seção lista tudo que ainda NÃO foi implementado,
 mesmo que não esteja explicitamente no Progress.
@@ -119,7 +119,7 @@ mesmo que não esteja explicitamente no Progress.
 
 ### Ajustes visuais
 
-- [ ] Ajustar/Refinar o design. A impressão ao analisar o design é que todos components e textos estão com o dobro do tamanho, peso da fonte...
+- [x] Ajustar/Refinar o design. A impressão ao analisar o design é que todos components e textos estão com o dobro do tamanho, peso da fonte...
 
 ### Observação
 
@@ -181,6 +181,9 @@ Esta seção deve ser atualizada sempre que:
 
 - Decisão: criar o componente `PageShell` para padronizar headers/containers de páginas.
   Motivo: reduzir duplicação e manter consistência visual entre telas.
+
+- Decisão: reduzir o tamanho padrão de títulos (`.pageTitle`) para melhorar a proporção com o design.
+  Motivo: feedback do `Pending Work` indicava tipografia/escala visual acima do esperado.
 
 
 Última atualização: [2026-05-05 09:46]

@@ -14,6 +14,7 @@ export default function Configuracoes() {
       subtitle="Gerencie os países e idiomas do sistema"
       align="center"
       backFallbackTo="/mensal"
+      titleStyle={{ fontSize: 56 }}
     >
       <div style={{ maxWidth: 940, margin: "0 auto" }}>
         <section className="card settingsCard" aria-label="Países fixos do sistema">
