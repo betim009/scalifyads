@@ -188,7 +188,7 @@ export default function Header() {
             <TopPillButton icon={<IconUser />} active={false}>
               Conta Global
             </TopPillButton>
-            <TopPillLink to="/" icon={<IconCalendar />}>
+            <TopPillLink to="/mensal" icon={<IconCalendar />}>
               Mensal
             </TopPillLink>
             <TopPillLink to="/financeiro" icon={<IconDollar />}>
@@ -204,4 +204,3 @@ export default function Header() {
   );
 }
 import { NavLink } from "react-router-dom";
-
