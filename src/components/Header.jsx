@@ -154,6 +154,21 @@ function TopPillButton({ active, icon, children }) {
   );
 }
 
+function TopPillLink({ to, icon, children }) {
+  return (
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        `pillButton${isActive ? " pillButtonActive" : ""}`
+      }
+      style={{ textDecoration: "none" }}
+    >
+      <span className="pillButtonIcon">{icon}</span>
+      {children}
+    </NavLink>
+  );
+}
+
 export default function Header() {
   return (
     <header className="appHeader">
@@ -173,19 +188,20 @@ export default function Header() {
             <TopPillButton icon={<IconUser />} active={false}>
               Conta Global
             </TopPillButton>
-            <TopPillButton icon={<IconCalendar />} active>
+            <TopPillLink to="/" icon={<IconCalendar />}>
               Mensal
-            </TopPillButton>
-            <TopPillButton icon={<IconDollar />} active={false}>
+            </TopPillLink>
+            <TopPillLink to="/financeiro" icon={<IconDollar />}>
               Financeiro
-            </TopPillButton>
-            <TopPillButton icon={<IconGear />} active={false}>
+            </TopPillLink>
+            <TopPillLink to="/configuracoes" icon={<IconGear />}>
               Configurações
-            </TopPillButton>
+            </TopPillLink>
           </nav>
         </div>
       </div>
     </header>
   );
 }
+import { NavLink } from "react-router-dom";
 
