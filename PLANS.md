@@ -54,7 +54,7 @@ Explica o objetivo e o resultado visível.
 
 ## Progress
 
-Última atualização: [2026-05-05 13:45]
+Última atualização: [2026-05-05 14:27]
 
 - [x] Entendimento inicial: o XLSX era usado como sistema manual do cliente.
 - [x] Entendimento inicial: o Figma representa a futura interface do sistema.
@@ -108,7 +108,7 @@ Explica o objetivo e o resultado visível.
 
 ## Pending Work (Pendências)
 
-Última atualização: [2026-05-05 13:45]
+Última atualização: [2026-05-05 14:27]
 
 Esta seção lista tudo que ainda NÃO foi implementado,
 mesmo que não esteja explicitamente no Progress.
@@ -159,10 +159,10 @@ Regra correta:
 - O botão "Mensal" na navbar navega para `/mensal`, não é a página atual
 
 Tarefas:
-- [ ] Consultar imagens em `screens/Desktop/home/` e `screens/Desktop/mensal/` para entender a diferença visual
-- [ ] Corrigir a rota `/` para renderizar o Dashboard correto (Home) — não deve ser redirecionado para `/mensal`
-- [ ] Corrigir `src/pages/Mensal.jsx` para refletir fielmente o design de `screens/Desktop/mensal/`
-- [ ] Garantir que a navegação da navbar distingue Home de Mensal
+- [x] Consultar imagens em `screens/Desktop/home/` e `screens/Desktop/mensal/` para entender a diferença visual
+- [x] Corrigir a rota `/` para renderizar o Dashboard correto (Home) — não deve ser redirecionado para `/mensal`
+- [x] Corrigir `src/pages/Mensal.jsx` para refletir fielmente o design de `screens/Desktop/mensal/`
+- [x] Garantir que a navegação da navbar distingue Home de Mensal
 - [ ] Commit: `fix: separa rotas home e mensal conforme design`
 
 ---
@@ -259,7 +259,7 @@ Esta seção deve ser atualizada sempre que:
 - O projeto não é apenas um CRUD. Ele tende a envolver automação, relatórios, regras de campanha e integração externa com a Meta Ads API.
 - As informações de países, idiomas, objetivos de campanha e nomes de campanha precisam ser tratadas como regras importantes, não como textos soltos de interface.
 
-Última atualização: [2026-05-05 00:00]
+Última atualização: [2026-05-05 14:19]
 
 - [2026-05-04] O XLSX era o sistema principal do cliente
 - [2026-05-04] O projeto não é apenas CRUD, envolve automação
@@ -273,6 +273,7 @@ Esta seção deve ser atualizada sempre que:
 - [2026-05-05 00:00] O projeto usa emojis como substitutos de ícones — isso foi uma decisão temporária (Fase 1) que deve ser resolvida na Fase 2 com Material UI Icons.
 - [2026-05-05 00:00] Inputs de `NovaCampanha.jsx` não respondem à digitação — provável uso de `value` sem `onChange` (inputs controlados quebrados).
 - [2026-05-05 00:00] Layout visual está com escala aproximadamente 2x o esperado — fonte base provavelmente não foi definida corretamente em `global.css`, e os componentes herdaram tamanhos do browser default.
+- [2026-05-05 14:19] A pasta de design no repo está em `screens/desktop/*` e `screens/mobile/*` (não `screens/Desktop/*`), então ao seguir o ExecPlan é necessário ajustar o caminho conforme a estrutura real.
 
 ## Decision Log
 
@@ -321,7 +322,7 @@ Esta seção deve ser atualizada sempre que:
   Motivo: o frontend deve ter interatividade real (filtros que filtram, períodos que mudam dados) mesmo sem backend. Hooks de mock centralizam essa lógica e facilitam a futura substituição por chamadas reais de API.
 
 
-Última atualização: [2026-05-05 13:45]
+Última atualização: [2026-05-05 14:19]
 
 - [2026-05-04] Decisão: iniciar pelo frontend
   Motivo: validar interface antes da API
@@ -331,6 +332,9 @@ Esta seção deve ser atualizada sempre que:
 
 - [2026-05-05 13:45] Decisão: converter campos de `NovaCampanha` para inputs controlados (useState) e selects reais.
   Motivo: garantir edição do formulário e eliminar campos “congelados”.
+
+- [2026-05-05 14:19] Decisão: restaurar `/` como Home e implementar `/mensal` como página separada conforme `screens/desktop/mensal/*`.
+  Motivo: corrigir a confusão Home vs Mensal descrita no [P2] e manter as duas rotas visualmente distintas.
 
 ## Outcomes & Retrospective
 
