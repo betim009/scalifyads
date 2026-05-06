@@ -58,6 +58,7 @@ Esta seção deve ser atualizada sempre que:
   - Por padrão, o backend usa `stub` quando não há token; com token válido, tenta Meta Graph automaticamente.
   - Token via env: exportar `META_ACCESS_TOKEN=...` no serviço `backend` (ex: docker compose `environment:`) ou via `POST /api/meta/tokens`.
   - Forçar stub mesmo com token: `META_SYNC_PROVIDER=stub`.
+  - Forçar Meta Graph (sem fallback para stub): `META_SYNC_PROVIDER=meta` (vai falhar se não houver token válido).
 - Automação MVP (manual):
   - Rodar executor (dry-run): `curl -X POST http://localhost:3001/api/automation/run -H 'Content-Type: application/json' -d '{"dryRun":true}'`
   - Rodar executor (persistindo logs): `curl -X POST http://localhost:3001/api/automation/run -H 'Content-Type: application/json' -d '{}'`
