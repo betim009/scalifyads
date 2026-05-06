@@ -129,6 +129,11 @@ export async function metaFetchCampaignInsightsDaily({
   fields = ['spend', 'impressions', 'clicks', 'cpc', 'cpm', 'ctr', 'date_start', 'date_stop']
 }) {
   const provider = process.env.META_SYNC_PROVIDER
+  if (provider === 'meta' && !accessToken) {
+    const err = new Error('Missing accessToken for META_SYNC_PROVIDER=meta')
+    err.status = 400
+    throw err
+  }
   const isStub = provider === 'stub' || (!accessToken && provider !== 'meta')
   if (isStub) {
     const days = eachDateInclusive(since, until)
