@@ -66,6 +66,7 @@ Esta seção deve ser atualizada sempre que:
     - Criar `.env` local a partir de `.env.example` e preencher `META_ACCESS_TOKEN`.
     - Subir stack: `docker compose up -d`
     - Validar token: `curl -X POST http://localhost:3001/api/meta/validate -H 'Content-Type: application/json' -d '{}'`
+  - Observação: quando o Insights retornar `action_values` com `purchase`/`omni_purchase`, o backend persiste isso em `campaign_metrics.revenue_cents` (se ausente, pode ficar `null`).
 - Automação MVP (manual):
   - Rodar executor (dry-run): `curl -X POST http://localhost:3001/api/automation/run -H 'Content-Type: application/json' -d '{"dryRun":true}'`
   - Rodar executor (persistindo logs): `curl -X POST http://localhost:3001/api/automation/run -H 'Content-Type: application/json' -d '{}'`
