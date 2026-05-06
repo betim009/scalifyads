@@ -54,7 +54,7 @@ Explica o objetivo e o resultado visível.
 
 ## Progress
 
-Última atualização: [2026-05-05 14:57]
+Última atualização: [2026-05-06 11:18]
 
 - [x] Entendimento inicial: o XLSX era usado como sistema manual do cliente.
 - [x] Entendimento inicial: o Figma representa a futura interface do sistema.
@@ -85,7 +85,7 @@ Explica o objetivo e o resultado visível.
 
 ## Data Progress
 
-Última atualização: [2026-05-05 14:57]
+Última atualização: [2026-05-06 11:18]
 
 - [2026-05-04] Entendimento do projeto baseado no XLSX
 - [2026-05-04] Definição do escopo do frontend
@@ -111,7 +111,7 @@ Explica o objetivo e o resultado visível.
 
 ## Pending Work (Pendências)
 
-Última atualização: [2026-05-05 14:57]
+Última atualização: [2026-05-06 11:18]
 
 Esta seção lista tudo que ainda NÃO foi implementado,
 mesmo que não esteja explicitamente no Progress.
@@ -251,6 +251,57 @@ Tarefas:
 
 ---
 
+### FASE 3 — Estrutura Full Stack, Backend, Banco e Docker
+
+> Esta fase inicia após a Fase 2.
+> Objetivo: organizar o projeto como aplicação full stack,
+> preparar backend, banco de dados, Docker e corrigir mocks do frontend.
+#### [P1] Reorganizar estrutura do projeto
+
+- [ ] Criar diretório `frontend/`
+- [ ] Mover o frontend atual da raiz para `frontend/`
+- [ ] Ajustar caminhos, scripts e imports quebrados
+- [ ] Garantir que o frontend continua buildando
+- [ ] Commit: `refactor: move frontend para diretorio dedicado`
+
+#### [P2] Iniciar backend
+
+- [ ] Criar diretório `backend/`
+- [ ] Criar estrutura inicial de pastas
+- [ ] Criar servidor base
+- [ ] Criar rota health check
+- [ ] Preparar conexão futura com banco
+- [ ] Commit: `feat: inicia estrutura base do backend`
+
+#### [P3] Refinar mocks do frontend
+
+- [ ] Auditar mocks existentes
+- [ ] Corrigir inconsistências entre campanhas e dashboard
+- [ ] Garantir que métricas sejam calculadas a partir dos mocks
+- [ ] Evitar números fixos desconectados dos dados
+- [ ] Commit: `fix: corrige consistencia dos mocks do dashboard`
+
+#### [P4] Iniciar modelagem do banco de dados
+
+- [ ] Analisar telas existentes
+- [ ] Analisar mocks
+- [ ] Analisar XLSX
+- [ ] Propor entidades principais
+- [ ] Criar migrations iniciais
+- [ ] Criar seeders iniciais
+- [ ] Commit: `feat: inicia modelagem do banco de dados`
+
+#### [P5] Configurar Docker
+
+- [ ] Criar `docker-compose.yml`
+- [ ] Configurar serviço do frontend
+- [ ] Configurar serviço do backend
+- [ ] Configurar serviço do banco
+- [ ] Definir portas sem conflito
+- [ ] Criar comandos documentados para subir, parar, retomar e reiniciar
+- [ ] Criar comando para limpar apenas o banco
+- [ ] Commit: `feat: adiciona ambiente docker`
+
 ### Observação
 
 Esta seção deve ser atualizada sempre que:
@@ -283,6 +334,7 @@ Esta seção deve ser atualizada sempre que:
 - [2026-05-05 14:19] A pasta de design no repo está em `screens/desktop/*` e `screens/mobile/*` (não `screens/Desktop/*`), então ao seguir o ExecPlan é necessário ajustar o caminho conforme a estrutura real.
 - [2026-05-05 14:33] `@mui/icons-material` no projeto não possui alguns nomes sugeridos no plano (ex: `PersonOutline`, `PauseCircleOutline`); foi necessário ajustar para variantes existentes (ex: `PersonOutlined`, `PauseCircleOutlined`) mantendo a API interna em `src/styles/icons.js`.
 - [2026-05-05 14:57] O design completo de `Nova Campanha` inclui steps 3–5 (Copy Base, Orçamento/Programação, Upload + sidebar); a seção [P5] foi atualizada e implementada conforme `screens/desktop/nova-campanha/*`.
+- [2026-05-06 11:18] Divergência local detectada: o arquivo de design `screens/desktop/home/Captura de Tela 2026-05-05 às 08.25.14.png` estava removido no working tree; arquivo restaurado para preservar a fonte de verdade visual.
 
 ## Decision Log
 
@@ -354,6 +406,9 @@ Esta seção deve ser atualizada sempre que:
 
 - [2026-05-05 14:57] Decisão: tornar `SelectLike` um `<select>` real e centralizar interatividade mock em `src/mocks/*`.
   Motivo: permitir seleção persistente sem backend e preparar substituição futura por API.
+
+- [2026-05-06 11:18] Decisão: preservar `screens/` como fonte de verdade visual e restaurar qualquer asset removido acidentalmente.
+  Motivo: evitar perda de referência de design e manter rastreabilidade das telas durante refactors.
 
 ## Outcomes & Retrospective
 
@@ -1025,6 +1080,22 @@ Observação:
 
 O versionamento faz parte da validação do progresso.  
 Uma tarefa só é considerada concluída após commit e push.
+
+### Regra de Git para todas as fases
+
+Última atualização: [2026-05-06 11:18]
+
+A cada item P concluído:
+
+1. Executar validação mínima
+2. Atualizar PLANS.md
+3. Executar:
+
+    git add .
+    git commit -m "tipo: mensagem clara"
+    git push
+
+Nenhum item pode ser marcado como concluído sem commit e push.
 
 ## Validation and Acceptance
 
