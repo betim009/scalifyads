@@ -57,7 +57,8 @@ Executar comandos equivalentes:
 
     ls
     find . -maxdepth 2 -type f | sort
-    cat package.json
+    cat frontend/package.json
+    cat backend/package.json
 
 Se o projeto for grande, evitar listar `node_modules`.
 
@@ -235,6 +236,22 @@ Nenhum item pode ser marcado como concluído sem commit e push.
 - [x] O código está componentizado.
 - [x] Sem dependência obrigatória de backend.
 - [x] Este ExecPlan está atualizado.
+
+### Fase 5 — Critérios (Full Stack / Integração)
+
+Última atualização: [2026-05-06 17:55]
+
+- [ ] `docker compose up` sobe `db`, `backend` e `frontend` sem erro (Postgres healthcheck ok).
+- [ ] Backend responde `GET http://localhost:3001/healthz` com `200`.
+- [ ] Backend responde `GET http://localhost:3001/api` com `{ ok: true }`.
+- [ ] Com DB ativo, `GET http://localhost:3001/api/countries` responde `200` com lista.
+- [ ] Fluxo mínimo no backend funciona com DB:
+  - `POST /api/campaigns` cria campanha
+  - `POST /api/campaigns/:id/generate` cria/atualiza `generated_campaigns`
+  - `POST /api/generated-campaigns/:id/mark-published` define `meta_campaign_id`
+- [ ] Sync Meta (stub ou real) executa e grava em `campaign_metrics`:
+  - `POST /api/meta/sync/generated-campaigns/:id` retorna `{ ok: true, sync: ... }`
+  - Verificar gravação via query no Postgres (ex: `SELECT * FROM campaign_metrics ORDER BY metric_date DESC LIMIT 5;`)
 
 ### Fase 2 — Critérios de aceite
 

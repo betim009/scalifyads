@@ -1,5 +1,14 @@
 # ARCHIVE — Histórico e registros
 
+Este arquivo contém apenas histórico e contexto legado.
+
+Para execução atual:
+
+- Backlog e estado atual: `PLANS.md`
+- Procedimentos e comandos: `RUNBOOK.md`
+
+Última atualização: [2026-05-06 17:55]
+
 ## Duplicatas legacy
 
 ## Purpose / Big Picture
@@ -14,7 +23,7 @@ Explica o objetivo e o resultado visível.
 
 ## Data Progress
 
-Última atualização: [2026-05-06 14:15]
+Última atualização: [2026-05-06 17:55]
 
 - [2026-05-04] Entendimento do projeto baseado no XLSX
 - [2026-05-04] Definição do escopo do frontend
@@ -44,6 +53,8 @@ Explica o objetivo e o resultado visível.
 - [x] [2026-05-06 13:59] Documento `SOBRE.md` preenchido (visão geral do projeto, fluxo e como rodar).
 - [x] [2026-05-06 14:12] Fase 3 (P4) — Iniciada modelagem do banco (Postgres): migrations SQL + seed + scripts `npm run migrate`/`npm run seed` no backend.
 - [x] [2026-05-06 14:15] Fase 3 (P5) — Ambiente Docker adicionado (Postgres + backend + frontend) com comandos documentados em `README.md`.
+- [x] [2026-05-06 17:36] Fase 4+ — Definida sincronização com Meta Ads: rotas `/api/meta/*` + sync manual de métricas diárias para `campaign_metrics` (Meta Graph + fallback `stub`).
+- [x] [2026-05-06 17:55] Refactor documental: `PLANS.md` reduzido para estado atual + backlog ativo único; histórico isolado em `ARCHIVE.md` e procedimentos em `RUNBOOK.md`.
 
 
 
