@@ -91,7 +91,7 @@ Contratos atuais (mínimo):
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-06 20:06]
+Última atualização: [2026-05-06 20:08]
 
 Regras:
 
@@ -119,7 +119,7 @@ Regras:
 
 ## Decision Log (Ativo)
 
-Última atualização: [2026-05-06 20:06]
+Última atualização: [2026-05-06 20:08]
 
 Mantém apenas decisões ainda válidas para execução atual. Histórico completo: ver `ARCHIVE.md` em `## Decision Log (histórico completo)`.
 
@@ -135,6 +135,7 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 - [2026-05-06 20:00] Endpoint `POST /api/meta/validate` adicionado para validar token e retornar `me` via Meta Graph (sem expor token no frontend).
 - [2026-05-06 20:04] UI de campanhas geradas permite vincular `meta_campaign_id` manualmente (além do atalho `stub-*`) para testar sync real sem alterar arquitetura.
 - [2026-05-06 20:06] `docker-compose.yml` expõe `META_SYNC_PROVIDER`, `META_GRAPH_VERSION`, `META_ACCESS_TOKEN` para habilitar sync real sem mudanças de código/arquitetura.
+- [2026-05-06 20:08] `.env.example` adicionado para padronizar configuração local do Meta sync via Docker Compose (sem commitar `.env` real).
 
 ## Blockers & Risks
 

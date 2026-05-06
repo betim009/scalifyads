@@ -62,6 +62,10 @@ Esta seção deve ser atualizada sempre que:
   - Validar token (Meta Graph): `curl -X POST http://localhost:3001/api/meta/validate -H 'Content-Type: application/json' -d '{}'`
   - Para sync real de uma campanha gerada, é preciso ter `generated_campaigns.meta_campaign_id` preenchido (pode ser vinculado no UI em Detalhes da Campanha).
   - Diagnóstico: `curl http://localhost:3001/api/meta/status`
+  - Fluxo recomendado com Docker Compose:
+    - Criar `.env` local a partir de `.env.example` e preencher `META_ACCESS_TOKEN`.
+    - Subir stack: `docker compose up -d`
+    - Validar token: `curl -X POST http://localhost:3001/api/meta/validate -H 'Content-Type: application/json' -d '{}'`
 - Automação MVP (manual):
   - Rodar executor (dry-run): `curl -X POST http://localhost:3001/api/automation/run -H 'Content-Type: application/json' -d '{"dryRun":true}'`
   - Rodar executor (persistindo logs): `curl -X POST http://localhost:3001/api/automation/run -H 'Content-Type: application/json' -d '{}'`
