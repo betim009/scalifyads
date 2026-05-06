@@ -43,6 +43,15 @@ Esta seção deve ser atualizada sempre que:
 - Nota: sincronização de métricas Meta foi definida como um sync manual via endpoint `POST /api/meta/sync/generated-campaigns/:id`, persistindo dados em `campaign_metrics`.
   - Provider: usa Meta Graph quando houver token (via `META_ACCESS_TOKEN`, body `accessToken` ou `meta_tokens`); caso contrário, usa `stub` para testar persistência sem credenciais.
 
+[2026-05-06 19:22]
+
+- Docker stack validado neste ambiente:
+  - `docker compose up -d` sobe `db`, `backend`, `frontend`.
+  - Smoke test (host):
+    - `curl http://localhost:3001/healthz` → `{"ok":true}`
+    - `curl http://localhost:3001/api/countries` → `{"ok":true,"countries":[...]}`
+- Nota: quando o backend roda com `node --watch`, se ocorrer erro de runtime ele pode ficar “parado aguardando mudanças”; usar `docker compose restart backend` para recuperar.
+
 
 
 ## Concrete Steps

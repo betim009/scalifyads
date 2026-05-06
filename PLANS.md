@@ -49,7 +49,7 @@ Construir o **Campaign Builder**, uma aplicação web que substitui a planilha o
 
 ## Snapshot (Estado Atual)
 
-Última atualização: [2026-05-06 17:55]
+Última atualização: [2026-05-06 19:22]
 
 O que está funcional hoje:
 
@@ -61,7 +61,7 @@ O que está funcional hoje:
 
 Nota importante:
 
-- O frontend ainda não consome o backend (integração via `VITE_BACKEND_URL` ainda não foi conectada no código).
+- O frontend já consome o backend via `VITE_BACKEND_URL` para países/campanhas (Dashboard/Configurações/Nova Campanha) e Financeiro, mantendo fallback local quando a API/DB não estiver disponível.
 
 ## Fontes de Verdade
 
@@ -91,7 +91,7 @@ Contratos atuais (mínimo):
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-06 17:55]
+Última atualização: [2026-05-06 19:22]
 
 Regras:
 
@@ -102,11 +102,11 @@ Regras:
 
 ### Fase 5 — Integração Full Stack (próximos passos reais)
 
-- [ ] Desbloquear execução com Docker e registrar evidência (stack sobe + smoke test). (ver `RUNBOOK.md`)
-- [ ] Conectar o frontend ao backend via `VITE_BACKEND_URL` (client HTTP + primeira tela lendo dados reais).
-- [ ] Trocar dados “de referência” (países/objetivos/campanhas) de mocks → API (mantendo fallback local quando DB não estiver disponível).
-- [ ] Fechar no frontend o fluxo operacional mínimo: criar campanha → gerar por país → marcar como publicada → listar geradas.
-- [ ] Criar endpoints de leitura/aggregate para Financeiro/ROI com base em `campaign_metrics` (mesmo que com provider `stub`).
+- [x] Desbloquear execução com Docker e registrar evidência (stack sobe + smoke test). (ver `RUNBOOK.md`)
+- [x] Conectar o frontend ao backend via `VITE_BACKEND_URL` (client HTTP + primeira tela lendo dados reais).
+- [x] Trocar dados “de referência” (países/campanhas) de mocks → API (mantendo fallback local quando DB não estiver disponível).
+- [x] Fechar no frontend o fluxo operacional mínimo: criar campanha → gerar por país → marcar como publicada → listar geradas.
+- [x] Criar endpoints de leitura/aggregate para Financeiro/ROI com base em `campaign_metrics` (mesmo que com provider `stub`).
 
 ### Fase 6 — Meta Ads real + Automação (quando Fase 5 estabilizar)
 
@@ -116,7 +116,7 @@ Regras:
 
 ## Decision Log (Ativo)
 
-Última atualização: [2026-05-06 17:55]
+Última atualização: [2026-05-06 19:22]
 
 Mantém apenas decisões ainda válidas para execução atual. Histórico completo: ver `ARCHIVE.md` em `## Decision Log (histórico completo)`.
 
@@ -125,13 +125,14 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 - [2026-05-06 12:08] Backend simples (Node + Express) com `GET /healthz` e API em `/api/*`.
 - [2026-05-06 17:36] Sync Meta definido como trigger manual (endpoint) persistindo métricas em `campaign_metrics` (Meta Graph quando houver token; fallback `stub` quando não houver).
 - [2026-05-06 17:55] `PLANS.md` reduzido para estado atual + backlog ativo único; histórico isolado em `ARCHIVE.md` e procedimentos em `RUNBOOK.md`.
+- [2026-05-06 19:22] Endpoints de Financeiro/ROI adicionados em `/api/finance/*`; provider `stub` passou a gerar `revenue` para permitir cálculo de ROI no dev.
 
 ## Blockers & Risks
 
-Última atualização: [2026-05-06 17:55]
+Última atualização: [2026-05-06 19:22]
 
-- Docker daemon pode estar inacessível no ambiente (bloqueio já observado). Ver `RUNBOOK.md` e registro em `ARCHIVE.md`.
-- Frontend ainda não usa o backend: risco de divergência entre UI e contratos da API até a integração.
+- Docker stack validado neste ambiente (ainda depende do daemon estar rodando). Ver evidência no `RUNBOOK.md`.
+- Frontend usa backend parcialmente (países/campanhas/financeiro); ainda há telas baseadas em mocks (ex: ROI) e risco de divergência até completar a integração.
 - Tokens Meta: riscos de segurança/expiração (estratégia ainda não definida; provider `stub` existe para desenvolvimento).
 
 ## Referências (histórico e legado)
@@ -153,3 +154,35 @@ Procedimentos e comandos ficam em `RUNBOOK.md`.
 Nota:
 
 - `PLANS.backup.md` existe como snapshot legado e não deve ser usado para execução (fonte oficial é este `PLANS.md`).
+
+## Architecture Rules
+
+Última atualização: [2026-05-06 19:22]
+
+### Frontend
+
+- Não fazer fetch direto em componentes
+- Toda chamada HTTP deve passar por `services/`
+- Não usar mocks hardcoded em componentes
+- Componentes devem ser reutilizáveis
+- Evitar lógica complexa em JSX
+
+### Backend
+
+- Arquitetura:
+  routes/
+  controllers/
+  services/
+  repositories/
+  database/
+
+- Controllers não acessam banco diretamente
+- Toda regra de negócio deve ficar em `services`
+- Queries SQL devem ficar isoladas
+- Nunca acessar Meta API diretamente na route
+
+### Infra
+
+- Toda integração externa deve possuir retry
+- Toda automação deve gerar logs
+- Nenhum token pode ficar no frontend
