@@ -54,7 +54,7 @@ Explica o objetivo e o resultado visível.
 
 ## Progress
 
-Última atualização: [2026-05-06 12:04]
+Última atualização: [2026-05-06 12:08]
 
 - [x] Entendimento inicial: o XLSX era usado como sistema manual do cliente.
 - [x] Entendimento inicial: o Figma representa a futura interface do sistema.
@@ -87,10 +87,11 @@ Explica o objetivo e o resultado visível.
 ### Fase 3 — Estrutura Full Stack (em andamento)
 
 - [x] P1 — Reorganizar estrutura do projeto (mover frontend para `frontend/`)
+- [x] P2 — Iniciar backend (criar `backend/` com servidor base + healthcheck)
 
 ## Data Progress
 
-Última atualização: [2026-05-06 12:04]
+Última atualização: [2026-05-06 12:08]
 
 - [2026-05-04] Entendimento do projeto baseado no XLSX
 - [2026-05-04] Definição do escopo do frontend
@@ -118,7 +119,7 @@ Explica o objetivo e o resultado visível.
 
 ## Pending Work (Pendências)
 
-Última atualização: [2026-05-06 12:04]
+Última atualização: [2026-05-06 12:08]
 
 Esta seção lista tudo que ainda NÃO foi implementado,
 mesmo que não esteja explicitamente no Progress.
@@ -273,12 +274,12 @@ Tarefas:
 
 #### [P2] Iniciar backend
 
-- [ ] Criar diretório `backend/`
-- [ ] Criar estrutura inicial de pastas
-- [ ] Criar servidor base
-- [ ] Criar rota health check
-- [ ] Preparar conexão futura com banco
-- [ ] Commit: `feat: inicia estrutura base do backend`
+- [x] Criar diretório `backend/`
+- [x] Criar estrutura inicial de pastas
+- [x] Criar servidor base
+- [x] Criar rota health check
+- [x] Preparar conexão futura com banco
+- [x] Commit: `feat: inicia estrutura base do backend`
 
 #### [P3] Refinar mocks do frontend
 
@@ -344,6 +345,7 @@ Esta seção deve ser atualizada sempre que:
 - [2026-05-06 11:18] Divergência local detectada: o arquivo de design `screens/desktop/home/Captura de Tela 2026-05-05 às 08.25.14.png` estava removido no working tree; arquivo restaurado para preservar a fonte de verdade visual.
 - [2026-05-06 11:52] Após iniciar a Fase 3 (P1), o frontend deixou de ficar na raiz: todos os caminhos do app agora são relativos a `frontend/` (ex: `src/*` → `frontend/src/*`), e comandos passam a ser executados em `frontend/`.
 - [2026-05-06 12:04] O ExecPlan ainda tinha referências `screens/Desktop/*` em trechos do documento; padronizado para `screens/desktop/*` e `screens/mobile/*` para refletir o repo real (case-sensitive).
+- [2026-05-06 12:08] Não existia `backend/` no repo; iniciado backend como pacote Node/Express independente em `backend/` com `GET /healthz`.
 
 ## Decision Log
 
@@ -393,7 +395,7 @@ Esta seção deve ser atualizada sempre que:
   Motivo: o frontend deve ter interatividade real (filtros que filtram, períodos que mudam dados) mesmo sem backend. Hooks de mock centralizam essa lógica e facilitam a futura substituição por chamadas reais de API.
 
 
-Última atualização: [2026-05-06 12:04]
+Última atualização: [2026-05-06 12:08]
 
 - [2026-05-04] Decisão: iniciar pelo frontend
   Motivo: validar interface antes da API
@@ -423,6 +425,8 @@ Esta seção deve ser atualizada sempre que:
   Motivo: isolar responsabilidades e evitar refactors maiores quando o backend for iniciado.
 - [2026-05-06 12:04] Decisão: padronizar a documentação para usar os caminhos reais do repo (`screens/desktop/*` e `screens/mobile/*`) e evitar referências com case incorreto.
   Motivo: o filesystem é case-sensitive em muitos ambientes; referências incorretas geram divergência entre ExecPlan e estrutura real.
+- [2026-05-06 12:08] Decisão: iniciar o backend com Node 22 + Express em `backend/` (package isolado), com `GET /healthz` e `PORT=3001` por padrão.
+  Motivo: manter o projeto simples neste início, facilitar Docker futuro e permitir healthcheck imediato sem introduzir ORM/banco prematuramente.
 
 ## Outcomes & Retrospective
 
@@ -1259,7 +1263,7 @@ Para recuperação:
 
 ## Artifacts and Notes
 
-Última atualização: [2026-05-06 11:52]
+Última atualização: [2026-05-06 12:08]
 
 ### Arquivos existentes (Fase 1 — entregues)
 
@@ -1299,6 +1303,14 @@ Para recuperação:
     frontend/src/mocks/useFormState.js       ← hook genérico de formulário controlado
     frontend/src/mocks/README.md             ← documentação de mocks
     frontend/src/styles/icons.js             ← mapeamento centralizado de ícones MUI
+
+### Backend (Fase 3 — P2)
+
+    backend/package.json
+    backend/package-lock.json
+    backend/src/server.js
+    backend/src/routes/health.js
+    backend/src/db.js
 
 ### Referências externas
 
