@@ -54,7 +54,7 @@ Explica o objetivo e o resultado visível.
 
 ## Progress
 
-Última atualização: [2026-05-06 11:18]
+Última atualização: [2026-05-06 11:52]
 
 - [x] Entendimento inicial: o XLSX era usado como sistema manual do cliente.
 - [x] Entendimento inicial: o Figma representa a futura interface do sistema.
@@ -85,7 +85,7 @@ Explica o objetivo e o resultado visível.
 
 ## Data Progress
 
-Última atualização: [2026-05-06 11:18]
+Última atualização: [2026-05-06 11:52]
 
 - [2026-05-04] Entendimento do projeto baseado no XLSX
 - [2026-05-04] Definição do escopo do frontend
@@ -108,10 +108,11 @@ Explica o objetivo e o resultado visível.
 - [x] [2026-05-05 14:57] P4 — Ajuste de escala tipográfica e espaçamentos globais (base 14px + refinamentos)
 - [x] [2026-05-05 14:57] P5 — Tela Nova Campanha completada conforme `screens/Desktop/nova-campanha/*` (steps 1–5 + sidebar)
 - [x] [2026-05-05 14:57] P6 — Mocks comportamentais (período no Financeiro + filtro/ordenação na Home + selects reais)
+- [ ] [2026-05-06 11:52] Fase 3 (P1) — Movido o frontend para `frontend/` e validado `npm run build` (commit pendente)
 
 ## Pending Work (Pendências)
 
-Última atualização: [2026-05-06 11:18]
+Última atualização: [2026-05-06 11:52]
 
 Esta seção lista tudo que ainda NÃO foi implementado,
 mesmo que não esteja explicitamente no Progress.
@@ -258,10 +259,10 @@ Tarefas:
 > preparar backend, banco de dados, Docker e corrigir mocks do frontend.
 #### [P1] Reorganizar estrutura do projeto
 
-- [ ] Criar diretório `frontend/`
-- [ ] Mover o frontend atual da raiz para `frontend/`
-- [ ] Ajustar caminhos, scripts e imports quebrados
-- [ ] Garantir que o frontend continua buildando
+- [x] Criar diretório `frontend/`
+- [x] Mover o frontend atual da raiz para `frontend/`
+- [x] Ajustar caminhos, scripts e imports quebrados
+- [x] Garantir que o frontend continua buildando
 - [ ] Commit: `refactor: move frontend para diretorio dedicado`
 
 #### [P2] Iniciar backend
@@ -317,7 +318,7 @@ Esta seção deve ser atualizada sempre que:
 - O projeto não é apenas um CRUD. Ele tende a envolver automação, relatórios, regras de campanha e integração externa com a Meta Ads API.
 - As informações de países, idiomas, objetivos de campanha e nomes de campanha precisam ser tratadas como regras importantes, não como textos soltos de interface.
 
-Última atualização: [2026-05-05 14:57]
+Última atualização: [2026-05-06 11:52]
 
 - [2026-05-04] O XLSX era o sistema principal do cliente
 - [2026-05-04] O projeto não é apenas CRUD, envolve automação
@@ -335,6 +336,7 @@ Esta seção deve ser atualizada sempre que:
 - [2026-05-05 14:33] `@mui/icons-material` no projeto não possui alguns nomes sugeridos no plano (ex: `PersonOutline`, `PauseCircleOutline`); foi necessário ajustar para variantes existentes (ex: `PersonOutlined`, `PauseCircleOutlined`) mantendo a API interna em `src/styles/icons.js`.
 - [2026-05-05 14:57] O design completo de `Nova Campanha` inclui steps 3–5 (Copy Base, Orçamento/Programação, Upload + sidebar); a seção [P5] foi atualizada e implementada conforme `screens/desktop/nova-campanha/*`.
 - [2026-05-06 11:18] Divergência local detectada: o arquivo de design `screens/desktop/home/Captura de Tela 2026-05-05 às 08.25.14.png` estava removido no working tree; arquivo restaurado para preservar a fonte de verdade visual.
+- [2026-05-06 11:52] Após iniciar a Fase 3 (P1), o frontend deixou de ficar na raiz: todos os caminhos do app agora são relativos a `frontend/` (ex: `src/*` → `frontend/src/*`), e comandos passam a ser executados em `frontend/`.
 
 ## Decision Log
 
@@ -384,7 +386,7 @@ Esta seção deve ser atualizada sempre que:
   Motivo: o frontend deve ter interatividade real (filtros que filtram, períodos que mudam dados) mesmo sem backend. Hooks de mock centralizam essa lógica e facilitam a futura substituição por chamadas reais de API.
 
 
-Última atualização: [2026-05-05 14:57]
+Última atualização: [2026-05-06 11:52]
 
 - [2026-05-04] Decisão: iniciar pelo frontend
   Motivo: validar interface antes da API
@@ -410,9 +412,12 @@ Esta seção deve ser atualizada sempre que:
 - [2026-05-06 11:18] Decisão: preservar `screens/` como fonte de verdade visual e restaurar qualquer asset removido acidentalmente.
   Motivo: evitar perda de referência de design e manter rastreabilidade das telas durante refactors.
 
+- [2026-05-06 11:52] Decisão: mover o frontend para `frontend/` (Fase 3 — P1) para preparar a evolução full stack com `backend/` e Docker.
+  Motivo: isolar responsabilidades e evitar refactors maiores quando o backend for iniciado.
+
 ## Outcomes & Retrospective
 
-Última atualização: [2026-05-05 09:55]
+Última atualização: [2026-05-06 11:52]
 
 Entregue nesta fase (frontend):
 
@@ -421,7 +426,8 @@ Entregue nesta fase (frontend):
 - Dashboard com cards de métricas, cards de ação e listagem visual de campanhas.
 - Financeiro com filtros visuais, cards de métricas, gráfico (SVG) e tabela de detalhamento.
 - Configurações com países fixos e “Outras Configurações”.
-- Dados mockados centralizados em `src/data/`.
+- Dados mockados centralizados em `frontend/src/data/`.
+- Fase 3 (em andamento): frontend isolado em `frontend/` (build validado).
 
 Pendências imediatas (frontend):
 
@@ -1244,47 +1250,50 @@ Para recuperação:
 
 ## Artifacts and Notes
 
-Última atualização: [2026-05-05 00:00]
+Última atualização: [2026-05-06 11:52]
 
 ### Arquivos existentes (Fase 1 — entregues)
 
-    src/App.jsx
-    src/main.jsx
-    src/pages/Dashboard.jsx
-    src/pages/Financeiro.jsx
-    src/pages/Configuracoes.jsx
-    src/pages/Mensal.jsx           ← criado mas com erro (confusão Home/Mensal)
-    src/pages/NovaCampanha.jsx     ← incompleto + bug de inputs
-    src/pages/RoiOntem.jsx
-    src/pages/CampanhaDetalhes.jsx
-    src/pages/CampanhaDuplicar.jsx
-    src/components/Header.jsx
-    src/components/BackLink.jsx
-    src/components/MetricCard.jsx
-    src/components/ActionCard.jsx
-    src/components/CampaignCard.jsx
-    src/components/StatusBadge.jsx
-    src/components/SpendLineChart.jsx
-    src/components/SelectLike.jsx
-    src/components/PeriodPills.jsx
-    src/components/FinanceMetricCard.jsx
-    src/components/ExportButton.jsx
-    src/components/PageShell.jsx
-    src/data/mockCampaigns.js
-    src/data/mockCountries.js
-    src/data/mockFinancial.js
-    src/styles/global.css
+    frontend/src/App.jsx
+    frontend/src/main.jsx
+    frontend/src/pages/Dashboard.jsx
+    frontend/src/pages/Financeiro.jsx
+    frontend/src/pages/Configuracoes.jsx
+    frontend/src/pages/Mensal.jsx           ← corrigido na Fase 2 (Home vs Mensal)
+    frontend/src/pages/NovaCampanha.jsx     ← completo na Fase 2 (inputs + steps 1–5)
+    frontend/src/pages/RoiOntem.jsx
+    frontend/src/pages/CampanhaDetalhes.jsx
+    frontend/src/pages/CampanhaDuplicar.jsx
+    frontend/src/components/Header.jsx
+    frontend/src/components/BackLink.jsx
+    frontend/src/components/MetricCard.jsx
+    frontend/src/components/ActionCard.jsx
+    frontend/src/components/CampaignCard.jsx
+    frontend/src/components/StatusBadge.jsx
+    frontend/src/components/SpendLineChart.jsx
+    frontend/src/components/RoiLineChart.jsx
+    frontend/src/components/SelectLike.jsx
+    frontend/src/components/PeriodPills.jsx
+    frontend/src/components/FinanceMetricCard.jsx
+    frontend/src/components/ExportButton.jsx
+    frontend/src/components/PageShell.jsx
+    frontend/src/data/mockCampaigns.js
+    frontend/src/data/mockCountries.js
+    frontend/src/data/mockFinancial.js
+    frontend/src/data/mockMonthly.js
+    frontend/src/styles/global.css
 
-### Arquivos novos esperados após Fase 2
+### Arquivos entregues na Fase 2
 
-    src/mocks/usePeriodFilter.js    ← hook: simula dados por período
-    src/mocks/useCampaignFilters.js ← hook: filtra campanhas por status
-    src/mocks/useFormState.js       ← hook genérico de formulário controlado
-    src/styles/icons.js             ← mapeamento centralizado de ícones MUI
+    frontend/src/mocks/usePeriodFilter.js    ← hook: simula dados por período
+    frontend/src/mocks/useCampaignFilters.js ← hook: filtra campanhas por status
+    frontend/src/mocks/useFormState.js       ← hook genérico de formulário controlado
+    frontend/src/mocks/README.md             ← documentação de mocks
+    frontend/src/styles/icons.js             ← mapeamento centralizado de ícones MUI
 
 ### Referências externas
 
-    screens/Desktop/*  → fonte de verdade do design
+    screens/desktop/*  → fonte de verdade do design
     projeto_escopo.xlsx → fonte de verdade de regra de negócio
 
 Pendências do produto completo:
