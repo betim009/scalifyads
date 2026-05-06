@@ -91,7 +91,7 @@ Contratos atuais (mínimo):
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-06 19:54]
+Última atualização: [2026-05-06 20:02]
 
 Regras:
 
@@ -112,11 +112,13 @@ Regras:
 
 - [x] Definir estratégia de autenticação/token (escopo por usuário, expiração/refresh) e registrar decisão.
 - [ ] Substituir gradualmente `stub` por sync real da Meta (mantendo `stub` para dev).
+  - [x] `POST /api/meta/validate` para validar token (Graph `/me`)
+  - [x] Retry/backoff + paginação (`paging.next`) no fetch de insights
 - [x] Definir 1–2 regras MVP de automação e implementar executor + logs.
 
 ## Decision Log (Ativo)
 
-Última atualização: [2026-05-06 19:58]
+Última atualização: [2026-05-06 20:00]
 
 Mantém apenas decisões ainda válidas para execução atual. Histórico completo: ver `ARCHIVE.md` em `## Decision Log (histórico completo)`.
 
@@ -129,14 +131,15 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 - [2026-05-06 19:54] Estratégia de token (MVP): sem auth no frontend; token fica apenas no backend (env `META_ACCESS_TOKEN` ou `POST /api/meta/tokens`), com escopo opcional por `userId` (uuid) para multiusuário futuro. Refresh automático fora do escopo por enquanto (operar com token válido/long-lived e `expires_at` para invalidar).
 - [2026-05-06 19:54] Automação MVP via executor no backend (regras em `automation_rules`, logs em `automation_logs`) acionado manualmente por endpoint.
 - [2026-05-06 19:58] Integração externa Meta Graph com retry/backoff para erros transitórios (429/5xx/timeouts). `META_SYNC_PROVIDER=meta` pode forçar Graph e evitar fallback para `stub` quando não há token.
+- [2026-05-06 20:00] Endpoint `POST /api/meta/validate` adicionado para validar token e retornar `me` via Meta Graph (sem expor token no frontend).
 
 ## Blockers & Risks
 
-Última atualização: [2026-05-06 19:22]
+Última atualização: [2026-05-06 20:02]
 
 - Docker stack validado neste ambiente (ainda depende do daemon estar rodando). Ver evidência no `RUNBOOK.md`.
 - Frontend usa backend parcialmente (países/campanhas/financeiro); ainda há telas baseadas em mocks (ex: ROI) e risco de divergência até completar a integração.
-- Tokens Meta: riscos de segurança/expiração (estratégia ainda não definida; provider `stub` existe para desenvolvimento).
+- Tokens Meta: riscos de segurança/expiração (refresh fora do escopo por enquanto; provider `stub` existe para desenvolvimento).
 
 ## Referências (histórico e legado)
 
