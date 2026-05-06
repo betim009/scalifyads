@@ -91,7 +91,7 @@ Contratos atuais (mínimo):
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-06 20:02]
+Última atualização: [2026-05-06 20:06]
 
 Regras:
 
@@ -113,12 +113,13 @@ Regras:
 - [x] Definir estratégia de autenticação/token (escopo por usuário, expiração/refresh) e registrar decisão.
 - [ ] Substituir gradualmente `stub` por sync real da Meta (mantendo `stub` para dev).
   - [x] `POST /api/meta/validate` para validar token (Graph `/me`)
+  - [x] `GET /api/meta/status` para diagnóstico (provider + token presente)
   - [x] Retry/backoff + paginação (`paging.next`) no fetch de insights
 - [x] Definir 1–2 regras MVP de automação e implementar executor + logs.
 
 ## Decision Log (Ativo)
 
-Última atualização: [2026-05-06 20:04]
+Última atualização: [2026-05-06 20:06]
 
 Mantém apenas decisões ainda válidas para execução atual. Histórico completo: ver `ARCHIVE.md` em `## Decision Log (histórico completo)`.
 
@@ -133,6 +134,7 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 - [2026-05-06 19:58] Integração externa Meta Graph com retry/backoff para erros transitórios (429/5xx/timeouts). `META_SYNC_PROVIDER=meta` pode forçar Graph e evitar fallback para `stub` quando não há token.
 - [2026-05-06 20:00] Endpoint `POST /api/meta/validate` adicionado para validar token e retornar `me` via Meta Graph (sem expor token no frontend).
 - [2026-05-06 20:04] UI de campanhas geradas permite vincular `meta_campaign_id` manualmente (além do atalho `stub-*`) para testar sync real sem alterar arquitetura.
+- [2026-05-06 20:06] `docker-compose.yml` expõe `META_SYNC_PROVIDER`, `META_GRAPH_VERSION`, `META_ACCESS_TOKEN` para habilitar sync real sem mudanças de código/arquitetura.
 
 ## Blockers & Risks
 
