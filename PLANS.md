@@ -91,7 +91,7 @@ Contratos atuais (mínimo):
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-06 19:22]
+Última atualização: [2026-05-06 19:54]
 
 Regras:
 
@@ -110,13 +110,13 @@ Regras:
 
 ### Fase 6 — Meta Ads real + Automação (quando Fase 5 estabilizar)
 
-- [ ] Definir estratégia de autenticação/token (escopo por usuário, expiração/refresh) e registrar decisão.
+- [x] Definir estratégia de autenticação/token (escopo por usuário, expiração/refresh) e registrar decisão.
 - [ ] Substituir gradualmente `stub` por sync real da Meta (mantendo `stub` para dev).
-- [ ] Definir 1–2 regras MVP de automação e implementar executor + logs.
+- [x] Definir 1–2 regras MVP de automação e implementar executor + logs.
 
 ## Decision Log (Ativo)
 
-Última atualização: [2026-05-06 19:22]
+Última atualização: [2026-05-06 19:54]
 
 Mantém apenas decisões ainda válidas para execução atual. Histórico completo: ver `ARCHIVE.md` em `## Decision Log (histórico completo)`.
 
@@ -126,6 +126,8 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 - [2026-05-06 17:36] Sync Meta definido como trigger manual (endpoint) persistindo métricas em `campaign_metrics` (Meta Graph quando houver token; fallback `stub` quando não houver).
 - [2026-05-06 17:55] `PLANS.md` reduzido para estado atual + backlog ativo único; histórico isolado em `ARCHIVE.md` e procedimentos em `RUNBOOK.md`.
 - [2026-05-06 19:22] Endpoints de Financeiro/ROI adicionados em `/api/finance/*`; provider `stub` passou a gerar `revenue` para permitir cálculo de ROI no dev.
+- [2026-05-06 19:54] Estratégia de token (MVP): sem auth no frontend; token fica apenas no backend (env `META_ACCESS_TOKEN` ou `POST /api/meta/tokens`), com escopo opcional por `userId` (uuid) para multiusuário futuro. Refresh automático fora do escopo por enquanto (operar com token válido/long-lived e `expires_at` para invalidar).
+- [2026-05-06 19:54] Automação MVP via executor no backend (regras em `automation_rules`, logs em `automation_logs`) acionado manualmente por endpoint.
 
 ## Blockers & Risks
 

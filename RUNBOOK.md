@@ -52,6 +52,16 @@ Esta seção deve ser atualizada sempre que:
     - `curl http://localhost:3001/api/countries` → `{"ok":true,"countries":[...]}`
 - Nota: quando o backend roda com `node --watch`, se ocorrer erro de runtime ele pode ficar “parado aguardando mudanças”; usar `docker compose restart backend` para recuperar.
 
+[2026-05-06 19:54]
+
+- Meta sync (dev):
+  - Por padrão, o backend usa `stub` quando não há token; com token válido, tenta Meta Graph automaticamente.
+  - Token via env: exportar `META_ACCESS_TOKEN=...` no serviço `backend` (ex: docker compose `environment:`) ou via `POST /api/meta/tokens`.
+  - Forçar stub mesmo com token: `META_SYNC_PROVIDER=stub`.
+- Automação MVP (manual):
+  - Rodar executor (dry-run): `curl -X POST http://localhost:3001/api/automation/run -H 'Content-Type: application/json' -d '{"dryRun":true}'`
+  - Rodar executor (persistindo logs): `curl -X POST http://localhost:3001/api/automation/run -H 'Content-Type: application/json' -d '{}'`
+
 
 
 ## Concrete Steps
