@@ -54,7 +54,7 @@ Explica o objetivo e o resultado visível.
 
 ## Progress
 
-Última atualização: [2026-05-06 11:52]
+Última atualização: [2026-05-06 11:56]
 
 - [x] Entendimento inicial: o XLSX era usado como sistema manual do cliente.
 - [x] Entendimento inicial: o Figma representa a futura interface do sistema.
@@ -83,9 +83,13 @@ Explica o objetivo e o resultado visível.
 - [x] P5 — Completar tela Nova Campanha fiel ao design
 - [x] P6 — Adicionar mocks comportamentais
 
+### Fase 3 — Estrutura Full Stack (em andamento)
+
+- [x] P1 — Reorganizar estrutura do projeto (mover frontend para `frontend/`)
+
 ## Data Progress
 
-Última atualização: [2026-05-06 11:52]
+Última atualização: [2026-05-06 11:56]
 
 - [2026-05-04] Entendimento do projeto baseado no XLSX
 - [2026-05-04] Definição do escopo do frontend
@@ -108,11 +112,11 @@ Explica o objetivo e o resultado visível.
 - [x] [2026-05-05 14:57] P4 — Ajuste de escala tipográfica e espaçamentos globais (base 14px + refinamentos)
 - [x] [2026-05-05 14:57] P5 — Tela Nova Campanha completada conforme `screens/Desktop/nova-campanha/*` (steps 1–5 + sidebar)
 - [x] [2026-05-05 14:57] P6 — Mocks comportamentais (período no Financeiro + filtro/ordenação na Home + selects reais)
-- [ ] [2026-05-06 11:52] Fase 3 (P1) — Movido o frontend para `frontend/` e validado `npm run build` (commit pendente)
+- [x] [2026-05-06 11:52] Fase 3 (P1) — Movido o frontend para `frontend/` e validado `npm run build`
 
 ## Pending Work (Pendências)
 
-Última atualização: [2026-05-06 11:52]
+Última atualização: [2026-05-06 11:56]
 
 Esta seção lista tudo que ainda NÃO foi implementado,
 mesmo que não esteja explicitamente no Progress.
@@ -263,7 +267,7 @@ Tarefas:
 - [x] Mover o frontend atual da raiz para `frontend/`
 - [x] Ajustar caminhos, scripts e imports quebrados
 - [x] Garantir que o frontend continua buildando
-- [ ] Commit: `refactor: move frontend para diretorio dedicado`
+- [x] Commit: `refactor: move frontend para diretorio dedicado`
 
 #### [P2] Iniciar backend
 
