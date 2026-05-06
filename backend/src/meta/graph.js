@@ -54,30 +54,67 @@ function hashString(input) {
   return h >>> 0
 }
 
-async function fetchJson(url, { timeoutMs = 15000 } = {}) {
+function sleepMs(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function isRetryableStatus(status) {
+  return status === 408 || status === 425 || status === 429 || (status >= 500 && status <= 599)
+}
+
+async function fetchJson(url, { timeoutMs = 15000, retries = 2 } = {}) {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), timeoutMs)
   try {
-    const res = await fetch(url, { signal: controller.signal })
-    const text = await res.text()
-    let json = null
-    try {
-      json = text ? JSON.parse(text) : null
-    } catch {
-      json = null
+    let attempt = 0
+    while (attempt <= retries) {
+      attempt += 1
+      try {
+        const res = await fetch(url, { signal: controller.signal })
+        const text = await res.text()
+        let json = null
+        try {
+          json = text ? JSON.parse(text) : null
+        } catch {
+          json = null
+        }
+
+        if (!res.ok) {
+          const message =
+            json?.error?.message ??
+            `Meta Graph request failed (${res.status} ${res.statusText || 'Error'})`
+          const err = new Error(message)
+          err.status = res.status
+          err.details = json?.error ?? null
+
+          if (attempt <= retries && isRetryableStatus(res.status)) {
+            const base = 300 * 2 ** (attempt - 1)
+            const jitter = Math.floor(Math.random() * 200)
+            await sleepMs(base + jitter)
+            continue
+          }
+
+          throw err
+        }
+
+        return json
+      } catch (err) {
+        const status = err?.status
+        const aborted = err?.name === 'AbortError'
+        if (aborted) throw err
+
+        if (attempt <= retries && (typeof status === 'number' ? isRetryableStatus(status) : true)) {
+          const base = 300 * 2 ** (attempt - 1)
+          const jitter = Math.floor(Math.random() * 200)
+          await sleepMs(base + jitter)
+          continue
+        }
+
+        throw err
+      }
     }
 
-    if (!res.ok) {
-      const message =
-        json?.error?.message ??
-        `Meta Graph request failed (${res.status} ${res.statusText || 'Error'})`
-      const err = new Error(message)
-      err.status = res.status
-      err.details = json?.error ?? null
-      throw err
-    }
-
-    return json
+    throw new Error('Meta Graph request failed after retries')
   } finally {
     clearTimeout(timeout)
   }
@@ -90,7 +127,8 @@ export async function metaFetchCampaignInsightsDaily({
   until,
   fields = ['spend', 'impressions', 'clicks', 'cpc', 'cpm', 'ctr', 'date_start', 'date_stop']
 }) {
-  const isStub = process.env.META_SYNC_PROVIDER === 'stub' || !accessToken
+  const provider = process.env.META_SYNC_PROVIDER
+  const isStub = provider === 'stub' || (!accessToken && provider !== 'meta')
   if (isStub) {
     const days = eachDateInclusive(since, until)
     return days.map((date) => {
@@ -126,7 +164,7 @@ export async function metaFetchCampaignInsightsDaily({
     limit: 5000
   })
 
-  const json = await fetchJson(url)
+  const json = await fetchJson(url, { retries: 3 })
   const data = Array.isArray(json?.data) ? json.data : []
   return data
 }
