@@ -118,7 +118,7 @@ Regras:
 
 ## Decision Log (Ativo)
 
-Última atualização: [2026-05-06 20:00]
+Última atualização: [2026-05-06 20:04]
 
 Mantém apenas decisões ainda válidas para execução atual. Histórico completo: ver `ARCHIVE.md` em `## Decision Log (histórico completo)`.
 
@@ -132,6 +132,7 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 - [2026-05-06 19:54] Automação MVP via executor no backend (regras em `automation_rules`, logs em `automation_logs`) acionado manualmente por endpoint.
 - [2026-05-06 19:58] Integração externa Meta Graph com retry/backoff para erros transitórios (429/5xx/timeouts). `META_SYNC_PROVIDER=meta` pode forçar Graph e evitar fallback para `stub` quando não há token.
 - [2026-05-06 20:00] Endpoint `POST /api/meta/validate` adicionado para validar token e retornar `me` via Meta Graph (sem expor token no frontend).
+- [2026-05-06 20:04] UI de campanhas geradas permite vincular `meta_campaign_id` manualmente (além do atalho `stub-*`) para testar sync real sem alterar arquitetura.
 
 ## Blockers & Risks
 
