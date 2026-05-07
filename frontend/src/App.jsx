@@ -7,6 +7,7 @@ import NovaCampanha from "./pages/NovaCampanha.jsx";
 import RoiOntem from "./pages/RoiOntem.jsx";
 import CampanhaDetalhes from "./pages/CampanhaDetalhes.jsx";
 import CampanhaDuplicar from "./pages/CampanhaDuplicar.jsx";
+import MetaPausedTest from "./pages/MetaPausedTest.jsx";
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="/campanhas/:id/duplicar" element={<CampanhaDuplicar />} />
         <Route path="/financeiro" element={<Financeiro />} />
         <Route path="/configuracoes" element={<Configuracoes />} />
+        <Route path="/meta-test" element={<MetaPausedTest />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

@@ -15,3 +15,25 @@ export async function syncGeneratedCampaign(generatedCampaignId, { startDate, en
   return { ok: true, sync: data?.sync ?? null };
 }
 
+export async function createMetaCampaign({
+  generatedCampaignId,
+  metaAdAccountId,
+  objective,
+  metaUserId,
+  force,
+} = {}) {
+  const body = {
+    generatedCampaignId,
+    metaAdAccountId,
+    ...(objective ? { objective } : null),
+    ...(metaUserId ? { metaUserId } : null),
+    ...(force === true ? { force: true } : null),
+  };
+
+  const data = await apiPost("/api/meta/campaigns", body);
+  return {
+    ok: true,
+    metaCampaign: data?.meta_campaign ?? null,
+    generatedCampaign: data?.generated_campaign ?? null,
+  };
+}

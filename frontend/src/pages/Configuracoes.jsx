@@ -1,9 +1,11 @@
 import PageShell from "../components/PageShell.jsx";
 import { useEffect, useState } from "react";
 import { getCountries } from "../services/reference.js";
+import { useNavigate } from "react-router-dom";
 
 export default function Configuracoes() {
   const [countries, setCountries] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     let alive = true;
@@ -90,6 +92,20 @@ export default function Configuracoes() {
                 <div className="activeBadge">Ativo</div>
               </div>
             ))}
+          </div>
+        </section>
+
+        <section className="card settingsCard" aria-label="Meta (teste)" style={{ marginTop: 24 }}>
+          <div className="settingsCardInner">
+            <h2 className="settingsCardTitle">Meta (teste)</h2>
+            <p className="settingsCardDesc">
+              Página isolada para testar criação REAL de campanhas na Meta com status obrigatório <b>PAUSED</b>.
+            </p>
+            <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <button type="button" className="pillOutline" onClick={() => navigate("/meta-test")}>
+                Abrir teste Meta
+              </button>
+            </div>
           </div>
         </section>
       </div>
