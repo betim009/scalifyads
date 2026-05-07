@@ -117,6 +117,61 @@ Esta seção deve ser atualizada sempre que:
     
     `GET /{meta_campaign_id}?fields=id,name,status,effective_status,objective`
 
+  - Implementação no projeto (backend):
+
+    - Criar campanha (persistindo no Postgres):
+
+      `POST /api/meta/campaigns`
+
+      Body mínimo:
+
+      ```json
+      {
+        "generatedCampaignId": "<uuid>",
+        "metaAdAccountId": "act_<digits>",
+        "objective": "OUTCOME_SALES"
+      }
+      ```
+
+      Notas:
+
+      - `objective` só é obrigatório quando a campanha não tiver `objective_key` definido no banco.
+      - O backend força `status=PAUSED` sempre (modo seguro).
+
+    - Consultar campanha no Graph (via backend):
+
+      `GET /api/meta/campaigns/{meta_campaign_id}`
+
+  - Fluxo operacional real (sugestão):
+
+    1. Subir stack (com DB):
+
+       `docker compose up -d`
+
+    2. Rodar migrations + seed (no backend):
+
+       `docker compose exec backend npm run migrate`
+       `docker compose exec backend npm run seed`
+
+    3. Configurar token (não colocar token no frontend):
+
+       - Via env no serviço `backend`: `META_ACCESS_TOKEN=...`
+       - Ou via API: `POST /api/meta/tokens`
+
+    4. Gerar campanhas por país e pegar um `generated_campaigns.id` (UI Detalhes da Campanha).
+
+    5. Criar campanha real (sempre `PAUSED`):
+
+       `curl -X POST http://localhost:3001/api/meta/campaigns -H 'Content-Type: application/json' -d '{"generatedCampaignId":"<uuid>","metaAdAccountId":"act_259174718403969","objective":"OUTCOME_TRAFFIC"}'`
+
+    6. Consultar campanha criada (backend → Graph):
+
+       `curl http://localhost:3001/api/meta/campaigns/{meta_campaign_id}`
+
+    7. Verificar persistência no DB (exemplo):
+
+       `SELECT meta_campaign_id, meta_ad_account_id, meta_user_id, meta_status, meta_effective_status, meta_objective FROM generated_campaigns WHERE id = '<uuid>';`
+
 
 ## Concrete Steps
 

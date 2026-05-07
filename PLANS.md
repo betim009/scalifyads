@@ -49,7 +49,7 @@ Construir o **Campaign Builder**, uma aplicação web que substitui a planilha o
 
 ## Snapshot (Estado Atual)
 
-Última atualização: [2026-05-07 13:54]
+Última atualização: [2026-05-07 14:03]
 
 O que está funcional hoje:
 
@@ -58,7 +58,7 @@ O que está funcional hoje:
 - Banco Postgres modelado via migrations SQL + seed idempotente: ver `backend/migrations/` e `backend/src/seed.js`.
 - Stack Docker definida (db + backend + frontend): ver `docker-compose.yml` e `README.md`.
 - Sincronização de métricas definida como sync manual (`/api/meta/sync/*`) com provider Meta Graph e fallback `stub`: ver `backend/src/routes/meta.js`.
-- Criação real de campanhas Meta Ads validada em ambiente de desenvolvimento via Meta Marketing API (`status: PAUSED`), com persistência futura planejada de `meta_campaign_id`.
+- Criação real de campanhas Meta Ads via backend (`POST /api/meta/campaigns`) implementada com persistência em `generated_campaigns` (campos `meta_*`) e regra obrigatória `status: PAUSED`.
 
 Nota importante:
 
@@ -75,7 +75,7 @@ Nota importante:
 
 ## Arquitetura (Snapshot)
 
-Última atualização: [2026-05-07 13:54]
+Última atualização: [2026-05-07 14:03]
 
 - Frontend: React + Vite + React Router em `frontend/` (scripts `dev/build/preview`).
 - Backend: Node (ESM) + Express em `backend/` (scripts `dev/migrate/seed/start`).
@@ -84,6 +84,7 @@ Nota importante:
 - Meta Campaign Create:
   `POST /api/meta/campaigns`
   - Regra operacional obrigatória (dev): toda campanha criada deve nascer como `status: PAUSED`.
+  - Implementação: service/provider em `backend/src/meta/*` (routes não acessam Meta diretamente).
 
 Contratos atuais (mínimo):
 
@@ -224,7 +225,7 @@ Critérios de aceite:
 
 ### P2 — Criação real de campanhas Meta (modo seguro)
 
-Última atualização: [2026-05-07 13:54]
+Última atualização: [2026-05-07 14:03]
 
 Objetivo:
 Substituir a simulação de criação de campanhas pela criação real via Meta Marketing API, mantendo segurança operacional durante o desenvolvimento.
@@ -282,12 +283,20 @@ Critérios de aceite:
 * Frontend exibe dados reais
 * Nenhuma campanha ativa automaticamente
 
+Subtarefas (execução incremental):
+
+- [x] Migração + persistência de campos `meta_*` em `generated_campaigns`.
+- [x] Backend: provider/service + endpoint `POST /api/meta/campaigns` (forçando `status: PAUSED`).
+- [x] Backend: endpoint de consulta `GET /api/meta/campaigns/:id` (via Graph).
+- [x] Frontend: exibir indicador `STUB`/`REAL`, `meta_campaign_id` e status real (`meta_status`/`meta_effective_status`).
+- [ ] Validar com token real em dev (criar + consultar + persistir + refletir no UI).
+
 
 
 
 ## Decision Log (Ativo)
 
-Última atualização: [2026-05-07 13:54]
+Última atualização: [2026-05-07 14:03]
 
 Mantém apenas decisões ainda válidas para execução atual. Histórico completo: ver `ARCHIVE.md` em `## Decision Log (histórico completo)`.
 
@@ -306,15 +315,38 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 - [2026-05-06 20:08] `.env.example` adicionado para padronizar configuração local do Meta sync via Docker Compose (sem commitar `.env` real).
 - [2026-05-06 20:13] `revenue_cents` pode vir do Graph Insights via `action_values` (purchase/omni_purchase) quando disponível; mantém fallback `stub` para dev.
 - [2026-05-07 13:54] Criação real de campanhas Meta Ads validada em ambiente de desenvolvimento. Durante o desenvolvimento, toda campanha criada via API deve nascer obrigatoriamente com `status: PAUSED` para evitar veiculação acidental.
+- [2026-05-07 14:03] Criação real de campanhas implementada via `POST /api/meta/campaigns` + persistência em `generated_campaigns` (`meta_campaign_id`, `meta_ad_account_id`, `meta_user_id`, `meta_status`, `meta_effective_status`, `meta_objective`); UI passa a exibir `STUB`/`REAL` e status Meta.
 
 ## Blockers & Risks
 
-Última atualização: [2026-05-07 13:54]
+Última atualização: [2026-05-07 14:03]
 
 - Docker stack validado neste ambiente (ainda depende do daemon estar rodando). Ver evidência no `RUNBOOK.md`.
 - Frontend usa backend parcialmente (países/campanhas/financeiro); ainda há telas baseadas em mocks (ex: ROI) e risco de divergência até completar a integração.
 - Tokens Meta: riscos de segurança/expiração (refresh fora do escopo por enquanto; provider `stub` existe para desenvolvimento).
 - Risco operacional: campanhas reais agora podem ser criadas via Meta Marketing API. Durante desenvolvimento, toda criação deve permanecer obrigatoriamente com `status: PAUSED`.
+- Risco de execução: `objective` pode estar ausente (UI ainda não define `objective_key` por padrão); o endpoint exige `objective` via body quando não houver objetivo no banco.
+
+## Progress (sessão atual)
+
+Última atualização: [2026-05-07 14:03]
+
+- Migração adicionada para persistir campos `meta_*` em `generated_campaigns`.
+- Backend implementado para criação real de campanha (`POST /api/meta/campaigns`) com regra obrigatória `status: PAUSED` e persistência.
+- Backend implementado para consulta (`GET /api/meta/campaigns/:id`).
+- Frontend atualizado para exibir `STUB`/`REAL`, `meta_campaign_id` e status real da Meta.
+
+## Surprises & Discoveries
+
+Última atualização: [2026-05-07 14:03]
+
+- Para criação de campanha via Marketing API, o payload inclui `special_ad_categories` (mesmo vazio) e deve sempre forçar `status=PAUSED` no backend em dev.
+
+## Outcomes & Retrospective
+
+Última atualização: [2026-05-07 14:03]
+
+- O projeto deixa de ser apenas simulação para criação de campanhas: existe caminho real end-to-end via backend, mantendo segurança operacional com `PAUSED`.
 
 ## Referências (histórico e legado)
 
