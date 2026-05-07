@@ -172,6 +172,20 @@ Esta seção deve ser atualizada sempre que:
 
        `SELECT meta_campaign_id, meta_ad_account_id, meta_user_id, meta_status, meta_effective_status, meta_objective FROM generated_campaigns WHERE id = '<uuid>';`
 
+[2026-05-07 14:49]
+
+- UI (teste) para criação REAL `PAUSED`:
+
+  - Acesso: Configurações → “Meta (teste)” → “Abrir teste Meta” (`/meta-test`)
+  - Pré-requisitos:
+    - DB habilitado (Docker ou `DATABASE_URL` local).
+    - Token no backend (`META_ACCESS_TOKEN` ou salvo via `POST /api/meta/tokens`).
+    - Existir ao menos 1 `generated_campaigns` (UI: criar campanha → “Gerar por país”).
+  - Comportamento esperado:
+    - Ao clicar “Criar REAL (PAUSED)” em uma linha, o frontend chama o backend (`POST /api/meta/campaigns`).
+    - O backend força `status=PAUSED` e persiste `meta_campaign_id` + `meta_status/meta_effective_status`.
+    - A campanha aparece como pausada no Ads Manager.
+
 
 ## Concrete Steps
 

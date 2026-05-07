@@ -130,6 +130,38 @@ Regras:
 Objetivo:
 Eliminar inconsistências entre frontend mockado e backend real, fortalecendo a confiabilidade do dashboard financeiro e ROI.
 
+
+### P0 — Conectar criação real Meta PAUSED em página de teste
+
+Última atualização: [2026-05-07 14:49]
+
+Objetivo:
+Habilitar, via UI, um fluxo isolado e seguro para criação REAL de campanhas na Meta via backend, garantindo que toda campanha nasça como `PAUSED`.
+
+Regras:
+
+- NÃO substituir o fluxo principal atual.
+- Criar página isolada de teste.
+- Não colocar token no frontend (token apenas no backend via env ou `/api/meta/tokens`).
+- Toda criação real deve ser `PAUSED` (forçado no backend).
+
+Backlog (execução incremental):
+
+- [x] Criar página isolada `frontend/src/pages/MetaPausedTest.jsx`.
+- [x] Criar rota isolada `/meta-test`.
+- [x] Adicionar ponto de navegação em Configurações (sem mexer no fluxo principal).
+- [x] Criar service no frontend para `POST /api/meta/campaigns` (sem token no frontend).
+- [x] UI: loading/error/success states e refresh.
+- [x] UI: listar `generated_campaigns` e permitir criar REAL (PAUSED) a partir de um `generated_campaign_id`.
+- [x] UI: listar campanhas REAL persistidas (via `generated_campaigns.meta_campaign_id`) e exibir `meta_status/meta_effective_status`.
+- [x] Backend: garantir `status=PAUSED` obrigatório na criação real.
+- [x] Backend: enviar `is_adset_budget_sharing_enabled=false` na criação real.
+- [x] Corrigir `POST /api/generated-campaigns/:id/mark-published` para não setar `ACTIVE` indevidamente (apenas vincula `meta_campaign_id`).
+- [ ] Validar com token real via UI (evidência: campanha aparece PAUSED no Ads Manager).
+- [ ] (Opcional) Adicionar botão “atualizar status” (Graph) para REAL persistidas, sem expor token.
+
+
+
 #### [x] Remover mock da página Mensal (`frontend/src/pages/Mensal.jsx`)
 
 Objetivo:
@@ -316,6 +348,9 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 - [2026-05-06 20:13] `revenue_cents` pode vir do Graph Insights via `action_values` (purchase/omni_purchase) quando disponível; mantém fallback `stub` para dev.
 - [2026-05-07 13:54] Criação real de campanhas Meta Ads validada em ambiente de desenvolvimento. Durante o desenvolvimento, toda campanha criada via API deve nascer obrigatoriamente com `status: PAUSED` para evitar veiculação acidental.
 - [2026-05-07 14:03] Criação real de campanhas implementada via `POST /api/meta/campaigns` + persistência em `generated_campaigns` (`meta_campaign_id`, `meta_ad_account_id`, `meta_user_id`, `meta_status`, `meta_effective_status`, `meta_objective`); UI passa a exibir `STUB`/`REAL` e status Meta.
+- [2026-05-07 14:49] `POST /api/generated-campaigns/:id/mark-published` deixa de setar `ACTIVE` automaticamente (evitar estado local indevido); passa a apenas vincular `meta_campaign_id`.
+- [2026-05-07] Decisão: validar a criação real de campanhas Meta em uma página de teste isolada antes de integrar ao fluxo principal.
+  Motivo: reduzir risco, manter campanhas sempre pausadas e evitar quebrar o fluxo atual baseado em campanhas locais/simuladas.
 
 ## Blockers & Risks
 
@@ -326,15 +361,18 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 - Tokens Meta: riscos de segurança/expiração (refresh fora do escopo por enquanto; provider `stub` existe para desenvolvimento).
 - Risco operacional: campanhas reais agora podem ser criadas via Meta Marketing API. Durante desenvolvimento, toda criação deve permanecer obrigatoriamente com `status: PAUSED`.
 - Risco de execução: `objective` pode estar ausente (UI ainda não define `objective_key` por padrão); o endpoint exige `objective` via body quando não houver objetivo no banco.
+- Criação real de campanhas Meta deve permanecer sempre com `status: PAUSED` nesta fase para evitar veiculação ou gasto acidental.
 
 ## Progress (sessão atual)
 
-Última atualização: [2026-05-07 14:03]
+Última atualização: [2026-05-07 14:49]
 
 - Migração adicionada para persistir campos `meta_*` em `generated_campaigns`.
 - Backend implementado para criação real de campanha (`POST /api/meta/campaigns`) com regra obrigatória `status: PAUSED` e persistência.
 - Backend implementado para consulta (`GET /api/meta/campaigns/:id`).
 - Frontend atualizado para exibir `STUB`/`REAL`, `meta_campaign_id` e status real da Meta.
+- Página isolada adicionada para testar criação REAL via UI: `/meta-test` (sem token no frontend).
+- `mark-published` corrigido para não alterar status local indevidamente.
 
 ## Surprises & Discoveries
 
