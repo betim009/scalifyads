@@ -120,7 +120,7 @@ export function generatedCampaignsRouter() {
       const { rows, rowCount } = await pool.query(
         `
           UPDATE generated_campaigns
-          SET meta_campaign_id = $2, status = 'ACTIVE'
+          SET meta_campaign_id = $2
           WHERE id = $1
           RETURNING
             id,
