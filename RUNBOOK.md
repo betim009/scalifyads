@@ -186,6 +186,17 @@ Esta seção deve ser atualizada sempre que:
     - O backend força `status=PAUSED` e persiste `meta_campaign_id` + `meta_status/meta_effective_status`.
     - A campanha aparece como pausada no Ads Manager.
 
+[2026-05-07 15:08]
+
+- Listar campanhas PAUSED já existentes no Ads Manager (via UI de teste):
+
+  - Endpoint (backend → Meta):
+    - `GET /api/meta/ad-accounts/:id/campaigns?pausedOnly=true&limit=100`
+  - UI:
+    - Em `/meta-test`, preencher `act_<digits>` e clicar “Listar PAUSED na Meta”.
+  - Observação:
+    - Essa lista vem direto da Meta e não depende de `generated_campaigns` no banco.
+
 
 ## Concrete Steps
 

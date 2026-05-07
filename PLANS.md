@@ -133,7 +133,7 @@ Eliminar inconsistências entre frontend mockado e backend real, fortalecendo a 
 
 ### P0 — Conectar criação real Meta PAUSED em página de teste
 
-Última atualização: [2026-05-07 14:49]
+Última atualização: [2026-05-07 15:08]
 
 Objetivo:
 Habilitar, via UI, um fluxo isolado e seguro para criação REAL de campanhas na Meta via backend, garantindo que toda campanha nasça como `PAUSED`.
@@ -157,6 +157,8 @@ Backlog (execução incremental):
 - [x] Backend: garantir `status=PAUSED` obrigatório na criação real.
 - [x] Backend: enviar `is_adset_budget_sharing_enabled=false` na criação real.
 - [x] Corrigir `POST /api/generated-campaigns/:id/mark-published` para não setar `ACTIVE` indevidamente (apenas vincula `meta_campaign_id`).
+- [x] Backend: endpoint para listar campanhas da Meta por Ad Account (PAUSED) sem token no frontend.
+- [x] UI: listar campanhas PAUSED existentes no Ads Manager via backend (não depende do banco local).
 - [ ] Validar com token real via UI (evidência: campanha aparece PAUSED no Ads Manager).
 - [ ] (Opcional) Adicionar botão “atualizar status” (Graph) para REAL persistidas, sem expor token.
 
@@ -349,6 +351,7 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 - [2026-05-07 13:54] Criação real de campanhas Meta Ads validada em ambiente de desenvolvimento. Durante o desenvolvimento, toda campanha criada via API deve nascer obrigatoriamente com `status: PAUSED` para evitar veiculação acidental.
 - [2026-05-07 14:03] Criação real de campanhas implementada via `POST /api/meta/campaigns` + persistência em `generated_campaigns` (`meta_campaign_id`, `meta_ad_account_id`, `meta_user_id`, `meta_status`, `meta_effective_status`, `meta_objective`); UI passa a exibir `STUB`/`REAL` e status Meta.
 - [2026-05-07 14:49] `POST /api/generated-campaigns/:id/mark-published` deixa de setar `ACTIVE` automaticamente (evitar estado local indevido); passa a apenas vincular `meta_campaign_id`.
+- [2026-05-07 15:08] Endpoint `GET /api/meta/ad-accounts/:id/campaigns` adicionado para listar campanhas PAUSED diretamente da Meta via backend (token nunca vai ao frontend); `/meta-test` passou a exibir esta lista.
 - [2026-05-07] Decisão: validar a criação real de campanhas Meta em uma página de teste isolada antes de integrar ao fluxo principal.
   Motivo: reduzir risco, manter campanhas sempre pausadas e evitar quebrar o fluxo atual baseado em campanhas locais/simuladas.
 
