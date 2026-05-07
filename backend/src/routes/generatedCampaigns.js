@@ -33,6 +33,11 @@ export function generatedCampaignsRouter() {
             gc.campaign_id,
             gc.country_code,
             gc.meta_campaign_id,
+            gc.meta_ad_account_id,
+            gc.meta_user_id,
+            gc.meta_status,
+            gc.meta_effective_status,
+            gc.meta_objective,
             gc.name,
             gc.status,
             gc.created_at
@@ -70,7 +75,19 @@ export function generatedCampaignsRouter() {
           UPDATE generated_campaigns
           SET status = $2
           WHERE id = $1
-          RETURNING id, campaign_id, country_code, meta_campaign_id, name, status, created_at
+          RETURNING
+            id,
+            campaign_id,
+            country_code,
+            meta_campaign_id,
+            meta_ad_account_id,
+            meta_user_id,
+            meta_status,
+            meta_effective_status,
+            meta_objective,
+            name,
+            status,
+            created_at
         `,
         [req.params.id, status]
       )
@@ -105,7 +122,19 @@ export function generatedCampaignsRouter() {
           UPDATE generated_campaigns
           SET meta_campaign_id = $2, status = 'ACTIVE'
           WHERE id = $1
-          RETURNING id, campaign_id, country_code, meta_campaign_id, name, status, created_at
+          RETURNING
+            id,
+            campaign_id,
+            country_code,
+            meta_campaign_id,
+            meta_ad_account_id,
+            meta_user_id,
+            meta_status,
+            meta_effective_status,
+            meta_objective,
+            name,
+            status,
+            created_at
         `,
         [req.params.id, metaCampaignId.trim()]
       )
