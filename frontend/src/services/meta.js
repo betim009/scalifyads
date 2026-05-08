@@ -78,6 +78,27 @@ export async function listMetaAdAccountCampaigns({ metaAdAccountId, limit = 50, 
   return { ok: true, metaCampaigns: list };
 }
 
+export async function getMetaStatus() {
+  const data = await apiGet("/api/meta/status");
+  return {
+    ok: true,
+    provider: data?.provider ?? null,
+    graphVersion: data?.graph_version ?? null,
+    hasAccessToken: Boolean(data?.has_access_token),
+  };
+}
+
+export async function validateMetaToken() {
+  const data = await apiPost("/api/meta/validate", {});
+  return { ok: true, me: data?.me ?? null };
+}
+
+export async function getMetaCampaign(metaCampaignId) {
+  const id = String(metaCampaignId || "").trim();
+  const data = await apiGet(`/api/meta/campaigns/${encodeURIComponent(id)}`);
+  return { ok: true, metaCampaign: data?.meta_campaign ?? null };
+}
+
 export async function createMetaAdSet(payload) {
   const data = await apiPost("/api/meta/adsets", payload ?? {});
   return { ok: true, metaAdSet: data?.meta_adset ?? null };
