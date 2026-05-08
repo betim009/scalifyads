@@ -847,8 +847,16 @@ export default function MetaPausedTest() {
               {localGenerated.map((gc) => {
                 const metaId = gc.meta_campaign_id || "";
                 const mode = metaId && String(metaId).startsWith("stub-") ? "STUB" : metaId ? "REAL" : "—";
+                const isFocused = createdGeneratedCampaignId && gc.id === createdGeneratedCampaignId;
                 return (
-                  <tr key={gc.id}>
+                  <tr
+                    key={gc.id}
+                    style={
+                      isFocused
+                        ? { background: "#f0fdf4", outline: "1px solid #bbf7d0", outlineOffset: -1 }
+                        : undefined
+                    }
+                  >
                     <td className="muted" style={{ fontWeight: 800 }}>
                       {gc.created_at ? String(gc.created_at).slice(0, 19).replace("T", " ") : "—"}
                     </td>
