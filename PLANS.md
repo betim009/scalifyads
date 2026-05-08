@@ -124,6 +124,15 @@ Fontes únicas (para reduzir drift):
 - Regras operacionais Meta (PAUSED obrigatório, token nunca no frontend, validações/curl/evidências): `RUNBOOK.md` em `## PLAYBOOKS ATUAIS`.
 - Histórico completo (worklogs, decisões antigas, execuções concluídas): `ARCHIVE.md`.
 
+## Operational Priorities
+
+Última atualização: [2026-05-08 10:46]
+
+- Manter `/meta-test` como fluxo prioritário e estável (não quebrar o lab).
+- Segurança Meta: toda criação REAL permanece obrigatoriamente `PAUSED` e token nunca vai ao frontend.
+- Preservar fallback `STUB` e sinalização explícita de `REAL/STUB/FALLBACK` na UI para evitar “dado falso”.
+- Mudanças pequenas e verificáveis (evidência via curl/DB quando aplicável) com commit incremental + timestamps.
+
 ## Backlog Ativo (ÚNICO)
 
 Última atualização: [2026-05-08 10:43]
@@ -229,7 +238,7 @@ Histórico/itens concluídos:
 
 ## Decision Log (Ativo)
 
-Última atualização: [2026-05-08 10:43]
+Última atualização: [2026-05-08 10:46]
 
 Mantém apenas decisões ainda válidas para execução atual. Histórico completo: ver `ARCHIVE.md` em `## Decision Log (histórico completo)`.
 
@@ -264,22 +273,24 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 - [2026-05-07 22:44] Decisão: criação incremental de AdSet/Ad via `POST /api/meta/adsets` e `POST /api/meta/ads` (sempre `PAUSED`), persistindo `meta_adset_id/meta_ad_id` e status em `generated_campaigns`. `creativeId` é obrigatório apenas em REAL.
 - [2026-05-08 10:43] Decisão: frontend não envia `accessToken` em nenhuma chamada HTTP; token permanece exclusivamente no backend (env/DB).
 - [2026-05-08 10:43] Decisão: sync de métricas tolera falhas do Meta Graph com fallback `stub` quando `META_SYNC_PROVIDER` não for `meta` (retorna `fallback` no payload); para fail-fast, usar `META_SYNC_PROVIDER=meta`.
+- [2026-05-08 10:46] Decisão: adicionar `Operational Priorities` no `PLANS.md` para orientar execução contínua e reduzir drift.
+- [2026-05-08 10:46] Decisão: separar `Blockers` de `Risks` em seções distintas para rastreabilidade e priorização mais claras.
 
-## Blockers & Risks
+## Blockers
 
-Última atualização: [2026-05-07 14:03]
+Última atualização: [2026-05-08 10:46]
 
-- Docker stack validado neste ambiente (ainda depende do daemon estar rodando). Ver evidência no `RUNBOOK.md`.
+- Execução com DB/stack depende do daemon do Docker estar rodando (`docker compose up -d`). Ver `RUNBOOK.md`.
+
+## Risks
+
+Última atualização: [2026-05-08 10:46]
+
 - Frontend usa backend parcialmente (países/campanhas/financeiro); ainda há telas baseadas em mocks (ex: ROI) e risco de divergência até completar a integração.
 - Tokens Meta: riscos de segurança/expiração (refresh fora do escopo por enquanto; provider `stub` existe para desenvolvimento).
-- Risco operacional: campanhas reais agora podem ser criadas via Meta Marketing API. Durante desenvolvimento, toda criação deve permanecer obrigatoriamente com `status: PAUSED`.
+- Risco operacional: campanhas reais agora podem ser criadas via Meta Marketing API; durante desenvolvimento, toda criação deve permanecer obrigatoriamente com `status: PAUSED`.
 - Risco de execução: `objective` pode estar ausente (UI ainda não define `objective_key` por padrão); o endpoint exige `objective` via body quando não houver objetivo no banco.
-- Criação real de campanhas Meta deve permanecer sempre com `status: PAUSED` nesta fase para evitar veiculação ou gasto acidental.
-- O formulário atual "Nova Campanha" concentra responsabilidades de:
-  - Campaign
-  - AdSet
-  - Ad
-  em um único fluxo, aumentando complexidade operacional e de manutenção.
+- O formulário atual "Nova Campanha" concentra responsabilidades de Campaign/AdSet/Ad em um único fluxo, aumentando complexidade operacional e de manutenção.
 
 ## Referências (histórico e legado)
 
