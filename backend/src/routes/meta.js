@@ -550,6 +550,12 @@ export function metaRouter() {
         return jsonError(res, 400, 'Missing optimizationGoal')
       }
 
+      const bidStrategyRaw = normalizeNonEmptyString(req.body?.bidStrategy)
+      const bidStrategy = bidStrategyRaw ?? null
+      const bidAmountRaw = req.body?.bidAmount
+      const bidAmount = bidAmountRaw === undefined || bidAmountRaw === null ? null : Number(bidAmountRaw)
+      const bidConstraints = req.body?.bidConstraints ?? null
+
       const modeRaw = normalizeNonEmptyString(req.body?.mode)
       const mode = modeRaw === 'STUB' ? 'STUB' : 'REAL'
 
@@ -608,6 +614,9 @@ export function metaRouter() {
                 dailyBudgetCents: Math.trunc(dailyBudgetCents),
                 billingEvent,
                 optimizationGoal,
+                bidStrategy: bidStrategy ?? 'LOWEST_COST_WITHOUT_CAP',
+                bidAmount,
+                bidConstraints,
                 accessToken
               })
             : metaCreateAdSetStub({ stubId: `stub-adset-${generatedCampaignId}`, name, campaign_id: metaCampaignId })

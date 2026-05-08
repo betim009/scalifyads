@@ -160,7 +160,10 @@ export async function metaCreateAdSet({
   billingEvent,
   optimizationGoal,
   accessToken,
-  status = 'PAUSED'
+  status = 'PAUSED',
+  bidStrategy,
+  bidAmount,
+  bidConstraints
 } = {}) {
   const act = normalizeMetaAdAccountId(metaAdAccountId)
   if (!act) {
@@ -221,6 +224,11 @@ export async function metaCreateAdSet({
   const forcedStatus = 'PAUSED'
   const targeting = { geo_locations: { countries: [cc] } }
 
+  const bs = normalizeNonEmptyString(bidStrategy)
+  const ba = bidAmount === undefined || bidAmount === null ? null : normalizePositiveInt(bidAmount)
+  const bcRaw = bidConstraints ?? null
+  const bc = bcRaw && typeof bcRaw === 'object' ? bcRaw : null
+
   const params = new URLSearchParams()
   params.set('access_token', token)
   params.set('name', adSetName)
@@ -230,6 +238,9 @@ export async function metaCreateAdSet({
   params.set('optimization_goal', og)
   params.set('targeting', JSON.stringify(targeting))
   params.set('status', forcedStatus)
+  if (bs) params.set('bid_strategy', bs)
+  if (ba) params.set('bid_amount', String(ba))
+  if (bc) params.set('bid_constraints', JSON.stringify(bc))
 
   const json = await fetchJson(buildUrl(`${act}/adsets`), { method: 'POST', body: params, retries: 3 })
   const id = normalizeNonEmptyString(json?.id)
