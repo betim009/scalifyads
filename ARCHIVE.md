@@ -7,9 +7,681 @@ Para execução atual:
 - Backlog e estado atual: `PLANS.md`
 - Procedimentos e comandos: `RUNBOOK.md`
 
+Última atualização: [2026-05-08 08:48]
+
+## Governança do arquivo (HISTÓRICO PURO)
+
+Última atualização: [2026-05-08 08:48]
+
+Regras (para evitar backlog fantasma e drift):
+
+- Este arquivo contém **histórico**. Não é backlog ativo.
+- Qualquer item com `[ ]` aqui deve ser tratado como **SNAPSHOT DE ÉPOCA / OBSOLETO** (não executar).
+- Backlog ativo único: `PLANS.md` em `## Backlog Ativo (ÚNICO)`.
+- Runbook operacional atual: `RUNBOOK.md` em `## PLAYBOOKS ATUAIS`.
+
+Conteúdo movido para cá em [2026-05-08 08:48]:
+
+- Logs e seções “diário” que estavam em `PLANS.md` (Progress/Surprises/Outcomes).
+- Bootstrap/checklists históricos que estavam em `RUNBOOK.md` (agora ficam sob `## RUNBOOK (legado) — não executar`).
+
+## Integração Meta — histórico consolidado
+
+Última atualização: [2026-05-08 08:48]
+
+Este bloco preserva histórico consolidado da primeira integração REAL (Campaign/AdSet/Ad + `/meta-test`) e sua evolução.
+
+Snapshots detalhados (incluindo listas antigas com `[x]/[ ]`): ver `## Backlog (concluído) — snapshots de execução`.
+
+## Backlog (concluído) — snapshots de execução
+
+Última atualização: [2026-05-08 08:48]
+
+> SNAPSHOT DE ÉPOCA — NÃO USAR COMO BACKLOG ATIVO.  
+> Fonte de verdade do backlog atual: `PLANS.md`.
+
+### Snapshot — `PLANS.md` / `## Backlog Ativo (ÚNICO)` (2026-05-07)
+
+Última atualização: [2026-05-07 09:03]
+
+Regras:
+
+- Esta é a ÚNICA fonte oficial do backlog ativo.
+- Backlog concluído e worklogs históricos devem ficar em `ARCHIVE.md`.
+- Procedimentos/como rodar/testar devem ficar em `RUNBOOK.md`.
+- Ao concluir um item: marcar como `[x]`, registrar decisão se necessário em `Decision Log (Ativo)` e criar commit incremental.
+
+### P0 — Integração Full Stack — Integração Full Stack (próximos passos reais)
+
+- [x] Desbloquear execução com Docker e registrar evidência (stack sobe + smoke test). (ver `RUNBOOK.md`)
+- [x] Conectar o frontend ao backend via `VITE_BACKEND_URL` (client HTTP + primeira tela lendo dados reais).
+- [x] Trocar dados “de referência” (países/campanhas) de mocks → API (mantendo fallback local quando DB não estiver disponível).
+- [x] Fechar no frontend o fluxo operacional mínimo: criar campanha → gerar por país → marcar como publicada → listar geradas.
+- [x] Criar endpoints de leitura/aggregate para Financeiro/ROI com base em `campaign_metrics` (mesmo que com provider `stub`).
+
+### P1 — Meta Ads real + Automação — Meta Ads real + Automação (quando Fase 5 estabilizar)
+
+- [x] Definir estratégia de autenticação/token (escopo por usuário, expiração/refresh) e registrar decisão.
+- [x] Substituir gradualmente `stub` por sync real da Meta (mantendo `stub` para dev).
+  - [x] `POST /api/meta/validate` para validar token (Graph `/me`)
+  - [x] `GET /api/meta/status` para diagnóstico (provider + token presente)
+  - [x] Retry/backoff + paginação (`paging.next`) no fetch de insights
+  - [x] Extrair `revenue_cents` quando disponível (ex: `action_values.purchase` / `omni_purchase`)
+- [x] Definir 1–2 regras MVP de automação e implementar executor + logs.
+
+### P0 — Consolidar dados reais (remover divergência mock vs API)
+
+Última atualização: [2026-05-07 09:14]
+
+Objetivo:
+Eliminar inconsistências entre frontend mockado e backend real, fortalecendo a confiabilidade do dashboard financeiro e ROI.
+
+
+### P0 — Conectar criação real Meta PAUSED em página de teste
+
+Última atualização: [2026-05-07 15:08]
+
+Objetivo:
+Habilitar, via UI, um fluxo isolado e seguro para criação REAL de campanhas na Meta via backend, garantindo que toda campanha nasça como `PAUSED`.
+
+Regras:
+
+- NÃO substituir o fluxo principal atual.
+- Criar página isolada de teste.
+- Não colocar token no frontend (token apenas no backend via env ou `/api/meta/tokens`).
+- Toda criação real deve ser `PAUSED` (forçado no backend).
+
+Backlog (execução incremental):
+
+- [x] Criar página isolada `frontend/src/pages/MetaPausedTest.jsx`.
+- [x] Criar rota isolada `/meta-test`.
+- [x] Adicionar ponto de navegação em Configurações (sem mexer no fluxo principal).
+- [x] Criar service no frontend para `POST /api/meta/campaigns` (sem token no frontend).
+- [x] UI: loading/error/success states e refresh.
+- [x] UI: listar `generated_campaigns` e permitir criar REAL (PAUSED) a partir de um `generated_campaign_id`.
+- [x] UI: listar campanhas REAL persistidas (via `generated_campaigns.meta_campaign_id`) e exibir `meta_status/meta_effective_status`.
+- [x] Backend: garantir `status=PAUSED` obrigatório na criação real.
+- [x] Backend: enviar `is_adset_budget_sharing_enabled=false` na criação real.
+- [x] Corrigir `POST /api/generated-campaigns/:id/mark-published` para não setar `ACTIVE` indevidamente (apenas vincula `meta_campaign_id`).
+- [x] Backend: endpoint para listar campanhas da Meta por Ad Account (PAUSED) sem token no frontend.
+- [x] UI: listar campanhas PAUSED existentes no Ads Manager via backend (não depende do banco local).
+- [ ] Validar com token real via UI (evidência: campanha aparece PAUSED no Ads Manager).
+- [ ] (Opcional) Adicionar botão “atualizar status” (Graph) para REAL persistidas, sem expor token.
+
+
+
+#### [x] Remover mock da página Mensal (`frontend/src/pages/Mensal.jsx`)
+
+Objetivo:
+Substituir `mockMonthly` por dados reais vindos do backend.
+
+Escopo:
+
+* Criar endpoint:
+
+  * `GET /api/finance/monthly?month=YYYY-MM`
+* Retornar:
+
+  * `totals`
+  * `daily`
+  * `bestDay`
+  * `worstDay`
+  * `roiSeries`
+* Utilizar `campaign_metrics` como fonte principal
+* Manter compatibilidade com provider `stub`
+* Criar loading/error states
+* Preservar layout atual
+
+Critérios de aceite:
+
+* Página renderiza sem `mockMonthly`
+* Troca de mês funciona corretamente
+* Tela possui loading/error states
+* Build frontend/backend funcionando
+
+#### [x] Remover mock da página ROI Ontem (`frontend/src/pages/RoiOntem.jsx`)
+
+Objetivo:
+Substituir `mockRoiOntem` por dados reais do backend baseados em `campaign_metrics`.
+
+Escopo:
+
+* Criar endpoint:
+
+  * `GET /api/finance/roi-d1?date=YYYY-MM-DD`
+* Retornar:
+
+  * `summary`
+  * `rows`
+  * métricas agregadas
+* Preparar integração futura com automação (`dryRun`)
+* Corrigir textos hardcoded de data/hora
+
+Critérios de aceite:
+
+* Página renderiza sem mocks
+* Data D-1 calculada dinamicamente
+* Tela possui loading/error states
+* Backend retorna agregações reais
+
+### P1 — Persistência real da Nova Campanha
+
+Última atualização: [2026-05-07 09:19]
+
+Objetivo:
+Persistir de forma real todos os dados do formulário de Nova Campanha.
+
+#### [x] Persistir formulário completo da Nova Campanha
+
+Escopo:
+
+* Salvar:
+
+  * BM
+  * Ad Account
+  * Pixel
+  * Budget
+  * Datas
+  * Copy
+  * Uploads
+  * Configurações
+* Definir modelagem:
+
+  * novas colunas
+  * ou tabelas normalizadas
+* Permitir:
+
+  * salvar draft
+  * reabrir draft
+  * editar draft
+  * continuar geração por país
+
+Critérios de aceite:
+
+* Draft pode ser reaberto
+* Dados permanecem persistidos
+* Campos obrigatórios possuem validação
+* Frontend deixa de depender de estado temporário local
+
+### P2 — Criação real de Campaign Meta (histórico consolidado)
+
+Última atualização: [2026-05-07 21:57]
+
+Objetivo:
+Consolidar a **primeira integração REAL** com Meta Ads (criação de Campaign via backend), mantendo segurança operacional durante o desenvolvimento.
+
+Nota:
+Esta seção é **histórico consolidado** da primeira integração real.
+A evolução futura do fluxo operacional deve acontecer prioritariamente em:
+`P1 — Evolução da /meta-test`.
+
+#### [x] Criar Campaign REAL via backend (modo seguro: `PAUSED`)
+
+Escopo:
+
+* Endpoint:
+  * `POST /api/meta/campaigns`
+* Regras:
+  * Toda Campaign criada deve nascer obrigatoriamente como:
+    ```json
+    { "status": "PAUSED" }
+    ```
+  * Token nunca vai ao frontend (token apenas no backend via env ou `/api/meta/tokens`).
+* Persistência:
+  * `generated_campaigns.meta_campaign_id`
+  * `generated_campaigns.meta_ad_account_id`
+  * `generated_campaigns.meta_user_id`
+  * `generated_campaigns.meta_status`
+  * `generated_campaigns.meta_effective_status`
+  * `generated_campaigns.meta_objective`
+* Consulta:
+  * `GET /api/meta/campaigns/:id` (via Graph)
+
+Subtarefas (execução incremental):
+
+- [x] Migração + persistência de campos `meta_*` em `generated_campaigns`.
+- [x] Backend: provider/service + endpoint `POST /api/meta/campaigns` (forçando `status: PAUSED`).
+- [x] Backend: endpoint de consulta `GET /api/meta/campaigns/:id` (via Graph).
+- [x] Frontend: exibir indicador `STUB`/`REAL`, `meta_campaign_id` e status real (`meta_status`/`meta_effective_status`).
+- [ ] Validar com token real em dev (criar + consultar + persistir + refletir no UI).
+
+### P1 — Evolução da `/meta-test` como fluxo operacional principal
+
+Última atualização: [2026-05-07 22:44]
+
+Objetivo:
+Transformar a página `/meta-test` no novo fluxo simplificado e progressivo de integração Meta Ads real, reduzindo dependência do formulário gigante atual.
+
+Regras:
+
+- Não remover o fluxo antigo ainda.
+- Não remover provider stub.
+- Toda criação Meta deve permanecer `PAUSED`.
+- Não depender do formulário completo da Nova Campanha.
+- Evoluir incrementalmente:
+  - Campaign
+  - AdSet
+  - Ad
+
+Backlog:
+
+- [x] Simplificar UI da `/meta-test` (fluxo mínimo de Campaign)
+- [x] Remover dependência de fluxos antigos (manter compatibilidade enquanto migra)
+- [x] Permitir criar Campaign diretamente pela UI (campos mínimos)
+- [x] Permitir gerar automaticamente Campaigns independentes por país (batch)
+- [x] Exibir claramente:
+  - REAL
+  - STUB
+  - FALLBACK
+- [x] Preparar UI/serviços para criação de AdSet (sem implementar full)
+- [x] Preparar UI/serviços para criação de Ad (sem implementar full)
+- [x] Adicionar criação REAL de AdSet
+- [x] Adicionar criação REAL de Ad
+- [x] Exibir estrutura Meta:
+  - Campaign
+  - AdSet
+  - Ad
+- [x] Persistir:
+  - meta_campaign_id
+  - meta_adset_id
+  - meta_ad_id
+- [x] Adicionar logs operacionais básicos
+- [ ] Preparar futura substituição da página "Nova Campanha"
+
+
+## PLANS (legado) — logs movidos do ExecPlan
+
+Última atualização: [2026-05-08 08:48]
+
+Este conteúdo foi removido de `PLANS.md` para manter o plano curto e executável. Preservado aqui como histórico.
+
+### Progress (sessão atual)
+
+Última atualização: [2026-05-07 22:44]
+
+- Migração adicionada para persistir campos `meta_*` em `generated_campaigns`.
+- Backend implementado para criação real de campanha (`POST /api/meta/campaigns`) com regra obrigatória `status: PAUSED` e persistência.
+- Backend implementado para consulta (`GET /api/meta/campaigns/:id`).
+- Frontend atualizado para exibir `STUB`/`REAL`, `meta_campaign_id` e status real da Meta.
+- Página isolada adicionada para testar criação REAL via UI: `/meta-test` (sem token no frontend).
+- `mark-published` corrigido para não alterar status local indevidamente.
+- Backend: endpoint `POST /api/meta/campaigns/simple` adicionado para criação REAL/`STUB` com campos mínimos (modo seguro `PAUSED`) + persistência local.
+- Frontend: `/meta-test` simplificado para fluxo progressivo (Campaign) e exibição explícita de REAL/STUB/FALLBACK.
+- Backend: criação incremental de AdSet/Ad (REAL/STUB, sempre `PAUSED`) com persistência em `generated_campaigns`.
+- Frontend: `/meta-test` habilitado para criar AdSet/Ad e exibir evidência de persistência (IDs/status).
+- Frontend: `/meta-test` ganhou painel de status do backend/token (`/api/meta/status` + `/api/meta/validate`), validação de `act_...` e botão para consultar status da Campaign via Graph (`GET /api/meta/campaigns/:id`).
+- Frontend: `/meta-test` ganhou batch de criação de Campaigns por país (REAL/STUB, sempre `PAUSED`) + painel de evidência de persistência local (`generated_campaigns`).
+- Frontend: `/meta-test` ganhou logs operacionais básicos (timeline) e um bloco explícito de estrutura Meta (Campaign → AdSet → Ad).
+
+### Surprises & Discoveries
+
+Última atualização: [2026-05-07 22:44]
+
+- Para criação de campanha via Marketing API, o payload inclui `special_ad_categories` (mesmo vazio) e deve sempre forçar `status=PAUSED` no backend em dev.
+- O “país” não existe como entidade nativa na Campaign da Meta: no produto, ele é parte do **modelo operacional** (mapeado em `generated_campaigns.country_code`) e é aplicado de forma real no nível de AdSet (targeting).
+
+### Outcomes & Retrospective
+
+Última atualização: [2026-05-07 22:44]
+
+- O projeto deixa de ser apenas simulação para criação de campanhas: existe caminho real end-to-end via backend, mantendo segurança operacional com `PAUSED`.
+- Direção arquitetural consolidada: abandonar evolução como “formulário gigante” e migrar para fluxo progressivo baseado em entidades Meta reais, com `/meta-test` como laboratório principal.
+- A `/meta-test` agora expõe “modo operacional” de forma explícita (RUN MODE / DATA / META READY) e prepara incrementalmente o caminho para AdSet/Ad sem quebrar o fluxo antigo.
+- A `/meta-test` já executa batch de Campaigns independentes por país e mostra evidência de persistência local (DB) para validar `meta_campaign_id` e status Meta.
+- A `/meta-test` agora cria AdSet/Ad (REAL/STUB, sempre `PAUSED`) e persiste IDs/status no Postgres para auditoria operacional.
+- A `/meta-test` agora registra logs operacionais básicos (sem token) e deixa explícito o modelo de domínio Meta (Campaign → AdSet → Ad) para guiar evolução incremental.
+
+
+## RUNBOOK (legado) — não executar
+
+Última atualização: [2026-05-08 08:48]
+
+Este conteúdo existia em `RUNBOOK.md` e foi movido para cá para não competir com os playbooks atuais.
+
+### Concrete Steps
+
+Última atualização: [2026-05-04 22:30]
+
+O agente deve seguir estes passos concretos.
+
+### 1. Inspecionar o projeto
+
+Executar comandos equivalentes:
+
+    ls
+    find . -maxdepth 2 -type f | sort
+    cat frontend/package.json
+    cat backend/package.json
+
+Se o projeto for grande, evitar listar `node_modules`.
+
+### 2. Identificar stack
+
+Verificar se o projeto usa:
+
+- React + Vite
+- Next.js
+- TypeScript ou JavaScript
+- Tailwind
+- CSS comum
+- MUI
+- React Router
+- Recharts ou outra biblioteca de gráfico
+
+Registrar a descoberta no `Surprises & Discoveries`.
+
+### 3. Instalar dependências somente se necessário
+
+Se não existir roteamento e o projeto for React comum, avaliar instalar:
+
+    npm install react-router-dom
+
+Se não existir biblioteca de gráfico e for necessário usar Recharts:
+
+    npm install recharts
+
+Não instalar bibliotecas desnecessárias.
+
+### 4. Criar dados mockados
+
+Criar arquivos em `src/data` ou pasta equivalente:
+
+    mockCountries.js
+    mockCampaigns.js
+    mockFinancial.js
+
+Esses arquivos devem centralizar os dados usados nas telas.
+
+### 5. Criar componentes reutilizáveis
+
+Criar componentes pequenos e claros:
+
+    Header
+    MetricCard
+    ActionCard
+    CampaignCard
+    StatusBadge
+    FilterButton
+    CountriesList
+    SettingRow
+
+Evitar duplicação visual.
+
+### 6. Criar páginas
+
+Criar páginas:
+
+    Dashboard
+    Financeiro
+    Configuracoes
+
+Conectar navegação entre elas.
+
+### 7. Aplicar estilo global
+
+Criar ou ajustar CSS global para:
+
+- Reset básico.
+- Fonte limpa.
+- Container centralizado.
+- Grid responsivo.
+- Cards.
+- Botões.
+- Badges.
+- Estados visuais.
+
+### 8. Validar localmente
+
+Executar:
+
+    npm install
+    npm run dev
+
+Se existir script diferente, usar o script correto do projeto.
+
+### 9. Revisar visual
+
+Comparar com as imagens do Figma:
+
+- Espaçamento.
+- Hierarquia visual.
+- Cards.
+- Títulos.
+- Botões.
+- Lista de campanhas.
+- Tela financeiro.
+- Tela configurações.
+
+Não precisa ficar pixel perfect, mas deve ficar visualmente próximo.
+
+### 10. Atualizar este ExecPlan
+
+Antes de finalizar, atualizar:
+
+- `Progress`
+- `Surprises & Discoveries`
+- `Decision Log`
+- `Outcomes & Retrospective`, se a fase terminar
+- `Artifacts and Notes`
+
+### 11. Versionamento com Git (OBRIGATÓRIO)
+
+A cada tarefa concluída, o agente deve:
+
+1. Adicionar alterações:
+    
+    git add .
+
+2. Criar commit claro e descritivo:
+    
+    git commit -m "feat: implementa dashboard com cards de métricas"
+
+3. Enviar para o repositório remoto:
+    
+    git push
+
+Regras:
+
+- Nunca acumular muitas alterações sem commit.
+- Cada commit deve representar uma unidade clara de progresso.
+- Usar prefixos:
+  - feat: nova funcionalidade
+  - fix: correção
+  - refactor: melhoria interna
+  - style: ajuste visual
+- O histórico de commits deve permitir entender a evolução do projeto.
+
+Observação:
+
+O versionamento faz parte da validação do progresso.  
+Uma tarefa só é considerada concluída após commit e push.
+
+### Regra de Git para todas as fases
+
+Última atualização: [2026-05-06 11:18]
+
+A cada item P concluído:
+
+1. Executar validação mínima
+2. Atualizar PLANS.md
+3. Executar:
+
+    git add .
+    git commit -m "tipo: mensagem clara"
+    git push
+
+Nenhum item pode ser marcado como concluído sem commit e push.
+
+
+
+### Validation and Acceptance
+
+### Fase 1 — Critérios (concluída)
+
+- [x] A aplicação abre sem erro.
+- [x] O Dashboard está implementado.
+- [x] A tela Financeiro está implementada.
+- [x] A tela Configurações está implementada.
+- [x] Os botões principais navegam corretamente.
+- [x] Os dados estão mockados em arquivos separados.
+- [x] O visual está próximo ao Figma.
+- [x] O layout está minimamente responsivo.
+- [x] O código está componentizado.
+- [x] Sem dependência obrigatória de backend.
+- [x] Este ExecPlan está atualizado.
+
+### Fase 5 — Critérios (Full Stack / Integração)
+
 Última atualização: [2026-05-06 17:55]
 
-## Duplicatas legacy
+- [ ] `docker compose up` sobe `db`, `backend` e `frontend` sem erro (Postgres healthcheck ok).
+- [ ] Backend responde `GET http://localhost:3001/healthz` com `200`.
+- [ ] Backend responde `GET http://localhost:3001/api` com `{ ok: true }`.
+- [ ] Com DB ativo, `GET http://localhost:3001/api/countries` responde `200` com lista.
+- [ ] Fluxo mínimo no backend funciona com DB:
+  - `POST /api/campaigns` cria campanha
+  - `POST /api/campaigns/:id/generate` cria/atualiza `generated_campaigns`
+  - `POST /api/generated-campaigns/:id/mark-published` define `meta_campaign_id`
+- [ ] Sync Meta (stub ou real) executa e grava em `campaign_metrics`:
+  - `POST /api/meta/sync/generated-campaigns/:id` retorna `{ ok: true, sync: ... }`
+  - Verificar gravação via query no Postgres (ex: `SELECT * FROM campaign_metrics ORDER BY metric_date DESC LIMIT 5;`)
+
+### Fase 2 — Critérios de aceite
+
+A Fase 2 será considerada concluída quando TODOS os itens abaixo estiverem verificados:
+
+Última atualização: [2026-05-05 14:57]
+
+#### Ícones (P3)
+
+- [x] `@mui/icons-material` instalado e buildando sem erro
+- [x] Nenhum emoji usado como ícone de UI (emojis de flag de país são permitidos temporariamente)
+- [x] Todos os botões de ação do design usam ícone MUI quando aplicável
+- [x] StatusBadge usa ícones MUI para cada status
+
+#### Escala / Tipografia (P4)
+
+- [x] `font-size` base do body definido como `14px` no `global.css`
+- [x] Títulos de página não ultrapassam `22px`
+- [x] Cards com padding proporcional (16–24px) conforme Figma
+- [x] Layout visualmente comparável ao Figma (não pixel-perfect, mas proporcional)
+
+#### Home vs Mensal (P2)
+
+- [x] Rota `/` renderiza a página Home (Dashboard) baseada em `screens/desktop/home/`
+- [x] Rota `/mensal` renderiza a página Mensal baseada em `screens/desktop/mensal/`
+- [x] Botão "Mensal" na navbar navega para `/mensal` (não é a página atual)
+- [x] As duas páginas são visualmente distintas conforme design
+
+#### Inputs (P1)
+
+- [x] Todos os campos editáveis de `NovaCampanha.jsx` aceitam digitação
+- [x] Nenhum input editável está bloqueado ou somente leitura
+- [x] Estado do formulário é mantido ao navegar entre campos
+
+#### Nova Campanha (P5)
+
+- [x] Todos os campos/seções visíveis no design estão presentes (steps 1–5 + sidebar)
+- [x] Seções incluem: Configuração, Link e Parâmetros, Copy Base (variações), Orçamento/Programação, Upload
+- [x] Botões principais do design existem (Publicar / Salvar como rascunho) e possuem ação mockada
+- [x] Botão `Voltar` retorna ao fluxo anterior (fallback para `/mensal`)
+
+#### Mocks Comportamentais (P6)
+
+- [x] Pasta `src/mocks/` existe com hooks documentados
+- [x] Clicar em período (Hoje/Ontem/7dias/30dias) muda valores dos cards do Financeiro
+- [x] Botão Filtrar na Home filtra a lista de campanhas por algum critério
+- [x] Interações não causam erros no build e não devem gerar erros no console
+
+---
+
+### Checklist visual do Dashboard (Fase 1 — referência)
+
+- [x] Header com logo, título e subtítulo.
+- [x] Botões superiores.
+- [x] Card `Total de campanhas`.
+- [x] Card `Campanhas ativas`.
+- [x] Card `Rascunhos`.
+- [x] Card `ROI (Ontem)`.
+- [x] Card `Países configurados`.
+- [x] Card `Criar Nova Campanha`.
+- [x] Card `Financeiro & Relatórios`.
+- [x] Card `ROI - Dia Anterior`.
+- [x] Seção `Suas Campanhas`.
+- [x] Card da campanha `DirigirBTN4`.
+
+### Checklist visual do Financeiro (Fase 1 — referência)
+
+- [x] Botão voltar.
+- [x] Título e subtítulo.
+- [x] Filtros de conta, BM e período.
+- [x] Cards financeiros.
+- [x] Gráfico de gastos.
+- [x] Link `Ver relatório completo`.
+
+### Checklist visual de Configurações (Fase 1 — referência)
+
+- [x] Botão voltar.
+- [x] Título e subtítulo.
+- [x] Lista de países.
+- [x] Códigos dos países.
+- [x] Badges de idioma.
+- [x] Aviso de países fixos.
+- [x] Outras configurações.
+- [x] Badges `Ativo`.
+
+### 12. Analisar XLSX antes de implementar
+
+Antes de implementar qualquer tela ou dado mockado, o agente deve:
+
+- Abrir o arquivo XLSX na raiz
+- Identificar:
+  - Campos relevantes
+  - Estrutura das campanhas
+  - Parâmetros utilizados
+  - Objetivos de campanha
+- Mapear esses dados para:
+  - mockCampaigns.js
+  - mockCountries.js
+  - mockFinancial.js
+
+Regra:
+
+Nenhum dado mockado deve ser inventado sem base no XLSX.
+
+Se houver dúvida, registrar em Surprises & Discoveries.
+
+
+
+### Idempotence and Recovery
+
+O agente deve trabalhar de forma segura.
+
+Regras:
+
+- Não apagar arquivos existentes sem necessidade.
+- Não reescrever o projeto inteiro se já houver estrutura útil.
+- Não misturar backend nesta primeira fase, exceto se já existir algo que precise ser preservado.
+- Não colocar token da Meta no frontend.
+- Não criar integração real com Meta Ads API nesta fase.
+- Não depender do XLSX em runtime nesta fase.
+- Usar dados mockados para representar o XLSX.
+- Se uma biblioteca falhar, registrar o problema e usar solução simples.
+- Se o projeto não compilar, corrigir antes de avançar.
+- Se houver conflito com arquitetura existente, preservar o padrão do projeto e registrar a decisão.
+
+Para recuperação:
+
+- Se uma alteração quebrar a aplicação, voltar ao último estado funcional.
+- Se o gráfico causar problema, substituir temporariamente por placeholder visual.
+- Se a navegação causar problema, manter navegação por estado local ou links simples até resolver.
+- Se CSS global afetar outras telas, isolar estilos por componente ou página.
+
+
+
+### Troubleshooting
+
+- [2026-05-06 14:15] Validação do `docker compose up` não foi possível neste ambiente: Docker daemon inacessível (erro de socket). O `docker-compose.yml` foi criado, mas precisa ser validado em máquina com Docker Desktop/daemon ativo.
 
 ## Purpose / Big Picture
 
@@ -64,8 +736,11 @@ Explica o objetivo e o resultado visível.
 
 Última atualização: [2026-05-06 14:15]
 
-Esta seção lista tudo que ainda NÃO foi implementado,
-mesmo que não esteja explicitamente no Progress.
+⚠️ SNAPSHOT DE ÉPOCA (histórico) — NÃO USAR COMO BACKLOG ATIVO.  
+Fonte de verdade do backlog atual: `PLANS.md` em `## Backlog Ativo (ÚNICO)`.
+
+Esta seção preserva as pendências registradas naquele momento,
+mesmo que parte delas já tenha sido implementada depois.
 
 ### Funcionalidades pendentes (Fase 1 — concluídas)
 

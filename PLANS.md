@@ -97,7 +97,7 @@ Nota importante:
 - Docker: `db` (host `5433`), `backend` (host `3001`), `frontend` (host `5173`).
 - Meta Campaign Create:
   `POST /api/meta/campaigns`
-  - Regra operacional obrigatória (dev): toda campanha criada deve nascer como `status: PAUSED`.
+  - Regras operacionais (PAUSED + token): ver `RUNBOOK.md` em `## PLAYBOOKS ATUAIS`.
   - Implementação: service/provider em `backend/src/meta/*` (routes não acessam Meta diretamente).
 
 Contratos atuais (mínimo):
@@ -108,9 +108,25 @@ Contratos atuais (mínimo):
 - Generated campaigns: `POST /api/generated-campaigns/:id/mark-published`, `POST /api/generated-campaigns/:id/status`.
 - Meta tokens + sync: `POST /api/meta/tokens`, `GET /api/meta/tokens`, `POST /api/meta/sync/generated-campaigns/:id`.
 
+## Governança Operacional
+
+Última atualização: [2026-05-08 08:48]
+
+Regras explícitas (IA-safe):
+
+- `/meta-test` = laboratório operacional atual e caminho de evolução futura da integração Meta (Campaign → AdSet → Ad).
+- “Nova Campanha” = fluxo legado parcial (manutenção/compatibilidade; evitar novas features estruturais).
+
+Fontes únicas (para reduzir drift):
+
+- Timestamps e governança documental: este `PLANS.md` (ver `## Regras de Atualização (OBRIGATÓRIO)`).
+- Backlog ativo: este `PLANS.md` (ver `## Backlog Ativo (ÚNICO)`).
+- Regras operacionais Meta (PAUSED obrigatório, token nunca no frontend, validações/curl/evidências): `RUNBOOK.md` em `## PLAYBOOKS ATUAIS`.
+- Histórico completo (worklogs, decisões antigas, execuções concluídas): `ARCHIVE.md`.
+
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-07 09:03]
+Última atualização: [2026-05-08 08:48]
 
 Regras:
 
@@ -119,242 +135,20 @@ Regras:
 - Procedimentos/como rodar/testar devem ficar em `RUNBOOK.md`.
 - Ao concluir um item: marcar como `[x]`, registrar decisão se necessário em `Decision Log (Ativo)` e criar commit incremental.
 
-### P0 — Integração Full Stack — Integração Full Stack (próximos passos reais)
+### P0 — Operação Meta real (PAUSED) — validações pendentes
 
-- [x] Desbloquear execução com Docker e registrar evidência (stack sobe + smoke test). (ver `RUNBOOK.md`)
-- [x] Conectar o frontend ao backend via `VITE_BACKEND_URL` (client HTTP + primeira tela lendo dados reais).
-- [x] Trocar dados “de referência” (países/campanhas) de mocks → API (mantendo fallback local quando DB não estiver disponível).
-- [x] Fechar no frontend o fluxo operacional mínimo: criar campanha → gerar por país → marcar como publicada → listar geradas.
-- [x] Criar endpoints de leitura/aggregate para Financeiro/ROI com base em `campaign_metrics` (mesmo que com provider `stub`).
-
-### P1 — Meta Ads real + Automação — Meta Ads real + Automação (quando Fase 5 estabilizar)
-
-- [x] Definir estratégia de autenticação/token (escopo por usuário, expiração/refresh) e registrar decisão.
-- [x] Substituir gradualmente `stub` por sync real da Meta (mantendo `stub` para dev).
-  - [x] `POST /api/meta/validate` para validar token (Graph `/me`)
-  - [x] `GET /api/meta/status` para diagnóstico (provider + token presente)
-  - [x] Retry/backoff + paginação (`paging.next`) no fetch de insights
-  - [x] Extrair `revenue_cents` quando disponível (ex: `action_values.purchase` / `omni_purchase`)
-- [x] Definir 1–2 regras MVP de automação e implementar executor + logs.
-
-### P0 — Consolidar dados reais (remover divergência mock vs API)
-
-Última atualização: [2026-05-07 09:14]
-
-Objetivo:
-Eliminar inconsistências entre frontend mockado e backend real, fortalecendo a confiabilidade do dashboard financeiro e ROI.
-
-
-### P0 — Conectar criação real Meta PAUSED em página de teste
-
-Última atualização: [2026-05-07 15:08]
-
-Objetivo:
-Habilitar, via UI, um fluxo isolado e seguro para criação REAL de campanhas na Meta via backend, garantindo que toda campanha nasça como `PAUSED`.
-
-Regras:
-
-- NÃO substituir o fluxo principal atual.
-- Criar página isolada de teste.
-- Não colocar token no frontend (token apenas no backend via env ou `/api/meta/tokens`).
-- Toda criação real deve ser `PAUSED` (forçado no backend).
-
-Backlog (execução incremental):
-
-- [x] Criar página isolada `frontend/src/pages/MetaPausedTest.jsx`.
-- [x] Criar rota isolada `/meta-test`.
-- [x] Adicionar ponto de navegação em Configurações (sem mexer no fluxo principal).
-- [x] Criar service no frontend para `POST /api/meta/campaigns` (sem token no frontend).
-- [x] UI: loading/error/success states e refresh.
-- [x] UI: listar `generated_campaigns` e permitir criar REAL (PAUSED) a partir de um `generated_campaign_id`.
-- [x] UI: listar campanhas REAL persistidas (via `generated_campaigns.meta_campaign_id`) e exibir `meta_status/meta_effective_status`.
-- [x] Backend: garantir `status=PAUSED` obrigatório na criação real.
-- [x] Backend: enviar `is_adset_budget_sharing_enabled=false` na criação real.
-- [x] Corrigir `POST /api/generated-campaigns/:id/mark-published` para não setar `ACTIVE` indevidamente (apenas vincula `meta_campaign_id`).
-- [x] Backend: endpoint para listar campanhas da Meta por Ad Account (PAUSED) sem token no frontend.
-- [x] UI: listar campanhas PAUSED existentes no Ads Manager via backend (não depende do banco local).
-- [ ] Validar com token real via UI (evidência: campanha aparece PAUSED no Ads Manager).
-- [ ] (Opcional) Adicionar botão “atualizar status” (Graph) para REAL persistidas, sem expor token.
-
-
-
-#### [x] Remover mock da página Mensal (`frontend/src/pages/Mensal.jsx`)
-
-Objetivo:
-Substituir `mockMonthly` por dados reais vindos do backend.
-
-Escopo:
-
-* Criar endpoint:
-
-  * `GET /api/finance/monthly?month=YYYY-MM`
-* Retornar:
-
-  * `totals`
-  * `daily`
-  * `bestDay`
-  * `worstDay`
-  * `roiSeries`
-* Utilizar `campaign_metrics` como fonte principal
-* Manter compatibilidade com provider `stub`
-* Criar loading/error states
-* Preservar layout atual
-
-Critérios de aceite:
-
-* Página renderiza sem `mockMonthly`
-* Troca de mês funciona corretamente
-* Tela possui loading/error states
-* Build frontend/backend funcionando
-
-#### [x] Remover mock da página ROI Ontem (`frontend/src/pages/RoiOntem.jsx`)
-
-Objetivo:
-Substituir `mockRoiOntem` por dados reais do backend baseados em `campaign_metrics`.
-
-Escopo:
-
-* Criar endpoint:
-
-  * `GET /api/finance/roi-d1?date=YYYY-MM-DD`
-* Retornar:
-
-  * `summary`
-  * `rows`
-  * métricas agregadas
-* Preparar integração futura com automação (`dryRun`)
-* Corrigir textos hardcoded de data/hora
-
-Critérios de aceite:
-
-* Página renderiza sem mocks
-* Data D-1 calculada dinamicamente
-* Tela possui loading/error states
-* Backend retorna agregações reais
-
-### P1 — Persistência real da Nova Campanha
-
-Última atualização: [2026-05-07 09:19]
-
-Objetivo:
-Persistir de forma real todos os dados do formulário de Nova Campanha.
-
-#### [x] Persistir formulário completo da Nova Campanha
-
-Escopo:
-
-* Salvar:
-
-  * BM
-  * Ad Account
-  * Pixel
-  * Budget
-  * Datas
-  * Copy
-  * Uploads
-  * Configurações
-* Definir modelagem:
-
-  * novas colunas
-  * ou tabelas normalizadas
-* Permitir:
-
-  * salvar draft
-  * reabrir draft
-  * editar draft
-  * continuar geração por país
-
-Critérios de aceite:
-
-* Draft pode ser reaberto
-* Dados permanecem persistidos
-* Campos obrigatórios possuem validação
-* Frontend deixa de depender de estado temporário local
-
-### P2 — Criação real de Campaign Meta (histórico consolidado)
-
-Última atualização: [2026-05-07 21:57]
-
-Objetivo:
-Consolidar a **primeira integração REAL** com Meta Ads (criação de Campaign via backend), mantendo segurança operacional durante o desenvolvimento.
-
-Nota:
-Esta seção é **histórico consolidado** da primeira integração real.
-A evolução futura do fluxo operacional deve acontecer prioritariamente em:
-`P1 — Evolução da /meta-test`.
-
-#### [x] Criar Campaign REAL via backend (modo seguro: `PAUSED`)
-
-Escopo:
-
-* Endpoint:
-  * `POST /api/meta/campaigns`
-* Regras:
-  * Toda Campaign criada deve nascer obrigatoriamente como:
-    ```json
-    { "status": "PAUSED" }
-    ```
-  * Token nunca vai ao frontend (token apenas no backend via env ou `/api/meta/tokens`).
-* Persistência:
-  * `generated_campaigns.meta_campaign_id`
-  * `generated_campaigns.meta_ad_account_id`
-  * `generated_campaigns.meta_user_id`
-  * `generated_campaigns.meta_status`
-  * `generated_campaigns.meta_effective_status`
-  * `generated_campaigns.meta_objective`
-* Consulta:
-  * `GET /api/meta/campaigns/:id` (via Graph)
-
-Subtarefas (execução incremental):
-
-- [x] Migração + persistência de campos `meta_*` em `generated_campaigns`.
-- [x] Backend: provider/service + endpoint `POST /api/meta/campaigns` (forçando `status: PAUSED`).
-- [x] Backend: endpoint de consulta `GET /api/meta/campaigns/:id` (via Graph).
-- [x] Frontend: exibir indicador `STUB`/`REAL`, `meta_campaign_id` e status real (`meta_status`/`meta_effective_status`).
-- [ ] Validar com token real em dev (criar + consultar + persistir + refletir no UI).
-
-### P1 — Evolução da `/meta-test` como fluxo operacional principal
-
-Última atualização: [2026-05-07 22:44]
-
-Objetivo:
-Transformar a página `/meta-test` no novo fluxo simplificado e progressivo de integração Meta Ads real, reduzindo dependência do formulário gigante atual.
-
-Regras:
-
-- Não remover o fluxo antigo ainda.
-- Não remover provider stub.
-- Toda criação Meta deve permanecer `PAUSED`.
-- Não depender do formulário completo da Nova Campanha.
-- Evoluir incrementalmente:
-  - Campaign
-  - AdSet
-  - Ad
+Contexto:
+- O fluxo oficial de evolução/validação Meta passa por `/meta-test` (ver regra em `## Governança Operacional`).
+- O histórico detalhado da integração inicial e itens concluídos foi movido para `ARCHIVE.md` (não manter PLANS como diário).
 
 Backlog:
 
-- [x] Simplificar UI da `/meta-test` (fluxo mínimo de Campaign)
-- [x] Remover dependência de fluxos antigos (manter compatibilidade enquanto migra)
-- [x] Permitir criar Campaign diretamente pela UI (campos mínimos)
-- [x] Permitir gerar automaticamente Campaigns independentes por país (batch)
-- [x] Exibir claramente:
-  - REAL
-  - STUB
-  - FALLBACK
-- [x] Preparar UI/serviços para criação de AdSet (sem implementar full)
-- [x] Preparar UI/serviços para criação de Ad (sem implementar full)
-- [x] Adicionar criação REAL de AdSet
-- [x] Adicionar criação REAL de Ad
-- [x] Exibir estrutura Meta:
-  - Campaign
-  - AdSet
-  - Ad
-- [x] Persistir:
-  - meta_campaign_id
-  - meta_adset_id
-  - meta_ad_id
-- [x] Adicionar logs operacionais básicos
-- [ ] Preparar futura substituição da página "Nova Campanha"
+- [ ] Validar com token real via UI em `/meta-test` (evidência: Campaign aparece `PAUSED` no Ads Manager).
+- [ ] (Opcional) Adicionar botão “atualizar status” (Graph) para REAL persistidas, sem expor token.
+- [ ] Preparar futura substituição da página "Nova Campanha" (migração incremental do fluxo legado → `/meta-test`).
+
+Histórico/itens concluídos:
+- Ver `ARCHIVE.md` em `## Backlog (concluído) — snapshots de execução` e `## Integração Meta — histórico consolidado`.
 
 
 ## Decision Log (Ativo)
@@ -408,41 +202,6 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
   - AdSet
   - Ad
   em um único fluxo, aumentando complexidade operacional e de manutenção.
-## Progress (sessão atual)
-
-Última atualização: [2026-05-07 22:44]
-
-- Migração adicionada para persistir campos `meta_*` em `generated_campaigns`.
-- Backend implementado para criação real de campanha (`POST /api/meta/campaigns`) com regra obrigatória `status: PAUSED` e persistência.
-- Backend implementado para consulta (`GET /api/meta/campaigns/:id`).
-- Frontend atualizado para exibir `STUB`/`REAL`, `meta_campaign_id` e status real da Meta.
-- Página isolada adicionada para testar criação REAL via UI: `/meta-test` (sem token no frontend).
-- `mark-published` corrigido para não alterar status local indevidamente.
-- Backend: endpoint `POST /api/meta/campaigns/simple` adicionado para criação REAL/`STUB` com campos mínimos (modo seguro `PAUSED`) + persistência local.
-- Frontend: `/meta-test` simplificado para fluxo progressivo (Campaign) e exibição explícita de REAL/STUB/FALLBACK.
-- Backend: criação incremental de AdSet/Ad (REAL/STUB, sempre `PAUSED`) com persistência em `generated_campaigns`.
-- Frontend: `/meta-test` habilitado para criar AdSet/Ad e exibir evidência de persistência (IDs/status).
-- Frontend: `/meta-test` ganhou painel de status do backend/token (`/api/meta/status` + `/api/meta/validate`), validação de `act_...` e botão para consultar status da Campaign via Graph (`GET /api/meta/campaigns/:id`).
-- Frontend: `/meta-test` ganhou batch de criação de Campaigns por país (REAL/STUB, sempre `PAUSED`) + painel de evidência de persistência local (`generated_campaigns`).
-- Frontend: `/meta-test` ganhou logs operacionais básicos (timeline) e um bloco explícito de estrutura Meta (Campaign → AdSet → Ad).
-
-## Surprises & Discoveries
-
-Última atualização: [2026-05-07 22:44]
-
-- Para criação de campanha via Marketing API, o payload inclui `special_ad_categories` (mesmo vazio) e deve sempre forçar `status=PAUSED` no backend em dev.
-- O “país” não existe como entidade nativa na Campaign da Meta: no produto, ele é parte do **modelo operacional** (mapeado em `generated_campaigns.country_code`) e é aplicado de forma real no nível de AdSet (targeting).
-
-## Outcomes & Retrospective
-
-Última atualização: [2026-05-07 22:44]
-
-- O projeto deixa de ser apenas simulação para criação de campanhas: existe caminho real end-to-end via backend, mantendo segurança operacional com `PAUSED`.
-- Direção arquitetural consolidada: abandonar evolução como “formulário gigante” e migrar para fluxo progressivo baseado em entidades Meta reais, com `/meta-test` como laboratório principal.
-- A `/meta-test` agora expõe “modo operacional” de forma explícita (RUN MODE / DATA / META READY) e prepara incrementalmente o caminho para AdSet/Ad sem quebrar o fluxo antigo.
-- A `/meta-test` já executa batch de Campaigns independentes por país e mostra evidência de persistência local (DB) para validar `meta_campaign_id` e status Meta.
-- A `/meta-test` agora cria AdSet/Ad (REAL/STUB, sempre `PAUSED`) e persiste IDs/status no Postgres para auditoria operacional.
-- A `/meta-test` agora registra logs operacionais básicos (sem token) e deixa explícito o modelo de domínio Meta (Campaign → AdSet → Ad) para guiar evolução incremental.
 
 ## Referências (histórico e legado)
 
