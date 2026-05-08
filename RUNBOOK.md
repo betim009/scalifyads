@@ -232,6 +232,16 @@ Esta seção deve ser atualizada sempre que:
   - Observação:
     - Essa lista vem direto da Meta e não depende de `generated_campaigns` no banco.
 
+[2026-05-08 10:52]
+
+- Evidência (STUB): persistência completa de `meta_*` para Campaign/AdSet/Ad via backend:
+  - `POST /api/meta/campaigns/simple` (`mode=STUB`)
+  - `POST /api/meta/adsets` (`mode=STUB`)
+  - `POST /api/meta/ads` (`mode=STUB`)
+  - `generated_campaigns.id`: `bd48cdae-c728-4719-b460-cad996ab3dbb`
+  - Verificação (db):
+    - `SELECT meta_campaign_id, meta_status, meta_adset_id, meta_adset_status, meta_ad_id, meta_ad_status FROM generated_campaigns WHERE id = '<uuid>';`
+
 ## LEGADO / NÃO EXECUTAR
 
 Última atualização: [2026-05-08 08:48]
