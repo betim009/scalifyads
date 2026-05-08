@@ -49,7 +49,7 @@ Construir o **Campaign Builder**, uma aplicação web que substitui a planilha o
 
 ## Snapshot (Estado Atual)
 
-Última atualização: [2026-05-07 22:05]
+Última atualização: [2026-05-07 22:20]
 
 O que está funcional hoje:
 
@@ -60,6 +60,11 @@ O que está funcional hoje:
 - Sincronização de métricas definida como sync manual (`/api/meta/sync/*`) com provider Meta Graph e fallback `stub`: ver `backend/src/routes/meta.js`.
 - Criação real de campanhas Meta Ads via backend (`POST /api/meta/campaigns`) implementada com persistência em `generated_campaigns` (campos `meta_*`) e regra obrigatória `status: PAUSED`.
 - Criação REAL simplificada (lab) com campos mínimos via `POST /api/meta/campaigns/simple` (nome/objetivo/ad account/país), persistindo em `campaigns` + `generated_campaigns`.
+- `/meta-test` agora suporta:
+  - criação simples (REAL/STUB, sempre `PAUSED`)
+  - batch por país (Campaign independente por país)
+  - diagnóstico de token (`/api/meta/status` + `/api/meta/validate`)
+  - evidência de persistência local (`generated_campaigns`)
 - O fluxo operacional começou a ser separado conceitualmente entre:
   - Campaign
   - AdSet
@@ -351,7 +356,7 @@ Backlog:
 
 ## Decision Log (Ativo)
 
-Última atualização: [2026-05-07 22:05]
+Última atualização: [2026-05-07 22:20]
 
 Mantém apenas decisões ainda válidas para execução atual. Histórico completo: ver `ARCHIVE.md` em `## Decision Log (histórico completo)`.
 
@@ -381,6 +386,7 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
   - Ad
   sem depender do fluxo completo antigo.
 - [2026-05-07 22:05] Decisão: para iniciar o fluxo progressivo com baixo acoplamento, `/meta-test` cria Campaign via endpoint dedicado (`POST /api/meta/campaigns/simple`) com campos mínimos (nome/objetivo/ad account/país), mantendo `POST /api/meta/campaigns` (baseado em `generated_campaigns`) como compatibilidade do fluxo antigo.
+- [2026-05-07 22:20] Decisão: batch por país será implementado no frontend (sequencial) chamando `POST /api/meta/campaigns/simple` por país, evitando criar endpoints batch agora (sem overengineering) e mantendo `PAUSED` obrigatório.
 
 ## Blockers & Risks
 
@@ -423,11 +429,12 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 
 ## Outcomes & Retrospective
 
-Última atualização: [2026-05-07 22:14]
+Última atualização: [2026-05-07 22:20]
 
 - O projeto deixa de ser apenas simulação para criação de campanhas: existe caminho real end-to-end via backend, mantendo segurança operacional com `PAUSED`.
 - Direção arquitetural consolidada: abandonar evolução como “formulário gigante” e migrar para fluxo progressivo baseado em entidades Meta reais, com `/meta-test` como laboratório principal.
 - A `/meta-test` agora expõe “modo operacional” de forma explícita (RUN MODE / DATA / META READY) e prepara incrementalmente o caminho para AdSet/Ad sem quebrar o fluxo antigo.
+- A `/meta-test` já executa batch de Campaigns independentes por país e mostra evidência de persistência local (DB) para validar `meta_campaign_id` e status Meta.
 
 ## Referências (histórico e legado)
 
