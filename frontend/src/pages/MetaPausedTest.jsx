@@ -115,6 +115,7 @@ export default function MetaPausedTest() {
   useEffect(() => {
     refresh();
     refreshBackendStatus();
+    refreshLocalGenerated();
   }, []);
 
   const countryOptions = useMemo(() => countries ?? [], [countries]);
@@ -588,6 +589,99 @@ export default function MetaPausedTest() {
             </div>
           </div>
         ) : null}
+      </div>
+
+      <div className="card" style={{ padding: 0, marginTop: 16 }}>
+        <div style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
+          <div>
+            <div style={{ fontWeight: 900, fontSize: 16 }}>Persistência local (DB) — generated_campaigns</div>
+            <div className="muted" style={{ marginTop: 6, fontWeight: 800 }}>
+              Evidência de persistência de `meta_campaign_id` + `meta_status/meta_effective_status` no Postgres.
+            </div>
+          </div>
+          <button
+            type="button"
+            className="pillOutline"
+            onClick={refreshLocalGenerated}
+            disabled={localLoading || loading || busy}
+          >
+            {localLoading ? "Atualizando..." : "Atualizar lista"}
+          </button>
+        </div>
+
+        {localError ? (
+          <div className="card" style={{ padding: 14, margin: "0 16px 16px", borderColor: "#fecaca", color: "#991b1b" }}>
+            <div style={{ fontWeight: 900 }}>Erro</div>
+            <div style={{ marginTop: 6, fontWeight: 700 }}>{localError}</div>
+          </div>
+        ) : null}
+
+        <div style={{ borderTop: "1px solid #e5e7eb", overflowX: "auto" }}>
+          <table className="dataTable" style={{ marginTop: 0 }}>
+            <thead>
+              <tr>
+                <th>Criado</th>
+                <th>País</th>
+                <th>Nome</th>
+                <th>Modo</th>
+                <th>Meta Campaign ID</th>
+                <th>Status Meta</th>
+                <th>Effective</th>
+              </tr>
+            </thead>
+            <tbody>
+              {localGenerated.map((gc) => {
+                const metaId = gc.meta_campaign_id || "";
+                const mode = metaId && String(metaId).startsWith("stub-") ? "STUB" : metaId ? "REAL" : "—";
+                return (
+                  <tr key={gc.id}>
+                    <td className="muted" style={{ fontWeight: 800 }}>
+                      {gc.created_at ? String(gc.created_at).slice(0, 19).replace("T", " ") : "—"}
+                    </td>
+                    <td style={{ fontWeight: 900 }}>
+                      {gc.country_code ? (
+                        <>
+                          <span aria-hidden="true" style={{ marginRight: 10 }}>
+                            {countryCodeToFlag(gc.country_code)}
+                          </span>
+                          {gc.country_code}
+                        </>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td style={{ fontWeight: 900 }}>{gc.name || "—"}</td>
+                    <td className="muted" style={{ fontWeight: 900 }}>
+                      {mode}
+                    </td>
+                    <td className="muted" style={{ fontWeight: 800 }}>
+                      {gc.meta_campaign_id || "—"}
+                    </td>
+                    <td className="muted" style={{ fontWeight: 900 }}>
+                      {gc.meta_status || "—"}
+                    </td>
+                    <td className="muted" style={{ fontWeight: 900 }}>
+                      {gc.meta_effective_status || "—"}
+                    </td>
+                  </tr>
+                );
+              })}
+              {!localGenerated.length ? (
+                <tr>
+                  <td colSpan={7} className="muted" style={{ fontWeight: 800 }}>
+                    {localLoading
+                      ? "Carregando..."
+                      : "Vazio. Clique em “Atualizar lista” ou crie Campaigns acima para gerar registros."}
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="muted" style={{ padding: 16, fontWeight: 800 }}>
+          Nota: país é parte do modelo operacional local (será aplicado como targeting real no AdSet na etapa futura).
+        </div>
       </div>
 
       <div className="card" style={{ padding: 18, marginTop: 16 }}>
