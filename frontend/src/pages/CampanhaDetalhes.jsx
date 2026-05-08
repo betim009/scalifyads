@@ -258,7 +258,14 @@ export default function CampanhaDetalhes() {
                             const res = await syncGeneratedCampaign(gc.id);
                             const inserted = res?.sync?.inserted ?? 0;
                             const updated = res?.sync?.updated ?? 0;
-                            setLastSync(`${inserted} inseridos / ${updated} atualizados`);
+                            const provider = res?.sync?.provider ?? "—";
+                            const fallback = res?.sync?.fallback ?? null;
+                            const fallbackNote = fallback?.reason
+                              ? ` (fallback: ${fallback.reason})`
+                              : fallback
+                                ? " (fallback)"
+                                : "";
+                            setLastSync(`${inserted} inseridos / ${updated} atualizados — provider: ${provider}${fallbackNote}`);
                           } catch (err) {
                             setError(err?.message ? String(err.message) : "Falha ao sincronizar métricas.");
                           } finally {

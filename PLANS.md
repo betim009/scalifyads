@@ -146,7 +146,7 @@ Fontes únicas (para reduzir drift):
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-08 10:47]
+Última atualização: [2026-05-08 10:49]
 
 Regras:
 
@@ -171,6 +171,7 @@ Regras:
 - [ ] Melhorar loading states
 - [ ] Melhorar error states
 - [ ] Melhorar feedback visual de persistência
+- [x] Exibir provider/fallback no resultado do sync (Campanha Detalhes)
 - [ ] Melhorar timeline/log operacional
 - [ ] Melhorar visualização da estrutura Meta
 - [ ] Melhorar estados de sucesso/erro
