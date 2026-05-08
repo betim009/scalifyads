@@ -37,6 +37,18 @@ function isRealMetaId(metaId) {
   return Boolean(id) && !id.startsWith("stub-");
 }
 
+function formatNowPtBr() {
+  return new Date().toLocaleString("pt-BR", { hour12: false });
+}
+
+function safeJson(value) {
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return "";
+  }
+}
+
 export default function MetaPausedTest() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -83,6 +95,30 @@ export default function MetaPausedTest() {
   const [localError, setLocalError] = useState("");
   const [localGenerated, setLocalGenerated] = useState([]);
 
+  // Logs operacionais (frontend-only, sem tokens)
+  const [opsLogs, setOpsLogs] = useState(() => {
+    try {
+      const raw = localStorage.getItem("metaTest.opsLogs.v1");
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
+
+  function pushLog(entry) {
+    const enriched = { at: formatNowPtBr(), ...(entry ?? {}) };
+    setOpsLogs((prev) => {
+      const next = [enriched, ...(Array.isArray(prev) ? prev : [])].slice(0, 100);
+      try {
+        localStorage.setItem("metaTest.opsLogs.v1", JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }
+
   async function refresh() {
     setLoading(true);
     setError("");
@@ -106,9 +142,11 @@ export default function MetaPausedTest() {
     try {
       const res = await getMetaStatus();
       setBackendStatus(res);
+      pushLog({ action: "meta.status", ok: true, details: { hasAccessToken: res?.hasAccessToken } });
     } catch (err) {
       setBackendStatus(null);
       setBackendStatusError(err?.message ? String(err.message) : "Falha ao consultar /api/meta/status.");
+      pushLog({ action: "meta.status", ok: false, error: err?.message ? String(err.message) : "error" });
     }
   }
 
@@ -159,11 +197,13 @@ export default function MetaPausedTest() {
     try {
       const res = await listGeneratedCampaigns({ limit: 50 });
       setLocalGenerated(res.generatedCampaigns ?? []);
+      pushLog({ action: "db.generated_campaigns.list", ok: true, details: { count: (res.generatedCampaigns ?? []).length } });
     } catch (err) {
       setLocalGenerated([]);
       setLocalError(
         err?.message ? String(err.message) : "Falha ao carregar `generated_campaigns` (DB/API indisponível).",
       );
+      pushLog({ action: "db.generated_campaigns.list", ok: false, error: err?.message ? String(err.message) : "error" });
     } finally {
       setLocalLoading(false);
     }
@@ -270,6 +310,52 @@ export default function MetaPausedTest() {
       ) : null}
 
       <div className="card" style={{ padding: 18, marginTop: 16 }}>
+        <div style={{ fontWeight: 900, fontSize: 16 }}>Estrutura Meta (Campaign → AdSet → Ad)</div>
+        <div className="muted" style={{ marginTop: 8, fontWeight: 800, lineHeight: 1.55 }}>
+          Esta tela evita “formulário gigante” e evolui progressivamente por entidade.
+        </div>
+
+        <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+          <div className="card" style={{ padding: 14 }}>
+            <div className="muted" style={{ fontWeight: 900 }}>
+              Campaign (Meta)
+            </div>
+            <div style={{ marginTop: 6, fontWeight: 900 }}>
+              {created?.metaCampaign?.id ?? "—"}
+            </div>
+            <div className="muted" style={{ marginTop: 8, fontWeight: 900 }}>
+              {created?.metaCampaign?.status ?? "—"} / {created?.metaCampaign?.effective_status ?? "—"}
+            </div>
+          </div>
+
+          <div className="card" style={{ padding: 14 }}>
+            <div className="muted" style={{ fontWeight: 900 }}>
+              AdSet (Meta)
+            </div>
+            <div style={{ marginTop: 6, fontWeight: 900 }}>—</div>
+            <div className="muted" style={{ marginTop: 8, fontWeight: 800 }}>
+              Targeting (país/posicionamentos) + budget
+            </div>
+          </div>
+
+          <div className="card" style={{ padding: 14 }}>
+            <div className="muted" style={{ fontWeight: 900 }}>
+              Ad (Meta)
+            </div>
+            <div style={{ marginTop: 6, fontWeight: 900 }}>—</div>
+            <div className="muted" style={{ marginTop: 8, fontWeight: 800 }}>
+              Creative (sem upload complexo)
+            </div>
+          </div>
+        </div>
+
+        <div className="muted" style={{ marginTop: 12, fontWeight: 800 }}>
+          País (modelo operacional local): <b>{countryCode || "—"}</b>
+          {countryCode && countryNameByCode?.[countryCode] ? ` — ${countryNameByCode[countryCode]}` : ""}
+        </div>
+      </div>
+
+      <div className="card" style={{ padding: 18, marginTop: 16 }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
           <div>
             <div style={{ fontWeight: 900, fontSize: 16 }}>Batch — Campaign por país</div>
@@ -316,6 +402,11 @@ export default function MetaPausedTest() {
             className="pillOutline"
             disabled={!canBatch}
             onClick={async () => {
+              pushLog({
+                action: "campaign.batch.start",
+                ok: true,
+                details: { mode: batchMode, countries: selectedCountryCodes.slice(), total: selectedCountryCodes.length },
+              });
               setBatchRunning(true);
               setBatchProgress(null);
               setBatchResults([]);
@@ -340,6 +431,16 @@ export default function MetaPausedTest() {
                       countryCode: code,
                       mode: batchMode,
                     });
+                    pushLog({
+                      action: "campaign.create.simple",
+                      ok: true,
+                      details: {
+                        mode: res.mode ?? batchMode,
+                        countryCode: code,
+                        metaCampaignId: res?.metaCampaign?.id ?? null,
+                        generatedCampaignId: res?.generatedCampaign?.id ?? null,
+                      },
+                    });
                     results.push({
                       countryCode: code,
                       mode: res.mode ?? batchMode,
@@ -349,6 +450,12 @@ export default function MetaPausedTest() {
                       generatedCampaignId: res?.generatedCampaign?.id ?? null,
                     });
                   } catch (err) {
+                    pushLog({
+                      action: "campaign.create.simple",
+                      ok: false,
+                      error: err?.message ? String(err.message) : "error",
+                      details: { mode: batchMode, countryCode: code },
+                    });
                     errors.push({
                       countryCode: code,
                       message: err?.message ? String(err.message) : "Falha ao criar Campaign.",
@@ -358,6 +465,11 @@ export default function MetaPausedTest() {
 
                 setBatchResults(results);
                 setBatchErrors(errors);
+                pushLog({
+                  action: "campaign.batch.done",
+                  ok: true,
+                  details: { okCount: results.length, errorCount: errors.length },
+                });
                 setSuccess(
                   `Batch concluído: ${results.length} sucesso(s) / ${errors.length} erro(s). Todas as Campaigns permanecem PAUSED.`,
                 );
@@ -549,19 +661,21 @@ export default function MetaPausedTest() {
             type="button"
             className="pillOutline"
             disabled={validateLoading || busy || !backendStatus?.hasAccessToken}
-            onClick={async () => {
-              setValidateLoading(true);
-              setValidateError("");
-              try {
-                const res = await validateMetaToken();
-                setValidateMe(res.me ?? null);
-              } catch (err) {
-                setValidateMe(null);
-                setValidateError(err?.message ? String(err.message) : "Falha ao validar token.");
-              } finally {
-                setValidateLoading(false);
-              }
-            }}
+	            onClick={async () => {
+	              setValidateLoading(true);
+	              setValidateError("");
+	              try {
+	                const res = await validateMetaToken();
+	                setValidateMe(res.me ?? null);
+	                pushLog({ action: "meta.validate", ok: true, details: { me: res?.me ?? null } });
+	              } catch (err) {
+	                setValidateMe(null);
+	                setValidateError(err?.message ? String(err.message) : "Falha ao validar token.");
+	                pushLog({ action: "meta.validate", ok: false, error: err?.message ? String(err.message) : "error" });
+	              } finally {
+	                setValidateLoading(false);
+	              }
+	            }}
           >
             {validateLoading ? "Validando..." : "Validar token (Graph /me)"}
           </button>
@@ -681,6 +795,86 @@ export default function MetaPausedTest() {
 
         <div className="muted" style={{ padding: 16, fontWeight: 800 }}>
           Nota: país é parte do modelo operacional local (será aplicado como targeting real no AdSet na etapa futura).
+        </div>
+      </div>
+
+      <div className="card" style={{ padding: 0, marginTop: 16 }}>
+        <div style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
+          <div>
+            <div style={{ fontWeight: 900, fontSize: 16 }}>Logs operacionais (básico)</div>
+            <div className="muted" style={{ marginTop: 6, fontWeight: 800 }}>
+              Timeline local do navegador (sem token) para auditoria rápida do lab.
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              className="pillOutline"
+              onClick={() => {
+                setOpsLogs([]);
+                try {
+                  localStorage.removeItem("metaTest.opsLogs.v1");
+                } catch {
+                  // ignore
+                }
+              }}
+              disabled={!opsLogs.length}
+            >
+              Limpar
+            </button>
+            <button
+              type="button"
+              className="pillOutline"
+              onClick={async () => {
+                const text = safeJson(opsLogs);
+                try {
+                  await navigator.clipboard.writeText(text);
+                  setSuccess("Logs copiados para a área de transferência.");
+                } catch {
+                  setError("Não foi possível copiar os logs.");
+                }
+              }}
+              disabled={!opsLogs.length}
+            >
+              Copiar JSON
+            </button>
+          </div>
+        </div>
+
+        <div style={{ borderTop: "1px solid #e5e7eb", overflowX: "auto" }}>
+          <table className="dataTable" style={{ marginTop: 0 }}>
+            <thead>
+              <tr>
+                <th>Quando</th>
+                <th>Ação</th>
+                <th>OK</th>
+                <th>Detalhes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {opsLogs.map((l, idx) => (
+                <tr key={`${l.at}-${idx}`}>
+                  <td className="muted" style={{ fontWeight: 800 }}>
+                    {l.at}
+                  </td>
+                  <td style={{ fontWeight: 900 }}>{l.action || "—"}</td>
+                  <td className="muted" style={{ fontWeight: 900 }}>
+                    {l.ok ? "SIM" : "NÃO"}
+                  </td>
+                  <td className="muted" style={{ fontWeight: 800, maxWidth: 520 }}>
+                    {l.ok ? safeJson(l.details ?? null) : l.error || "—"}
+                  </td>
+                </tr>
+              ))}
+              {!opsLogs.length ? (
+                <tr>
+                  <td colSpan={4} className="muted" style={{ fontWeight: 800 }}>
+                    Vazio. Execute ações acima para gerar logs.
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -832,30 +1026,47 @@ export default function MetaPausedTest() {
             type="button"
             className="pillOutline"
             disabled={!canCreate}
-            onClick={async () => {
-              setBusy(true);
-              setCreatedLoading(true);
-              setError("");
-              setSuccess("");
-              setCreated(null);
-              try {
-                const res = await createMetaCampaignSimple({
-                  name: name.trim(),
-                  objective,
-                  metaAdAccountId: adAccountNormalized,
-                  countryCode,
-                  mode,
-                });
-                setCreated(res);
-                setSuccess(`Campaign criada (${res.mode || mode}) — status obrigatório: PAUSED.`);
-                await refreshBackendStatus();
-              } catch (err) {
-                setError(err?.message ? String(err.message) : "Falha ao criar Campaign.");
-              } finally {
-                setCreatedLoading(false);
-                setBusy(false);
-              }
-            }}
+	            onClick={async () => {
+	              setBusy(true);
+	              setCreatedLoading(true);
+	              setError("");
+	              setSuccess("");
+	              setCreated(null);
+	              try {
+	                const res = await createMetaCampaignSimple({
+	                  name: name.trim(),
+	                  objective,
+	                  metaAdAccountId: adAccountNormalized,
+	                  countryCode,
+	                  mode,
+	                });
+	                setCreated(res);
+	                pushLog({
+	                  action: "campaign.create.simple",
+	                  ok: true,
+	                  details: {
+	                    mode: res.mode ?? mode,
+	                    countryCode,
+	                    metaCampaignId: res?.metaCampaign?.id ?? null,
+	                    generatedCampaignId: res?.generatedCampaign?.id ?? null,
+	                  },
+	                });
+	                setSuccess(`Campaign criada (${res.mode || mode}) — status obrigatório: PAUSED.`);
+	                await refreshBackendStatus();
+	                await refreshLocalGenerated();
+	              } catch (err) {
+	                setError(err?.message ? String(err.message) : "Falha ao criar Campaign.");
+	                pushLog({
+	                  action: "campaign.create.simple",
+	                  ok: false,
+	                  error: err?.message ? String(err.message) : "error",
+	                  details: { mode, countryCode },
+	                });
+	              } finally {
+	                setCreatedLoading(false);
+	                setBusy(false);
+	              }
+	            }}
           >
             {busy ? "Criando..." : `Criar Campaign ${mode} (PAUSED)`}
           </button>
@@ -866,23 +1077,33 @@ export default function MetaPausedTest() {
             disabled={
               normalizeNonEmptyString(metaAdAccountId) === "" || metaLoading || !backendStatus?.hasAccessToken
             }
-            onClick={async () => {
-              setMetaLoading(true);
-              setMetaError("");
-              try {
-                const res = await listMetaAdAccountCampaigns({
-                  metaAdAccountId: adAccountNormalized || metaAdAccountId.trim(),
-                  limit: 100,
-                  pausedOnly: true,
-                });
-                setMetaCampaigns(res.metaCampaigns ?? []);
-              } catch (err) {
-                setMetaError(err?.message ? String(err.message) : "Falha ao listar campanhas na Meta (PAUSED).");
-                setMetaCampaigns([]);
-              } finally {
-                setMetaLoading(false);
-              }
-            }}
+	            onClick={async () => {
+	              setMetaLoading(true);
+	              setMetaError("");
+	              try {
+	                const res = await listMetaAdAccountCampaigns({
+	                  metaAdAccountId: adAccountNormalized || metaAdAccountId.trim(),
+	                  limit: 100,
+	                  pausedOnly: true,
+	                });
+	                setMetaCampaigns(res.metaCampaigns ?? []);
+	                pushLog({
+	                  action: "meta.adaccount.campaigns.list",
+	                  ok: true,
+	                  details: { count: (res.metaCampaigns ?? []).length },
+	                });
+	              } catch (err) {
+	                setMetaError(err?.message ? String(err.message) : "Falha ao listar campanhas na Meta (PAUSED).");
+	                setMetaCampaigns([]);
+	                pushLog({
+	                  action: "meta.adaccount.campaigns.list",
+	                  ok: false,
+	                  error: err?.message ? String(err.message) : "error",
+	                });
+	              } finally {
+	                setMetaLoading(false);
+	              }
+	            }}
           >
             {metaLoading ? "Listando..." : "Listar PAUSED na Meta"}
           </button>
@@ -964,22 +1185,24 @@ export default function MetaPausedTest() {
                 !backendStatus?.hasAccessToken ||
                 !isRealMetaId(created.metaCampaign?.id)
               }
-              onClick={async () => {
-                setCreatedLoading(true);
-                setError("");
-                try {
-                  const res = await getMetaCampaign(created.metaCampaign.id);
-                  setCreated((prev) => ({
-                    ...(prev ?? {}),
-                    metaCampaign: res.metaCampaign ?? prev?.metaCampaign ?? null,
-                  }));
-                  setSuccess("Status atualizado via Graph.");
-                } catch (err) {
-                  setError(err?.message ? String(err.message) : "Falha ao consultar Campaign no Graph.");
-                } finally {
-                  setCreatedLoading(false);
-                }
-              }}
+	              onClick={async () => {
+	                setCreatedLoading(true);
+	                setError("");
+	                try {
+	                  const res = await getMetaCampaign(created.metaCampaign.id);
+	                  setCreated((prev) => ({
+	                    ...(prev ?? {}),
+	                    metaCampaign: res.metaCampaign ?? prev?.metaCampaign ?? null,
+	                  }));
+	                  setSuccess("Status atualizado via Graph.");
+	                  pushLog({ action: "meta.campaign.get", ok: true, details: { metaCampaignId: created.metaCampaign.id } });
+	                } catch (err) {
+	                  setError(err?.message ? String(err.message) : "Falha ao consultar Campaign no Graph.");
+	                  pushLog({ action: "meta.campaign.get", ok: false, error: err?.message ? String(err.message) : "error" });
+	                } finally {
+	                  setCreatedLoading(false);
+	                }
+	              }}
             >
               {createdLoading ? "Consultando..." : "Consultar status no Graph"}
             </button>
