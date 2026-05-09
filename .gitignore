@@ -10,6 +10,9 @@ lerna-debug.log*
 PROMPT.template.txt
 PROMPT.correcao.txt
 
+# Local screenshots (evitar commits acidentais no repo root)
+/Captura de Tela*.png
+
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 

@@ -271,7 +271,7 @@ Histórico/itens concluídos:
 
 ## Decision Log (Ativo)
 
-Última atualização: [2026-05-09 15:21]
+Última atualização: [2026-05-09 15:22]
 
 Mantém apenas decisões ainda válidas para execução atual. Histórico completo: ver `ARCHIVE.md` em `## Decision Log (histórico completo)`.
 
@@ -320,6 +320,7 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 - [2026-05-09 15:18] Decisão: logs do `/meta-test` devem ser filtráveis por entidade (campaign/adset/ad/meta/db) para troubleshooting rápido sem backend schema/log pipeline nesta fase.
 - [2026-05-09 15:20] Decisão: `/meta-test` deve permitir retomar execução a partir de `generated_campaigns` existente (seleção explícita) para suportar troubleshooting e fluxo incremental sem refazer a Campaign.
 - [2026-05-09 15:21] Decisão: a navegação progressiva do `/meta-test` deve exibir evidência de conclusão por etapa (OK/—) baseada em `meta_*` persistido no DB.
+- [2026-05-09 15:22] Decisão: ignorar screenshots acidentais no repo root (ex: “Captura de Tela*.png”) via `.gitignore` para reduzir ruído operacional no `git status`.
 
 ## Blockers
 
