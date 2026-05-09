@@ -279,6 +279,22 @@ export default function MetaPausedTest() {
       backFallbackTo="/configuracoes"
     >
       <div className="card" style={{ padding: 18 }}>
+        <div style={{ fontWeight: 900 }}>Atalhos</div>
+        <div className="muted" style={{ marginTop: 8, fontWeight: 800, lineHeight: 1.55 }}>
+          Navegação rápida para as seções principais (evita scroll longo).
+        </div>
+        <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <a className="pillOutline" href="#meta-test-mode">Modo</a>
+          <a className="pillOutline" href="#meta-test-backend-status">Status backend</a>
+          <a className="pillOutline" href="#meta-test-db">DB (generated_campaigns)</a>
+          <a className="pillOutline" href="#meta-test-ops-logs">Logs</a>
+          <a className="pillOutline" href="#meta-test-step-campaign">Etapa 1 (Campaign)</a>
+          <a className="pillOutline" href="#meta-test-step-adset">Etapa 2 (AdSet)</a>
+          <a className="pillOutline" href="#meta-test-step-ad">Etapa 3 (Ad)</a>
+        </div>
+      </div>
+
+      <div id="meta-test-mode" className="card" style={{ padding: 18 }}>
         <div style={{ fontWeight: 900 }}>Modo atual</div>
         <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
           <span
@@ -764,7 +780,7 @@ export default function MetaPausedTest() {
         ) : null}
       </div>
 
-      <div className="card" style={{ padding: 18, marginTop: 16 }}>
+      <div id="meta-test-backend-status" className="card" style={{ padding: 18, marginTop: 16 }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
           <div>
             <div style={{ fontWeight: 900, fontSize: 16 }}>Status do backend (Meta)</div>
@@ -907,7 +923,7 @@ export default function MetaPausedTest() {
         ) : null}
       </div>
 
-      <div className="card" style={{ padding: 0, marginTop: 16 }}>
+      <div id="meta-test-db" className="card" style={{ padding: 0, marginTop: 16 }}>
         <div style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
           <div>
             <div style={{ fontWeight: 900, fontSize: 16 }}>Persistência local (DB) — generated_campaigns</div>
@@ -1037,7 +1053,7 @@ export default function MetaPausedTest() {
         </div>
       </div>
 
-      <div className="card" style={{ padding: 0, marginTop: 16 }}>
+      <div id="meta-test-ops-logs" className="card" style={{ padding: 0, marginTop: 16 }}>
         <div style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
           <div>
             <div style={{ fontWeight: 900, fontSize: 16 }}>Logs operacionais (básico)</div>
@@ -1123,7 +1139,7 @@ export default function MetaPausedTest() {
         </div>
       </div>
 
-      <div className="card" style={{ padding: 18, marginTop: 16 }}>
+      <div id="meta-test-step-campaign" className="card" style={{ padding: 18, marginTop: 16 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <div>
             <div style={{ fontWeight: 900, fontSize: 16 }}>Etapa 1 — Campaign (mínimo)</div>
@@ -1546,7 +1562,7 @@ export default function MetaPausedTest() {
         </div>
       </div>
 
-      <div className="card" style={{ padding: 18, marginTop: 16 }}>
+      <div id="meta-test-step-adset" className="card" style={{ padding: 18, marginTop: 16 }}>
         <div style={{ fontWeight: 900, fontSize: 16 }}>Etapa 2 — AdSet (PAUSED)</div>
         <div className="muted" style={{ marginTop: 8, fontWeight: 800, lineHeight: 1.55 }}>
           Criação incremental via `POST /api/meta/adsets` (REAL/STUB). Sempre PAUSED.
@@ -1760,7 +1776,7 @@ export default function MetaPausedTest() {
         </details>
       </div>
 
-      <div className="card" style={{ padding: 18, marginTop: 16 }}>
+      <div id="meta-test-step-ad" className="card" style={{ padding: 18, marginTop: 16 }}>
         <div style={{ fontWeight: 900, fontSize: 16 }}>Etapa 3 — Ad (PAUSED)</div>
         <div className="muted" style={{ marginTop: 8, fontWeight: 800, lineHeight: 1.55 }}>
           Criação incremental via `POST /api/meta/ads` (REAL/STUB). Sempre PAUSED. REAL requer `creativeId` existente.

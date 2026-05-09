@@ -146,7 +146,7 @@ Fontes únicas (para reduzir drift):
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-09 15:03]
+Última atualização: [2026-05-09 15:05]
 
 Regras:
 
@@ -184,6 +184,7 @@ Regras:
 - [x] `/meta-test`: estrutura Meta exibe IDs/status de AdSet/Ad quando disponíveis
 - [ ] Melhorar estados de sucesso/erro
 - [ ] Melhorar navegação operacional
+- [x] `/meta-test`: adicionar atalhos (anchors) para navegação entre seções
 - [ ] Melhorar percepção REAL vs STUB
 - [ ] Refinar responsividade
 
@@ -258,7 +259,7 @@ Histórico/itens concluídos:
 
 ## Decision Log (Ativo)
 
-Última atualização: [2026-05-09 15:03]
+Última atualização: [2026-05-09 15:05]
 
 Mantém apenas decisões ainda válidas para execução atual. Histórico completo: ver `ARCHIVE.md` em `## Decision Log (histórico completo)`.
 
@@ -297,6 +298,7 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 - [2026-05-08 10:46] Decisão: separar `Blockers` de `Risks` em seções distintas para rastreabilidade e priorização mais claras.
 - [2026-05-08 10:47] Decisão: documentar `Execution Rules` no `PLANS.md` para orientar execução contínua e reduzir ambiguidades operacionais.
 - [2026-05-09 15:03] Decisão: `/meta-test` deve sempre limpar/exibir detalhes de erro de forma consistente (evitar `errorDetails` stale) e indicar `LOADING/UNKNOWN` no status do backend para troubleshooting operacional.
+- [2026-05-09 15:05] Decisão: `/meta-test` deve oferecer navegação rápida (anchors) por ser uma tela longa e usada para troubleshooting operacional.
 
 ## Blockers
 
