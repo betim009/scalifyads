@@ -254,6 +254,13 @@ Esta seção deve ser atualizada sempre que:
   - Criar AdSet REAL (PAUSED): `POST /api/meta/adsets` (`mode=REAL`)
     - `meta_adset_id`: `120246780152480596` (effective pode ficar `IN_PROCESS` no início)
 
+[2026-05-09 15:32]
+
+- `/meta-test` (UX operacional):
+  - DB: lista de `generated_campaigns` agora permite “Selecionar” um registro para retomar o fluxo incremental (Campaign → AdSet → Ad) sem recriar a Campaign.
+  - Logs: filtro por entidade (campaign/adset/ad/meta/db) e cópia do JSON respeita o filtro atual.
+  - Navegação: atalhos exibem `OK/—` por etapa e botões “Ir para Etapa 2/3” fazem scroll.
+
 ## LEGADO / NÃO EXECUTAR
 
 Última atualização: [2026-05-08 08:48]
