@@ -48,7 +48,6 @@ function safeJson(value) {
 
 export default function MetaPausedTest() {
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [errorDetails, setErrorDetails] = useState(null);
@@ -114,6 +113,8 @@ export default function MetaPausedTest() {
       return [];
     }
   });
+
+  const isCreatingAny = campaignCreating || adSetCreating || adCreating;
 
   function pushLog(entry) {
     const enriched = { at: formatNowPtBr(), ...(entry ?? {}) };
@@ -188,7 +189,7 @@ export default function MetaPausedTest() {
 
   const canCreate =
     !loading &&
-    !busy &&
+    !isCreatingAny &&
     !campaignCreating &&
     normalizeNonEmptyString(name) !== "" &&
     normalizeNonEmptyString(objective) !== "" &&
@@ -220,7 +221,7 @@ export default function MetaPausedTest() {
 
   const canCreateAdSet =
     !loading &&
-    !busy &&
+    !isCreatingAny &&
     !adSetCreating &&
     createdGeneratedCampaignId !== "" &&
     normalizeNonEmptyString(adSetName) !== "" &&
@@ -232,7 +233,7 @@ export default function MetaPausedTest() {
 
   const canCreateAd =
     !loading &&
-    !busy &&
+    !isCreatingAny &&
     !adCreating &&
     createdGeneratedCampaignId !== "" &&
     createdMetaAdSetId !== "" &&
@@ -241,7 +242,7 @@ export default function MetaPausedTest() {
 
   const canBatch =
     !loading &&
-    !busy &&
+    !isCreatingAny &&
     !batchRunning &&
     normalizeNonEmptyString(name) !== "" &&
     normalizeNonEmptyString(objective) !== "" &&
@@ -811,7 +812,7 @@ export default function MetaPausedTest() {
             type="button"
             className="pillOutline"
             onClick={refreshBackendStatus}
-            disabled={busy || loading || backendStatusLoading}
+            disabled={isCreatingAny || loading || backendStatusLoading}
           >
             {backendStatusLoading ? "Atualizando..." : "Atualizar status"}
           </button>
@@ -874,7 +875,7 @@ export default function MetaPausedTest() {
           <button
             type="button"
             className="pillOutline"
-            disabled={validateLoading || busy || !backendStatus?.hasAccessToken}
+            disabled={validateLoading || isCreatingAny || !backendStatus?.hasAccessToken}
 	            onClick={async () => {
 	              setValidateLoading(true);
 	              setValidateError("");
@@ -954,7 +955,7 @@ export default function MetaPausedTest() {
             type="button"
             className="pillOutline"
             onClick={refreshLocalGenerated}
-            disabled={localLoading || loading || busy}
+            disabled={localLoading || loading || isCreatingAny}
           >
             {localLoading ? "Atualizando..." : "Atualizar lista"}
           </button>
@@ -1166,7 +1167,7 @@ export default function MetaPausedTest() {
               Nome + Objective + Ad Account + País.
             </div>
           </div>
-          <button type="button" className="pillOutline" onClick={refresh} disabled={loading || busy}>
+          <button type="button" className="pillOutline" onClick={refresh} disabled={loading || isCreatingAny}>
             Atualizar
           </button>
         </div>
@@ -1307,7 +1308,6 @@ export default function MetaPausedTest() {
             className="pillOutline"
             disabled={!canCreate}
 		            onClick={async () => {
-		              setBusy(true);
                   setCampaignCreating(true);
 		              setError("");
 		              setErrorDetails(null);
@@ -1345,7 +1345,6 @@ export default function MetaPausedTest() {
 		                });
 		              } finally {
 	                setCampaignCreating(false);
-	                setBusy(false);
 	              }
 	            }}
           >
@@ -1487,7 +1486,7 @@ export default function MetaPausedTest() {
               className="pillOutline"
               disabled={
                 createdLoading ||
-                busy ||
+                isCreatingAny ||
                 !backendStatus?.hasAccessToken ||
                 !isRealMetaId(created.metaCampaign?.id)
               }
@@ -1721,7 +1720,6 @@ export default function MetaPausedTest() {
             className="pillOutline"
             disabled={!canCreateAdSet}
 	            onClick={async () => {
-	              setBusy(true);
 	              setAdSetCreating(true);
 	              setError("");
 	              setErrorDetails(null);
@@ -1764,7 +1762,6 @@ export default function MetaPausedTest() {
 	                });
 	              } finally {
                 setAdSetCreating(false);
-                setBusy(false);
               }
             }}
           >
@@ -1873,7 +1870,6 @@ export default function MetaPausedTest() {
             className="pillOutline"
             disabled={!canCreateAd}
 	            onClick={async () => {
-	              setBusy(true);
 	              setAdCreating(true);
 	              setError("");
 	              setErrorDetails(null);
@@ -1913,7 +1909,6 @@ export default function MetaPausedTest() {
 	                });
 	              } finally {
                 setAdCreating(false);
-                setBusy(false);
               }
             }}
           >
