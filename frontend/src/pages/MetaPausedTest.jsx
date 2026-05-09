@@ -296,6 +296,8 @@ export default function MetaPausedTest() {
     const metaCampaignId = normalizeNonEmptyString(gc?.meta_campaign_id);
     const inferredMode = metaCampaignId ? (metaCampaignId.startsWith("stub-") ? "STUB" : "REAL") : "REAL";
 
+    setMode(inferredMode);
+
     setCreated({
       ok: true,
       mode: inferredMode,
