@@ -150,7 +150,7 @@ Fontes únicas (para reduzir drift):
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-09 15:56]
+Última atualização: [2026-05-09 15:57]
 
 Regras:
 
@@ -199,7 +199,7 @@ Regras:
 ### P2 — Fluxo progressivo Meta
 
 - [ ] Consolidar fluxo Campaign → AdSet → Ad
-- [ ] Separar estados operacionais por entidade
+- [x] Separar estados operacionais por entidade
 - [x] `/meta-test`: extrair seção de logs em componente dedicado (reduzir arquivo gigante)
 - [x] `/meta-test`: extrair seção de DB (`generated_campaigns`) em componente dedicado
 - [x] `/meta-test`: extrair cards de navegação/progresso/modo em componentes dedicados
@@ -281,7 +281,7 @@ Histórico/itens concluídos:
 
 ## Decision Log (Ativo)
 
-Última atualização: [2026-05-09 15:56]
+Última atualização: [2026-05-09 15:57]
 
 Mantém apenas decisões ainda válidas para execução atual. Histórico completo: ver `ARCHIVE.md` em `## Decision Log (histórico completo)`.
 
@@ -338,6 +338,7 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 - [2026-05-09 15:51] Decisão: seção de status do backend (provider/token/validate) do `/meta-test` deve ser um componente dedicado, mantendo o handler no backend e sem expor token no frontend.
 - [2026-05-09 15:54] Decisão: cada etapa do fluxo `/meta-test` (Campaign/AdSet/Ad) deve ter componente próprio para manter separação conceitual e reduzir risco de regressões.
 - [2026-05-09 15:56] Decisão: extrair Etapa 3 (Ad) para componente dedicado mantém a separação Campaign/AdSet/Ad e reduz acoplamento no `MetaPausedTest.jsx`.
+- [2026-05-09 15:57] Decisão: considerar “Separar estados operacionais por entidade” concluído no `/meta-test` quando existirem flags de execução por entidade + componentes dedicados (Campaign/AdSet/Ad/DB/Logs/Status), mantendo comportamento estável.
 - [2026-05-09 15:16] Decisão: preferir `gridTemplateColumns: repeat(auto-fit, minmax(...))` no `/meta-test` para responsividade sem depender de media queries/código extra.
 - [2026-05-09 15:18] Decisão: logs do `/meta-test` devem ser filtráveis por entidade (campaign/adset/ad/meta/db) para troubleshooting rápido sem backend schema/log pipeline nesta fase.
 - [2026-05-09 15:20] Decisão: `/meta-test` deve permitir retomar execução a partir de `generated_campaigns` existente (seleção explícita) para suportar troubleshooting e fluxo incremental sem refazer a Campaign.
