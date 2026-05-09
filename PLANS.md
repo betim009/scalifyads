@@ -150,7 +150,7 @@ Fontes únicas (para reduzir drift):
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-09 15:49]
+Última atualização: [2026-05-09 15:51]
 
 Regras:
 
@@ -203,6 +203,7 @@ Regras:
 - [x] `/meta-test`: extrair seção de logs em componente dedicado (reduzir arquivo gigante)
 - [x] `/meta-test`: extrair seção de DB (`generated_campaigns`) em componente dedicado
 - [x] `/meta-test`: extrair cards de navegação/progresso/modo em componentes dedicados
+- [x] `/meta-test`: extrair seção de status do backend (token/provider/validate) em componente dedicado
 - [x] `/meta-test`: separar loading de create Campaign vs Graph get (evitar `createdLoading` ambíguo)
 - [x] `/meta-test`: remover `busy` global e usar flags por entidade (Campaign/AdSet/Ad)
 - [x] Separar services por entidade Meta
@@ -278,7 +279,7 @@ Histórico/itens concluídos:
 
 ## Decision Log (Ativo)
 
-Última atualização: [2026-05-09 15:49]
+Última atualização: [2026-05-09 15:51]
 
 Mantém apenas decisões ainda válidas para execução atual. Histórico completo: ver `ARCHIVE.md` em `## Decision Log (histórico completo)`.
 
@@ -332,6 +333,7 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 - [2026-05-09 15:35] Decisão: refactors no `/meta-test` devem ser incrementais e orientados por seção (extrair componentes UI sem alterar comportamento) para reduzir risco e evitar regressões.
 - [2026-05-09 15:47] Decisão: extrair seções grandes do `/meta-test` (DB/logs/etc) para componentes dedicados é preferível a refactors “tudo de uma vez”.
 - [2026-05-09 15:49] Decisão: cards de navegação/progresso/modo do `/meta-test` devem ser componentes dedicados para manter `MetaPausedTest.jsx` enxuto e reduzir risco de regressão.
+- [2026-05-09 15:51] Decisão: seção de status do backend (provider/token/validate) do `/meta-test` deve ser um componente dedicado, mantendo o handler no backend e sem expor token no frontend.
 - [2026-05-09 15:16] Decisão: preferir `gridTemplateColumns: repeat(auto-fit, minmax(...))` no `/meta-test` para responsividade sem depender de media queries/código extra.
 - [2026-05-09 15:18] Decisão: logs do `/meta-test` devem ser filtráveis por entidade (campaign/adset/ad/meta/db) para troubleshooting rápido sem backend schema/log pipeline nesta fase.
 - [2026-05-09 15:20] Decisão: `/meta-test` deve permitir retomar execução a partir de `generated_campaigns` existente (seleção explícita) para suportar troubleshooting e fluxo incremental sem refazer a Campaign.
