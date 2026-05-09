@@ -8,6 +8,7 @@ import BackendStatusSection from "./metaTest/BackendStatusSection.jsx";
 import OpsLogsSection from "./metaTest/OpsLogsSection.jsx";
 import GeneratedCampaignsSection from "./metaTest/GeneratedCampaignsSection.jsx";
 import StepAdSetSection from "./metaTest/StepAdSetSection.jsx";
+import StepAdSection from "./metaTest/StepAdSection.jsx";
 import { getCountries } from "../services/reference.js";
 import { createMetaCampaignSimple, getMetaCampaign, listMetaAdAccountCampaigns } from "../services/metaCampaigns.js";
 import { createMetaAdSet } from "../services/metaAdSets.js";
@@ -1387,156 +1388,60 @@ export default function MetaPausedTest() {
         normalizeNonEmptyString={normalizeNonEmptyString}
       />
 
-      <div id="meta-test-step-ad" className="card" style={{ padding: 18, marginTop: 16 }}>
-        <div style={{ fontWeight: 900, fontSize: 16 }}>Etapa 3 — Ad (PAUSED)</div>
-        <div className="muted" style={{ marginTop: 8, fontWeight: 800, lineHeight: 1.55 }}>
-          Criação incremental via `POST /api/meta/ads` (REAL/STUB). Sempre PAUSED. REAL requer `creativeId` existente.
-        </div>
-
-        <div
-          style={{
-            marginTop: 14,
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-            gap: 12,
-          }}
-        >
-          <label style={{ display: "grid", gap: 6 }}>
-            <span className="muted" style={{ fontWeight: 900 }}>
-              Meta AdSet ID (origem)
-            </span>
-            <input
-              value={createdMetaAdSetId}
-              readOnly
-              placeholder="Será preenchido quando AdSet existir"
-              style={{
-                height: 38,
-                borderRadius: 12,
-                border: "1px solid #e5e7eb",
-                padding: "0 12px",
-                fontSize: 13,
-                fontWeight: 800,
-                outline: "none",
-                background: "#f9fafb",
-              }}
-            />
-          </label>
-
-          <label style={{ display: "grid", gap: 6 }}>
-            <span className="muted" style={{ fontWeight: 900 }}>
-              Nome do Ad
-            </span>
-            <input
-              value={adName}
-              onChange={(e) => setAdName(e.target.value)}
-              placeholder="Ex: Ad BR — Image 1"
-              style={{
-                height: 38,
-                borderRadius: 12,
-                border: "1px solid #e5e7eb",
-                padding: "0 12px",
-                fontSize: 13,
-                fontWeight: 700,
-                outline: "none",
-                background: "#ffffff",
-              }}
-            />
-          </label>
-
-          <label style={{ display: "grid", gap: 6 }}>
-            <span className="muted" style={{ fontWeight: 900 }}>
-              Creative ID (somente REAL)
-            </span>
-            <input
-              value={adCreativeId}
-              onChange={(e) => setAdCreativeId(e.target.value)}
-              placeholder="Ex: 1234567890"
-              disabled={flowMode === "STUB"}
-              style={{
-                height: 38,
-                borderRadius: 12,
-                border: "1px solid #e5e7eb",
-                padding: "0 12px",
-                fontSize: 13,
-                fontWeight: 700,
-                outline: "none",
-                background: flowMode === "STUB" ? "#f9fafb" : "#ffffff",
-              }}
-            />
-          </label>
-        </div>
-
-        <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-          <button
-            type="button"
-            className="pillOutline"
-            disabled={!canCreateAd}
-	            onClick={async () => {
-	              setAdCreating(true);
-	              setError("");
-	              setErrorDetails(null);
-	              setSuccess("");
-	              try {
-                const payload = {
-                  generatedCampaignId: createdGeneratedCampaignId,
-                  name: adName.trim(),
-                  ...(flowMode === "REAL" ? { creativeId: adCreativeId.trim() } : null),
-                  mode: flowMode,
-                };
-                const res = await createMetaAd(payload);
-                setCreated((prev) => ({
-                  ...(prev ?? {}),
-                  mode: res.mode ?? prev?.mode ?? flowMode,
-                  metaAd: res.metaAd ?? prev?.metaAd ?? null,
-                  generatedCampaign: res.generatedCampaign ?? prev?.generatedCampaign ?? null,
-                }));
-                pushLog({
-                  action: "ad.create",
-                  ok: true,
-                  details: {
-                    mode: res.mode ?? flowMode,
-                    generatedCampaignId: createdGeneratedCampaignId,
-                    metaAdId: res?.metaAd?.id ?? null,
-                  },
-                });
-                setSuccess(`Ad criado (${res.mode || flowMode}) — status obrigatório: PAUSED.`);
-                await refreshLocalGenerated();
-	              } catch (err) {
-	                const captured = captureError(err, "Falha ao criar Ad.");
-	                pushLog({
-	                  action: "ad.create",
-	                  ok: false,
-	                  error: captured.message || "error",
-	                  details: { mode: flowMode, generatedCampaignId: createdGeneratedCampaignId, errorDetails: captured.details },
-	                });
-	              } finally {
-                setAdCreating(false);
-              }
-            }}
-          >
-            {adCreating ? "Criando..." : `Criar Ad ${flowMode} (PAUSED)`}
-          </button>
-          <div className="muted" style={{ fontWeight: 800 }}>
-            Requer AdSet criado acima. REAL exige token no backend e `creativeId`.
-          </div>
-        </div>
-
-        <details style={{ marginTop: 12 }}>
-          <summary style={{ cursor: "pointer", fontWeight: 900 }}>Preview do payload</summary>
-          <pre style={{ marginTop: 10, background: "#0b1220", color: "#e5e7eb", padding: 12, borderRadius: 12, overflowX: "auto" }}>
-{JSON.stringify(
-  {
-    generatedCampaignId: createdGeneratedCampaignId || null,
-    name: normalizeNonEmptyString(adName) || null,
-    creativeId: flowMode === "REAL" ? normalizeNonEmptyString(adCreativeId) || null : undefined,
-    mode: flowMode,
-  },
-  null,
-  2,
-)}
-          </pre>
-        </details>
-      </div>
+      <StepAdSection
+        createdMetaAdSetId={createdMetaAdSetId}
+        adName={adName}
+        setAdName={setAdName}
+        adCreativeId={adCreativeId}
+        setAdCreativeId={setAdCreativeId}
+        canCreateAd={canCreateAd}
+        adCreating={adCreating}
+        onCreateAd={async () => {
+          setAdCreating(true);
+          setError("");
+          setErrorDetails(null);
+          setSuccess("");
+          try {
+            const payload = {
+              generatedCampaignId: createdGeneratedCampaignId,
+              name: adName.trim(),
+              ...(flowMode === "REAL" ? { creativeId: adCreativeId.trim() } : null),
+              mode: flowMode,
+            };
+            const res = await createMetaAd(payload);
+            setCreated((prev) => ({
+              ...(prev ?? {}),
+              mode: res.mode ?? prev?.mode ?? flowMode,
+              metaAd: res.metaAd ?? prev?.metaAd ?? null,
+              generatedCampaign: res.generatedCampaign ?? prev?.generatedCampaign ?? null,
+            }));
+            pushLog({
+              action: "ad.create",
+              ok: true,
+              details: {
+                mode: res.mode ?? flowMode,
+                generatedCampaignId: createdGeneratedCampaignId,
+                metaAdId: res?.metaAd?.id ?? null,
+              },
+            });
+            setSuccess(`Ad criado (${res.mode || flowMode}) — status obrigatório: PAUSED.`);
+            await refreshLocalGenerated();
+          } catch (err) {
+            const captured = captureError(err, "Falha ao criar Ad.");
+            pushLog({
+              action: "ad.create",
+              ok: false,
+              error: captured.message || "error",
+              details: { mode: flowMode, generatedCampaignId: createdGeneratedCampaignId, errorDetails: captured.details },
+            });
+          } finally {
+            setAdCreating(false);
+          }
+        }}
+        createdGeneratedCampaignId={createdGeneratedCampaignId}
+        flowMode={flowMode}
+        normalizeNonEmptyString={normalizeNonEmptyString}
+      />
     </PageShell>
   );
 }
