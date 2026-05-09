@@ -150,7 +150,7 @@ Fontes únicas (para reduzir drift):
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-09 15:15]
+Última atualização: [2026-05-09 15:16]
 
 Regras:
 
@@ -193,6 +193,7 @@ Regras:
 - [ ] Melhorar percepção REAL vs STUB
 - [x] `/meta-test`: exibir REAL/STUB por entidade (Campaign/AdSet/Ad) na estrutura Meta
 - [ ] Refinar responsividade
+- [x] `/meta-test`: tornar grids responsivos (auto-fit/minmax) para telas menores
 
 ### P2 — Fluxo progressivo Meta
 
@@ -267,7 +268,7 @@ Histórico/itens concluídos:
 
 ## Decision Log (Ativo)
 
-Última atualização: [2026-05-09 15:15]
+Última atualização: [2026-05-09 15:16]
 
 Mantém apenas decisões ainda válidas para execução atual. Histórico completo: ver `ARCHIVE.md` em `## Decision Log (histórico completo)`.
 
@@ -312,6 +313,7 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 - [2026-05-09 15:10] Decisão: separar `services/` de Meta por entidade (Campaign/AdSet/Ad/Status/Sync), mantendo `services/meta.js` como re-export para compatibilidade incremental.
 - [2026-05-09 15:13] Decisão: no `/meta-test`, separar estados de loading por ação/entidade (ex: create Campaign vs Graph get) para evitar sinais operacionais ambíguos.
 - [2026-05-09 15:15] Decisão: remover `busy` global do `/meta-test` e derivar “bloqueios de ação” a partir de flags específicas de criação por entidade para reduzir acoplamento e risco de regressão.
+- [2026-05-09 15:16] Decisão: preferir `gridTemplateColumns: repeat(auto-fit, minmax(...))` no `/meta-test` para responsividade sem depender de media queries/código extra.
 
 ## Blockers
 

@@ -472,7 +472,14 @@ export default function MetaPausedTest() {
           Esta tela evita “formulário gigante” e evolui progressivamente por entidade.
         </div>
 
-        <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+        <div
+          style={{
+            marginTop: 12,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+            gap: 12,
+          }}
+        >
           <div className="card" style={{ padding: 14 }}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
               <div className="muted" style={{ fontWeight: 900 }}>
@@ -840,7 +847,14 @@ export default function MetaPausedTest() {
           </div>
         ) : null}
 
-        <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+        <div
+          style={{
+            marginTop: 12,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: 12,
+          }}
+        >
           <div className="card" style={{ padding: 14 }}>
             <div className="muted" style={{ fontWeight: 900 }}>
               Provider
@@ -1177,7 +1191,14 @@ export default function MetaPausedTest() {
           <span style={{ fontWeight: 900 }}>{dataModeLabel}</span>
         </div>
 
-        <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div
+          style={{
+            marginTop: 14,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+            gap: 12,
+          }}
+        >
           <label style={{ display: "grid", gap: 6 }}>
             <span className="muted" style={{ fontWeight: 900 }}>
               Nome
@@ -1430,7 +1451,14 @@ export default function MetaPausedTest() {
             </div>
           </div>
 
-          <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div
+            style={{
+              marginTop: 12,
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+              gap: 12,
+            }}
+          >
             <div className="card" style={{ padding: 14 }}>
               <div className="muted" style={{ fontWeight: 900 }}>
                 Meta Campaign ID
@@ -1586,7 +1614,14 @@ export default function MetaPausedTest() {
           Criação incremental via `POST /api/meta/adsets` (REAL/STUB). Sempre PAUSED.
         </div>
 
-        <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div
+          style={{
+            marginTop: 14,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+            gap: 12,
+          }}
+        >
           <label style={{ display: "grid", gap: 6 }}>
             <span className="muted" style={{ fontWeight: 900 }}>
               Meta Campaign ID (origem)
@@ -1798,7 +1833,14 @@ export default function MetaPausedTest() {
           Criação incremental via `POST /api/meta/ads` (REAL/STUB). Sempre PAUSED. REAL requer `creativeId` existente.
         </div>
 
-        <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div
+          style={{
+            marginTop: 14,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+            gap: 12,
+          }}
+        >
           <label style={{ display: "grid", gap: 6 }}>
             <span className="muted" style={{ fontWeight: 900 }}>
               Meta AdSet ID (origem)
