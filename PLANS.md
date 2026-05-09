@@ -146,7 +146,7 @@ Fontes únicas (para reduzir drift):
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-09 15:05]
+Última atualização: [2026-05-09 15:06]
 
 Regras:
 
@@ -236,8 +236,8 @@ Regras:
 
 - [x] Adicionar Operational Priorities
 - [x] Adicionar Execution Rules
-- [ ] Adicionar Technical Debt
-- [ ] Adicionar Known Problems
+- [x] Adicionar Technical Debt
+- [x] Adicionar Known Problems
 - [x] Separar Blockers de Risks
 - [ ] Padronizar timestamps
 - [ ] Melhorar rastreabilidade
@@ -315,6 +315,21 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 - Risco operacional: campanhas reais agora podem ser criadas via Meta Marketing API; durante desenvolvimento, toda criação deve permanecer obrigatoriamente com `status: PAUSED`.
 - Risco de execução: `objective` pode estar ausente (UI ainda não define `objective_key` por padrão); o endpoint exige `objective` via body quando não houver objetivo no banco.
 - O formulário atual "Nova Campanha" concentra responsabilidades de Campaign/AdSet/Ad em um único fluxo, aumentando complexidade operacional e de manutenção.
+
+## Technical Debt
+
+Última atualização: [2026-05-09 15:06]
+
+- Frontend: `frontend/src/pages/MetaPausedTest.jsx` ainda concentra muita lógica inline (handlers/payloads). Próximo passo: extrair por entidade (Campaign/AdSet/Ad) em `services/` + helpers para reduzir risco de regressão.
+- Frontend: ausência de um padrão compartilhado de alerts/toasts (cada tela implementa manualmente).
+- Legado: fluxo “Nova Campanha” segue monolítico e tende a acumular responsabilidades; manter compatível e migrar capacidades úteis para `/meta-test` (P7).
+
+## Known Problems
+
+Última atualização: [2026-05-09 15:06]
+
+- Se o Docker daemon não estiver rodando, DB/API ficam indisponíveis (UI cai em `FALLBACK` e endpoints podem falhar). Ver `RUNBOOK.md` em `### Setup rápido (Docker + DB)`.
+- Meta REAL depende de token presente no backend; sem token, o lab opera apenas em `STUB` (esperado).
 
 ## Referências (histórico e legado)
 
