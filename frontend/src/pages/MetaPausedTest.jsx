@@ -63,6 +63,7 @@ export default function MetaPausedTest() {
   const [countryCode, setCountryCode] = useState("");
 
   const [created, setCreated] = useState(null);
+  const [campaignCreating, setCampaignCreating] = useState(false);
   const [createdLoading, setCreatedLoading] = useState(false);
 
   const [metaLoading, setMetaLoading] = useState(false);
@@ -188,6 +189,7 @@ export default function MetaPausedTest() {
   const canCreate =
     !loading &&
     !busy &&
+    !campaignCreating &&
     normalizeNonEmptyString(name) !== "" &&
     normalizeNonEmptyString(objective) !== "" &&
     normalizeNonEmptyString(normalizeMetaAdAccountId(metaAdAccountId)) !== "" &&
@@ -1306,7 +1308,7 @@ export default function MetaPausedTest() {
             disabled={!canCreate}
 		            onClick={async () => {
 		              setBusy(true);
-		              setCreatedLoading(true);
+                  setCampaignCreating(true);
 		              setError("");
 		              setErrorDetails(null);
 		              setSuccess("");
@@ -1342,12 +1344,12 @@ export default function MetaPausedTest() {
 		                  details: { mode, countryCode, errorDetails: captured.details },
 		                });
 		              } finally {
-	                setCreatedLoading(false);
+	                setCampaignCreating(false);
 	                setBusy(false);
 	              }
 	            }}
           >
-            {busy ? "Criando..." : `Criar Campaign ${mode} (PAUSED)`}
+            {campaignCreating ? "Criando..." : `Criar Campaign ${mode} (PAUSED)`}
           </button>
 
           <button

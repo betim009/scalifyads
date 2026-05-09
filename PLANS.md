@@ -150,7 +150,7 @@ Fontes únicas (para reduzir drift):
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-09 15:10]
+Última atualização: [2026-05-09 15:13]
 
 Regras:
 
@@ -198,6 +198,7 @@ Regras:
 
 - [ ] Consolidar fluxo Campaign → AdSet → Ad
 - [ ] Separar estados operacionais por entidade
+- [x] `/meta-test`: separar loading de create Campaign vs Graph get (evitar `createdLoading` ambíguo)
 - [x] Separar services por entidade Meta
 - [ ] Separar persistência por entidade
 - [ ] Separar logs por entidade
@@ -308,6 +309,7 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 - [2026-05-09 15:07] Decisão: `/meta-test` deve sinalizar REAL/STUB por entidade (Campaign/AdSet/Ad) na estrutura Meta para reduzir confusão operacional.
 - [2026-05-09 15:08] Decisão: `/meta-test` deve evitar estado ambíguo de alertas (erro e sucesso simultâneos); em falhas, limpar `success`.
 - [2026-05-09 15:10] Decisão: separar `services/` de Meta por entidade (Campaign/AdSet/Ad/Status/Sync), mantendo `services/meta.js` como re-export para compatibilidade incremental.
+- [2026-05-09 15:13] Decisão: no `/meta-test`, separar estados de loading por ação/entidade (ex: create Campaign vs Graph get) para evitar sinais operacionais ambíguos.
 
 ## Blockers
 
