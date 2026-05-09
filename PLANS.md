@@ -150,7 +150,7 @@ Fontes únicas (para reduzir drift):
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-09 15:32]
+Última atualização: [2026-05-09 15:35]
 
 Regras:
 
@@ -200,6 +200,7 @@ Regras:
 
 - [ ] Consolidar fluxo Campaign → AdSet → Ad
 - [ ] Separar estados operacionais por entidade
+- [x] `/meta-test`: extrair seção de logs em componente dedicado (reduzir arquivo gigante)
 - [x] `/meta-test`: separar loading de create Campaign vs Graph get (evitar `createdLoading` ambíguo)
 - [x] `/meta-test`: remover `busy` global e usar flags por entidade (Campaign/AdSet/Ad)
 - [x] Separar services por entidade Meta
@@ -275,7 +276,7 @@ Histórico/itens concluídos:
 
 ## Decision Log (Ativo)
 
-Última atualização: [2026-05-09 15:32]
+Última atualização: [2026-05-09 15:35]
 
 Mantém apenas decisões ainda válidas para execução atual. Histórico completo: ver `ARCHIVE.md` em `## Decision Log (histórico completo)`.
 
@@ -326,6 +327,7 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 - [2026-05-09 15:31] Decisão: logs do `/meta-test` devem ter um campo `entity` persistido (inferido da `action`) para permitir filtro por entidade sem depender apenas de prefixo string.
 - [2026-05-09 15:31] Decisão: “continuar fluxo incrementalmente” no `/meta-test` significa poder retomar do DB (sem recriar Campaign) e executar Campaign → AdSet → Ad em etapas independentes.
 - [2026-05-09 15:32] Decisão: “navegação progressiva” no `/meta-test` é atendida por atalhos + status de etapas + card de progresso + botões de scroll, mantendo o fluxo baseado em entidades (Campaign → AdSet → Ad).
+- [2026-05-09 15:35] Decisão: refactors no `/meta-test` devem ser incrementais e orientados por seção (extrair componentes UI sem alterar comportamento) para reduzir risco e evitar regressões.
 - [2026-05-09 15:16] Decisão: preferir `gridTemplateColumns: repeat(auto-fit, minmax(...))` no `/meta-test` para responsividade sem depender de media queries/código extra.
 - [2026-05-09 15:18] Decisão: logs do `/meta-test` devem ser filtráveis por entidade (campaign/adset/ad/meta/db) para troubleshooting rápido sem backend schema/log pipeline nesta fase.
 - [2026-05-09 15:20] Decisão: `/meta-test` deve permitir retomar execução a partir de `generated_campaigns` existente (seleção explícita) para suportar troubleshooting e fluxo incremental sem refazer a Campaign.
