@@ -46,6 +46,17 @@ function safeJson(value) {
   }
 }
 
+function inferEntityFromAction(action) {
+  const a = normalizeNonEmptyString(action);
+  if (!a) return "unknown";
+  if (a.startsWith("campaign.")) return "campaign";
+  if (a.startsWith("adset.")) return "adset";
+  if (a.startsWith("ad.")) return "ad";
+  if (a.startsWith("meta.")) return "meta";
+  if (a.startsWith("db.")) return "db";
+  return "other";
+}
+
 export default function MetaPausedTest() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -120,16 +131,18 @@ export default function MetaPausedTest() {
   const filteredOpsLogs = useMemo(() => {
     const list = Array.isArray(opsLogs) ? opsLogs : [];
     if (opsLogsFilter === "all") return list;
-    if (opsLogsFilter === "campaign") return list.filter((l) => String(l?.action || "").startsWith("campaign."));
-    if (opsLogsFilter === "adset") return list.filter((l) => String(l?.action || "").startsWith("adset."));
-    if (opsLogsFilter === "ad") return list.filter((l) => String(l?.action || "").startsWith("ad."));
-    if (opsLogsFilter === "meta") return list.filter((l) => String(l?.action || "").startsWith("meta."));
-    if (opsLogsFilter === "db") return list.filter((l) => String(l?.action || "").startsWith("db."));
+    if (opsLogsFilter === "campaign") return list.filter((l) => (l?.entity || inferEntityFromAction(l?.action)) === "campaign");
+    if (opsLogsFilter === "adset") return list.filter((l) => (l?.entity || inferEntityFromAction(l?.action)) === "adset");
+    if (opsLogsFilter === "ad") return list.filter((l) => (l?.entity || inferEntityFromAction(l?.action)) === "ad");
+    if (opsLogsFilter === "meta") return list.filter((l) => (l?.entity || inferEntityFromAction(l?.action)) === "meta");
+    if (opsLogsFilter === "db") return list.filter((l) => (l?.entity || inferEntityFromAction(l?.action)) === "db");
     return list;
   }, [opsLogs, opsLogsFilter]);
 
   function pushLog(entry) {
-    const enriched = { at: formatNowPtBr(), ...(entry ?? {}) };
+    const base = entry ?? {};
+    const entity = normalizeNonEmptyString(base?.entity) || inferEntityFromAction(base?.action);
+    const enriched = { at: formatNowPtBr(), entity, ...base };
     setOpsLogs((prev) => {
       const next = [enriched, ...(Array.isArray(prev) ? prev : [])].slice(0, 100);
       try {
