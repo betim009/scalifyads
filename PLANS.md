@@ -214,7 +214,7 @@ Regras:
 - [x] `/meta-test`: separar loading de create Campaign vs Graph get (evitar `createdLoading` ambíguo)
 - [x] `/meta-test`: remover `busy` global e usar flags por entidade (Campaign/AdSet/Ad)
 - [x] Separar services por entidade Meta
-- [x] Separar persistência por entidade (dual-write: `generated_adsets`/`generated_ads` + compat `generated_campaigns.meta_*`)
+- [x] Separar persistência por entidade (dual-write: `generated_adsets`/`generated_ads` + compat `generated_campaigns.meta_*`) (commit: 69d93fd)
 - [x] Separar logs por entidade
 - [x] `/meta-test`: filtro de logs por entidade (campaign/adset/ad/meta/db)
 - [x] Permitir continuar fluxo incrementalmente
@@ -355,7 +355,7 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 - [2026-05-09 15:23] Decisão: erros por seção do `/meta-test` devem ser descartáveis (dismiss) para reduzir ruído visual durante troubleshooting.
 - [2026-05-09 15:23] Decisão: ao selecionar `generated_campaigns` no `/meta-test`, preencher contexto no formulário (nome/objetivo/ad account/país) para facilitar retomar/depurar o fluxo.
 - [2026-05-11 12:30] Decisão: reduzir risco do `/meta-test` extraindo seções (Batch/Resultado) + util/hook (`metaTestUtils`, `useOpsLogs`) para diminuir o tamanho de `MetaPausedTest.jsx` sem alterar comportamento. (commit: 20e2627)
-- [2026-05-11 12:38] Decisão: persistir AdSet/Ad em tabelas dedicadas (`generated_adsets`, `generated_ads`) com dual-write, mantendo compatibilidade com campos `generated_campaigns.meta_*` durante migração gradual.
+- [2026-05-11 12:38] Decisão: persistir AdSet/Ad em tabelas dedicadas (`generated_adsets`, `generated_ads`) com dual-write, mantendo compatibilidade com campos `generated_campaigns.meta_*` durante migração gradual. (commit: 69d93fd)
 
 ## Blockers
 
