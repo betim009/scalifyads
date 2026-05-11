@@ -150,7 +150,7 @@ Fontes únicas (para reduzir drift):
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-11 12:34]
+Última atualização: [2026-05-11 12:35]
 
 Regras:
 
@@ -178,6 +178,7 @@ Regras:
 - [x] `/meta-test`: exibir `LOADING` nos indicadores (DATA/DB/META/SYNC)
 - [x] `/meta-test`: melhorar loading/erro para status do backend + Graph get (com detalhes + dismiss)
 - [x] `/meta-test`: desabilitar criação REAL de Campaign quando token está ausente no backend (evitar tentativa/erro) (commit: a3bceb2)
+- [x] `/meta-test`: adicionar botão “Copiar” no card de erro global (troubleshooting mais rápido)
 - [ ] Melhorar error states
 - [x] `/meta-test`: exibir detalhes (`error.details`) em falhas (validate/meta/db)
 - [x] `/meta-test`: permitir dismiss de errors de seção (Meta/DB/status backend)

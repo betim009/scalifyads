@@ -343,16 +343,35 @@ export default function MetaPausedTest() {
         <div className="card" style={{ padding: 18, marginTop: 16, borderColor: "#fecaca", color: "#991b1b" }}>
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
             <div style={{ fontWeight: 900 }}>Erro</div>
-            <button
-              type="button"
-              className="pillOutline"
-              onClick={() => {
-                setError("");
-                setErrorDetails(null);
-              }}
-            >
-              Fechar
-            </button>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                className="pillOutline"
+                disabled={!error && !errorDetails}
+                onClick={async () => {
+                  setSuccess("");
+                  try {
+                    const text = errorDetails ? safeJson(errorDetails) : String(error || "");
+                    await navigator.clipboard.writeText(text);
+                    setSuccess("Erro copiado para a área de transferência.");
+                  } catch {
+                    // ignore
+                  }
+                }}
+              >
+                Copiar
+              </button>
+              <button
+                type="button"
+                className="pillOutline"
+                onClick={() => {
+                  setError("");
+                  setErrorDetails(null);
+                }}
+              >
+                Fechar
+              </button>
+            </div>
           </div>
           <div style={{ marginTop: 6, fontWeight: 700 }}>{error}</div>
           {errorDetails ? (
