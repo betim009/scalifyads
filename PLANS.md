@@ -178,7 +178,7 @@ Regras:
 - [x] `/meta-test`: exibir `LOADING` nos indicadores (DATA/DB/META/SYNC)
 - [x] `/meta-test`: melhorar loading/erro para status do backend + Graph get (com detalhes + dismiss)
 - [x] `/meta-test`: desabilitar criação REAL de Campaign quando token está ausente no backend (evitar tentativa/erro) (commit: a3bceb2)
-- [x] `/meta-test`: adicionar botão “Copiar” no card de erro global (troubleshooting mais rápido)
+- [x] `/meta-test`: adicionar botão “Copiar” no card de erro global (troubleshooting mais rápido) (commit: 22da892)
 - [ ] Melhorar error states
 - [x] `/meta-test`: exibir detalhes (`error.details`) em falhas (validate/meta/db)
 - [x] `/meta-test`: permitir dismiss de errors de seção (Meta/DB/status backend)
