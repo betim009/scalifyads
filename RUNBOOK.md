@@ -42,11 +42,12 @@
 
 ### Meta — Operações principais (backend)
 
-Última atualização: [2026-05-08 08:48]
+Última atualização: [2026-05-12 19:02]
 
 - Criar Campaign REAL (PAUSED): `POST /api/meta/campaigns`
 - Criar Campaign REAL/STUB mínima (PAUSED): `POST /api/meta/campaigns/simple`
 - Criar AdSet/Ad (REAL/STUB, PAUSED): `POST /api/meta/adsets`, `POST /api/meta/ads`
+  - `POST /api/meta/ads`: campo opcional `creativeDraftId` (uuid) para rastreabilidade local (não substitui `creativeId` no REAL)
 - Consultar Campaign no Graph (via backend): `GET /api/meta/campaigns/{meta_campaign_id}`
 - Consultar AdSet no Graph (via backend): `GET /api/meta/adsets/{meta_adset_id}`
 - Consultar Ad no Graph (via backend): `GET /api/meta/ads/{meta_ad_id}`
