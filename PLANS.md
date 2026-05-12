@@ -150,7 +150,7 @@ Fontes únicas (para reduzir drift):
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-12 18:45]
+Última atualização: [2026-05-12 18:47]
 
 Regras:
 
@@ -243,7 +243,7 @@ Regras:
 - [x] Persistir falhas operacionais (ops_logs com `ok=false` + `error/details`) (commit: 6ab378e)
 - [x] Persistir histórico Meta (ops_logs + snapshots Graph) (commit: 7489ed7)
 - [x] `/meta-test`: registrar snapshots do Graph em `ops_logs` (meta.*.get) (commit: 7489ed7)
-- [ ] Persistir status de execução
+- [x] Persistir status de execução (`ops_last_*` em `generated_campaigns`) (commit: 7c329b1)
 - [x] Persistir estrutura Campaign/AdSet/Ad
 - [x] `/meta-test`: exibir estrutura persistida (generated_adsets/generated_ads) para registro selecionado (commit: 402f699)
 - [x] Criar recuperação operacional (bundle export + seleção do DB) (commit: 86995d6)
@@ -297,7 +297,7 @@ Histórico/itens concluídos:
 
 ## Decision Log (Ativo)
 
-Última atualização: [2026-05-12 18:44]
+Última atualização: [2026-05-12 18:47]
 
 Mantém apenas decisões ainda válidas para execução atual. Histórico completo: ver `ARCHIVE.md` em `## Decision Log (histórico completo)`.
 
@@ -374,6 +374,7 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 - [2026-05-12 18:40] Decisão: persistir estado operacional REAL/STUB no DB (`generated_campaigns.meta_run_mode`) para reduzir inferência via prefixo `stub-*` e melhorar rastreabilidade. (commit: b8ac3bc)
 - [2026-05-12 18:42] Decisão: usar `ops_logs` como trilha histórica mínima para snapshots do Graph (Campaign/AdSet/Ad) no `/meta-test`, evitando schema de histórico dedicado nesta fase. (commit: 7489ed7)
 - [2026-05-12 18:44] Decisão: adicionar “recovery bundle” (JSON export) no `/meta-test` para rastreabilidade e troubleshooting rápido sem depender de prints/descrições manuais. (commit: 86995d6)
+- [2026-05-12 18:47] Decisão: persistir resumo de execução no `generated_campaigns` (`ops_last_action/ok/at`) para visibilidade rápida sem abrir `ops_logs`. (commit: 7c329b1)
 
 ## Blockers
 
