@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { formatNowPtBr, inferEntityFromAction, normalizeNonEmptyString } from "./metaTestUtils.js";
+import { createOpsLogs } from "../../services/opsLogs.js";
 
 export default function useOpsLogs({ storageKey = "metaTest.opsLogs.v1", maxEntries = 100 } = {}) {
   const [opsLogs, setOpsLogs] = useState(() => {
@@ -36,6 +37,23 @@ export default function useOpsLogs({ storageKey = "metaTest.opsLogs.v1", maxEntr
       }
       return next;
     });
+
+    // Best-effort persist (DB-enabled environments only). Never block UI.
+    createOpsLogs({
+      source: "meta-test",
+      entries: [
+        {
+          entity: enriched.entity,
+          action: enriched.action,
+          ok: Boolean(enriched.ok),
+          error: enriched.error ?? null,
+          details: enriched.details ?? null,
+          clientAt: enriched.at,
+        },
+      ],
+    }).catch(() => {
+      // ignore (DB may be disabled/offline)
+    });
   }
 
   return {
@@ -47,4 +65,3 @@ export default function useOpsLogs({ storageKey = "metaTest.opsLogs.v1", maxEntr
     pushLog,
   };
 }
-
