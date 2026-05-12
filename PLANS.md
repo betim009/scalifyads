@@ -150,7 +150,7 @@ Fontes únicas (para reduzir drift):
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-12 18:19]
+Última atualização: [2026-05-12 18:22]
 
 Regras:
 
@@ -207,6 +207,7 @@ Regras:
 
 - [ ] Consolidar fluxo Campaign → AdSet → Ad
 - [x] `/meta-test`: prefill de nomes padrão (AdSet/Ad) ao criar/selecionar Campaign (commit: a0a5494)
+- [x] `/meta-test`: refresh Graph de AdSet/Ad via backend (GET `/api/meta/adsets/:id`, `/api/meta/ads/:id`) (commit: 7df3fad)
 - [x] Separar estados operacionais por entidade
 - [x] `/meta-test`: extrair seção de logs em componente dedicado (reduzir arquivo gigante)
 - [x] `/meta-test`: extrair seção de DB (`generated_campaigns`) em componente dedicado
@@ -292,7 +293,7 @@ Histórico/itens concluídos:
 
 ## Decision Log (Ativo)
 
-Última atualização: [2026-05-11 12:38]
+Última atualização: [2026-05-12 18:22]
 
 Mantém apenas decisões ainda válidas para execução atual. Histórico completo: ver `ARCHIVE.md` em `## Decision Log (histórico completo)`.
 
@@ -362,6 +363,7 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 - [2026-05-09 15:23] Decisão: ao selecionar `generated_campaigns` no `/meta-test`, preencher contexto no formulário (nome/objetivo/ad account/país) para facilitar retomar/depurar o fluxo.
 - [2026-05-11 12:30] Decisão: reduzir risco do `/meta-test` extraindo seções (Batch/Resultado) + util/hook (`metaTestUtils`, `useOpsLogs`) para diminuir o tamanho de `MetaPausedTest.jsx` sem alterar comportamento. (commit: 20e2627)
 - [2026-05-11 12:38] Decisão: persistir AdSet/Ad em tabelas dedicadas (`generated_adsets`, `generated_ads`) com dual-write, mantendo compatibilidade com campos `generated_campaigns.meta_*` durante migração gradual. (commit: 69d93fd)
+- [2026-05-12 18:22] Decisão: expor endpoints de leitura via backend para AdSet/Ad (`GET /api/meta/adsets/:id`, `GET /api/meta/ads/:id`) para troubleshooting no `/meta-test` sem token no frontend. (commit: 7df3fad)
 
 ## Blockers
 

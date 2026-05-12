@@ -48,6 +48,8 @@
 - Criar Campaign REAL/STUB mínima (PAUSED): `POST /api/meta/campaigns/simple`
 - Criar AdSet/Ad (REAL/STUB, PAUSED): `POST /api/meta/adsets`, `POST /api/meta/ads`
 - Consultar Campaign no Graph (via backend): `GET /api/meta/campaigns/{meta_campaign_id}`
+- Consultar AdSet no Graph (via backend): `GET /api/meta/adsets/{meta_adset_id}`
+- Consultar Ad no Graph (via backend): `GET /api/meta/ads/{meta_ad_id}`
 - Listar Campaigns PAUSED por Ad Account (via backend): `GET /api/meta/ad-accounts/:id/campaigns?pausedOnly=true&limit=100`
 
 ### Meta — Sync / Automação (dev)
