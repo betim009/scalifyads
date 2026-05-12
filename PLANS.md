@@ -390,13 +390,14 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 
 ## Risks
 
-Última atualização: [2026-05-08 10:46]
+Última atualização: [2026-05-12 19:07]
 
 - Frontend usa backend parcialmente (países/campanhas/financeiro); ainda há telas baseadas em mocks (ex: ROI) e risco de divergência até completar a integração.
 - Tokens Meta: riscos de segurança/expiração (refresh fora do escopo por enquanto; provider `stub` existe para desenvolvimento).
 - Risco operacional: campanhas reais agora podem ser criadas via Meta Marketing API; durante desenvolvimento, toda criação deve permanecer obrigatoriamente com `status: PAUSED`.
 - Risco de execução: `objective` pode estar ausente (UI ainda não define `objective_key` por padrão); o endpoint exige `objective` via body quando não houver objetivo no banco.
 - O formulário atual "Nova Campanha" concentra responsabilidades de Campaign/AdSet/Ad em um único fluxo, aumentando complexidade operacional e de manutenção.
+- Creative REAL: criação de AdCreative e upload de imagem para a Meta exigem parâmetros externos (ex: `page_id`, `instagram_actor_id`, requisitos de mídia) ainda não definidos no lab.
 
 ## Technical Debt
 
