@@ -121,6 +121,7 @@ export default function BackendStatusSection({
             setValidateLoading(true);
             setValidateError("");
             setValidateErrorDetails(null);
+            setValidateMe(null);
             try {
               const res = await validateMetaToken();
               setValidateMe(res.me ?? null);
