@@ -26,7 +26,7 @@ import { countryCodeToFlag } from "../services/fallbacks.js";
 import { getGeneratedCampaignStructure, listGeneratedCampaigns } from "../services/generatedCampaigns.js";
 import { listOpsLogs } from "../services/opsLogs.js";
 import { listCreativeAssets, uploadCreativeAsset } from "../services/creativeAssets.js";
-import { createCreativeDraft, listCreativeDrafts } from "../services/creativeDrafts.js";
+import { createCreativeDraft, duplicateCreativeDraft, listCreativeDrafts } from "../services/creativeDrafts.js";
 import useOpsLogs from "./metaTest/useOpsLogs.js";
 import {
   isRealMetaId,
@@ -1033,6 +1033,30 @@ export default function MetaPausedTest() {
         setCtaType={setDraftCtaType}
         destinationUrl={draftDestinationUrl}
         setDestinationUrl={setDraftDestinationUrl}
+        onDuplicate={async (draftId) => {
+          if (!draftId) return;
+          setError("");
+          setErrorDetails(null);
+          setSuccess("");
+          try {
+            const res = await duplicateCreativeDraft(draftId);
+            pushLog({
+              action: "creative.draft.duplicate",
+              ok: true,
+              details: { sourceId: draftId, id: res?.creativeDraft?.id ?? null },
+            });
+            setSuccess("Draft duplicado.");
+            await refreshCreativeDrafts(createdGeneratedCampaignId);
+          } catch (err) {
+            const captured = captureError(err, "Falha ao duplicar draft.");
+            pushLog({
+              action: "creative.draft.duplicate",
+              ok: false,
+              error: captured.message || "error",
+              details: { errorDetails: captured.details },
+            });
+          }
+        }}
       />
 
       <OpsLogsSection

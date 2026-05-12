@@ -25,6 +25,7 @@ export default function CreativeDraftsSection({
   setCtaType,
   destinationUrl,
   setDestinationUrl,
+  onDuplicate,
 }) {
   const baseUrl = getBackendBaseUrl();
   const selectedAsset = (assets ?? []).find((a) => a.id === draftAssetId) ?? null;
@@ -279,6 +280,7 @@ export default function CreativeDraftsSection({
               <th>Headline</th>
               <th>Status</th>
               <th>Meta creative</th>
+              <th>Ação</th>
             </tr>
           </thead>
           <tbody>
@@ -294,11 +296,21 @@ export default function CreativeDraftsSection({
                 <td style={{ fontWeight: 900 }}>{d.headline || "—"}</td>
                 <td className="muted" style={{ fontWeight: 900 }}>{d.status || "—"}</td>
                 <td className="muted" style={{ fontWeight: 800 }}>{d.meta_creative_id || "—"}</td>
+                <td>
+                  <button
+                    type="button"
+                    className="pillOutline"
+                    onClick={() => onDuplicate(d.id)}
+                    style={{ height: 32, padding: "0 12px", fontSize: 12, fontWeight: 900 }}
+                  >
+                    Duplicar
+                  </button>
+                </td>
               </tr>
             ))}
             {!drafts.length && !loading ? (
               <tr>
-                <td colSpan={6} className="muted" style={{ fontWeight: 800 }}>
+                <td colSpan={7} className="muted" style={{ fontWeight: 800 }}>
                   Vazio. Crie um draft acima.
                 </td>
               </tr>

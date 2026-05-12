@@ -13,3 +13,7 @@ export async function createCreativeDraft(payload) {
   return { ok: true, creativeDraft: data?.creative_draft ?? null };
 }
 
+export async function duplicateCreativeDraft(id) {
+  const data = await apiPost(`/api/creative-drafts/${encodeURIComponent(String(id))}/duplicate`, {});
+  return { ok: true, creativeDraft: data?.creative_draft ?? null };
+}
