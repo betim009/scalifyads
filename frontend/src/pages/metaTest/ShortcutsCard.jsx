@@ -24,6 +24,9 @@ export default function ShortcutsCard({ stepCampaignOk, stepAdSetOk, stepAdOk })
         <a className="pillOutline" href="#meta-test-creative-assets">
           Mídia
         </a>
+        <a className="pillOutline" href="#meta-test-creative-drafts">
+          Creative
+        </a>
         <a className="pillOutline" href="#meta-test-ops-logs">
           Logs
         </a>

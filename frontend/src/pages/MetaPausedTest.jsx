@@ -9,6 +9,7 @@ import OpsLogsDbSection from "./metaTest/OpsLogsDbSection.jsx";
 import GeneratedCampaignsSection from "./metaTest/GeneratedCampaignsSection.jsx";
 import GeneratedStructureSection from "./metaTest/GeneratedStructureSection.jsx";
 import CreativeAssetsSection from "./metaTest/CreativeAssetsSection.jsx";
+import CreativeDraftsSection from "./metaTest/CreativeDraftsSection.jsx";
 import StepAdSetSection from "./metaTest/StepAdSetSection.jsx";
 import StepAdSection from "./metaTest/StepAdSection.jsx";
 import StepCampaignSection from "./metaTest/StepCampaignSection.jsx";
@@ -25,6 +26,7 @@ import { countryCodeToFlag } from "../services/fallbacks.js";
 import { getGeneratedCampaignStructure, listGeneratedCampaigns } from "../services/generatedCampaigns.js";
 import { listOpsLogs } from "../services/opsLogs.js";
 import { listCreativeAssets, uploadCreativeAsset } from "../services/creativeAssets.js";
+import { createCreativeDraft, listCreativeDrafts } from "../services/creativeDrafts.js";
 import useOpsLogs from "./metaTest/useOpsLogs.js";
 import {
   isRealMetaId,
@@ -108,6 +110,18 @@ export default function MetaPausedTest() {
   const [creativeAssets, setCreativeAssets] = useState([]);
   const [assetUploading, setAssetUploading] = useState(false);
 
+  const [draftsLoading, setDraftsLoading] = useState(false);
+  const [draftsError, setDraftsError] = useState("");
+  const [draftsErrorDetails, setDraftsErrorDetails] = useState(null);
+  const [creativeDrafts, setCreativeDrafts] = useState([]);
+  const [draftCreating, setDraftCreating] = useState(false);
+  const [draftAssetId, setDraftAssetId] = useState("");
+  const [draftPrimaryText, setDraftPrimaryText] = useState("");
+  const [draftHeadline, setDraftHeadline] = useState("");
+  const [draftDescription, setDraftDescription] = useState("");
+  const [draftCtaType, setDraftCtaType] = useState("");
+  const [draftDestinationUrl, setDraftDestinationUrl] = useState("");
+
   const { opsLogs, setOpsLogs, opsLogsFilter, setOpsLogsFilter, filteredOpsLogs, pushLog } = useOpsLogs();
 
   const isCreatingAny = campaignCreating || adSetCreating || adCreating;
@@ -172,6 +186,7 @@ export default function MetaPausedTest() {
     refreshBackendStatus();
     refreshLocalGenerated();
     refreshCreativeAssets();
+    refreshCreativeDrafts(createdGeneratedCampaignId);
     try {
       const raw = localStorage.getItem("metaTest.draft.v1");
       const parsed = raw ? JSON.parse(raw) : null;
@@ -389,6 +404,27 @@ export default function MetaPausedTest() {
     }
   }
 
+  async function refreshCreativeDrafts(forGeneratedCampaignId) {
+    const id = normalizeNonEmptyString(forGeneratedCampaignId);
+    if (!id) {
+      setCreativeDrafts([]);
+      return;
+    }
+    setDraftsLoading(true);
+    setDraftsError("");
+    setDraftsErrorDetails(null);
+    try {
+      const res = await listCreativeDrafts({ generatedCampaignId: id, limit: 50 });
+      setCreativeDrafts(res.creativeDrafts ?? []);
+    } catch (err) {
+      setCreativeDrafts([]);
+      setDraftsError(err?.message ? String(err.message) : "Falha ao carregar creative drafts.");
+      setDraftsErrorDetails(err?.body?.error?.details ?? err?.body ?? null);
+    } finally {
+      setDraftsLoading(false);
+    }
+  }
+
   function handleSelectGeneratedCampaignRow(gc) {
     setError("");
     setErrorDetails(null);
@@ -522,6 +558,7 @@ export default function MetaPausedTest() {
     setSuccess("Registro selecionado. Você pode continuar o fluxo incremental a partir do DB.");
 
     refreshStructure(gc?.id);
+    refreshCreativeDrafts(gc?.id);
   }
 
   return (
@@ -922,6 +959,77 @@ export default function MetaPausedTest() {
         safeJson={safeJson}
       />
 
+      <CreativeDraftsSection
+        generatedCampaignId={createdGeneratedCampaignId}
+        assets={creativeAssets}
+        drafts={creativeDrafts}
+        loading={draftsLoading}
+        error={draftsError}
+        errorDetails={draftsErrorDetails}
+        refreshDisabled={draftsLoading || loading || isCreatingAny || !createdGeneratedCampaignId}
+        onRefresh={() => refreshCreativeDrafts(createdGeneratedCampaignId)}
+        createDisabled={draftCreating || loading || isCreatingAny || !createdGeneratedCampaignId}
+        onCreate={async () => {
+          if (!createdGeneratedCampaignId) return;
+          setDraftCreating(true);
+          setError("");
+          setErrorDetails(null);
+          setSuccess("");
+          try {
+            const payload = {
+              generatedCampaignId: createdGeneratedCampaignId,
+              creativeAssetId: normalizeNonEmptyString(draftAssetId) || null,
+              primaryText: normalizeNonEmptyString(draftPrimaryText) || null,
+              headline: normalizeNonEmptyString(draftHeadline) || null,
+              description: normalizeNonEmptyString(draftDescription) || null,
+              ctaType: normalizeNonEmptyString(draftCtaType) || null,
+              destinationUrl: normalizeNonEmptyString(draftDestinationUrl) || null,
+            };
+            const res = await createCreativeDraft(payload);
+            pushLog({
+              action: "creative.draft.create",
+              ok: true,
+              details: { id: res?.creativeDraft?.id ?? null, generatedCampaignId: createdGeneratedCampaignId },
+            });
+            setSuccess("Creative draft persistido.");
+            setDraftAssetId("");
+            setDraftPrimaryText("");
+            setDraftHeadline("");
+            setDraftDescription("");
+            setDraftCtaType("");
+            setDraftDestinationUrl("");
+            await refreshCreativeDrafts(createdGeneratedCampaignId);
+          } catch (err) {
+            const captured = captureError(err, "Falha ao criar draft.");
+            pushLog({
+              action: "creative.draft.create",
+              ok: false,
+              error: captured.message || "error",
+              details: { errorDetails: captured.details },
+            });
+          } finally {
+            setDraftCreating(false);
+          }
+        }}
+        onDismissError={() => {
+          setDraftsError("");
+          setDraftsErrorDetails(null);
+        }}
+        safeJson={safeJson}
+        draftAssetId={draftAssetId}
+        setDraftAssetId={setDraftAssetId}
+        primaryText={draftPrimaryText}
+        setPrimaryText={setDraftPrimaryText}
+        headline={draftHeadline}
+        setHeadline={setDraftHeadline}
+        description={draftDescription}
+        setDescription={setDraftDescription}
+        ctaType={draftCtaType}
+        setCtaType={setDraftCtaType}
+        destinationUrl={draftDestinationUrl}
+        setDestinationUrl={setDraftDestinationUrl}
+      />
+
       <OpsLogsSection
         opsLogs={opsLogs}
         filteredOpsLogs={filteredOpsLogs}
@@ -1005,6 +1113,7 @@ export default function MetaPausedTest() {
             setSuccess(`Campaign criada (${res.mode || mode}) — status obrigatório: PAUSED.`);
             await refreshBackendStatus();
             await refreshLocalGenerated();
+            await refreshCreativeDrafts(res?.generatedCampaign?.id);
           } catch (err) {
             const captured = captureError(err, "Falha ao criar Campaign.");
             pushLog({
