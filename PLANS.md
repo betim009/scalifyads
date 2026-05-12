@@ -150,7 +150,7 @@ Fontes únicas (para reduzir drift):
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-12 19:03]
+Última atualização: [2026-05-12 19:05]
 
 Regras:
 
@@ -257,7 +257,7 @@ Regras:
 - [x] Associar creative ao Ad (creative_draft_id em `generated_ads` + UI seleção) (commits: 1fa8d8f, 5a6e520)
 - [ ] Validar creative REAL
 - [x] Exibir preview operacional (preview texto + mídia) (commit: f8689c5)
-- [ ] Preparar variações futuras
+- [x] Preparar variações futuras (duplicar creative drafts) (commits: ba2322f, 41c1d13)
 
 ### P5 — Ad REAL mínimo
 
@@ -297,7 +297,7 @@ Histórico/itens concluídos:
 
 ## Decision Log (Ativo)
 
-Última atualização: [2026-05-12 19:03]
+Última atualização: [2026-05-12 19:05]
 
 Mantém apenas decisões ainda válidas para execução atual. Histórico completo: ver `ARCHIVE.md` em `## Decision Log (histórico completo)`.
 
@@ -380,6 +380,7 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 - [2026-05-12 18:59] Decisão: persistir Creative como draft local (`creative_drafts`) vinculado a `generated_campaign_id` + asset opcional, para evoluir criação REAL gradualmente sem exigir Meta creative de imediato. (commits: 07757eb, 6ca9629)
 - [2026-05-12 19:02] Decisão: associar Ad ↔ Creative local por referência (`generated_ads.creative_draft_id`) para rastreabilidade e futura criação REAL baseada no draft. (commits: 1fa8d8f, 5a6e520)
 - [2026-05-12 19:03] Decisão: preview operacional é local e simples (texto + mídia via `/uploads`), suficiente para troubleshooting antes de integrar preview real da Meta. (commit: f8689c5)
+- [2026-05-12 19:05] Decisão: variações futuras começam com duplicação de `creative_drafts` (sem abstrações), permitindo iterar copy/mídia rapidamente no lab. (commits: ba2322f, 41c1d13)
 
 ## Blockers
 
