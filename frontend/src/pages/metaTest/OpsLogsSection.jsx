@@ -1,3 +1,5 @@
+import { useMemo, useState } from "react";
+
 export default function OpsLogsSection({
   opsLogs,
   filteredOpsLogs,
@@ -9,6 +11,26 @@ export default function OpsLogsSection({
   setErrorDetails,
   setSuccess,
 }) {
+  const [statusFilter, setStatusFilter] = useState("all"); // all | ok | error
+  const [query, setQuery] = useState("");
+
+  const viewLogs = useMemo(() => {
+    let list = Array.isArray(filteredOpsLogs) ? filteredOpsLogs : [];
+
+    if (statusFilter === "ok") list = list.filter((l) => Boolean(l?.ok));
+    if (statusFilter === "error") list = list.filter((l) => !l?.ok);
+
+    const q = String(query || "").trim().toLowerCase();
+    if (!q) return list;
+    return list.filter((l) => {
+      try {
+        return JSON.stringify(l).toLowerCase().includes(q);
+      } catch {
+        return false;
+      }
+    });
+  }, [filteredOpsLogs, statusFilter, query]);
+
   return (
     <div id="meta-test-ops-logs" className="card" style={{ padding: 0, marginTop: 16 }}>
       <div style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
@@ -18,7 +40,7 @@ export default function OpsLogsSection({
             Timeline local do navegador (sem token) para auditoria rápida do lab.
           </div>
           <div className="muted" style={{ marginTop: 8, fontWeight: 800 }}>
-            Mostrando <b>{filteredOpsLogs.length}</b> de <b>{opsLogs.length}</b> log(s).
+            Mostrando <b>{viewLogs.length}</b> de <b>{opsLogs.length}</b> log(s).
           </div>
         </div>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -44,7 +66,7 @@ export default function OpsLogsSection({
               setError("");
               setErrorDetails(null);
               setSuccess("");
-              const text = safeJson(filteredOpsLogs);
+              const text = safeJson(viewLogs);
               try {
                 await navigator.clipboard.writeText(text);
                 setSuccess("Logs (filtro atual) copiados para a área de transferência.");
@@ -53,7 +75,7 @@ export default function OpsLogsSection({
                 setErrorDetails(null);
               }
             }}
-            disabled={!filteredOpsLogs.length}
+            disabled={!viewLogs.length}
           >
             Copiar JSON
           </button>
@@ -88,6 +110,65 @@ export default function OpsLogsSection({
         })}
       </div>
 
+      <div style={{ padding: "0 16px 16px", display: "flex", gap: 10, flexWrap: "wrap", alignItems: "end" }}>
+        <label style={{ display: "grid", gap: 6, minWidth: 220 }}>
+          <span className="muted" style={{ fontWeight: 900 }}>
+            Status
+          </span>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            style={{
+              height: 38,
+              borderRadius: 12,
+              border: "1px solid #e5e7eb",
+              padding: "0 12px",
+              fontSize: 13,
+              fontWeight: 900,
+              outline: "none",
+              background: "#ffffff",
+            }}
+          >
+            <option value="all">Todos</option>
+            <option value="ok">Somente OK</option>
+            <option value="error">Somente erros</option>
+          </select>
+        </label>
+
+        <label style={{ display: "grid", gap: 6, minWidth: 280, flex: 1 }}>
+          <span className="muted" style={{ fontWeight: 900 }}>
+            Buscar
+          </span>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Ex: meta.validate, stub-, act_..."
+            style={{
+              height: 38,
+              borderRadius: 12,
+              border: "1px solid #e5e7eb",
+              padding: "0 12px",
+              fontSize: 13,
+              fontWeight: 700,
+              outline: "none",
+              background: "#ffffff",
+            }}
+          />
+        </label>
+
+        <button
+          type="button"
+          className="pillOutline"
+          onClick={() => {
+            setStatusFilter("all");
+            setQuery("");
+          }}
+          disabled={statusFilter === "all" && !query}
+        >
+          Limpar filtros
+        </button>
+      </div>
+
       <div style={{ borderTop: "1px solid #e5e7eb", overflowX: "auto" }}>
         <table className="dataTable" style={{ marginTop: 0 }}>
           <thead>
@@ -99,7 +180,7 @@ export default function OpsLogsSection({
             </tr>
           </thead>
           <tbody>
-            {filteredOpsLogs.map((l, idx) => (
+            {viewLogs.map((l, idx) => (
               <tr key={`${l.at}-${idx}`}>
                 <td className="muted" style={{ fontWeight: 800 }}>
                   {l.at}
@@ -115,10 +196,10 @@ export default function OpsLogsSection({
                 </td>
               </tr>
             ))}
-            {!filteredOpsLogs.length ? (
+            {!viewLogs.length ? (
               <tr>
                 <td colSpan={4} className="muted" style={{ fontWeight: 800 }}>
-                  {opsLogs.length ? "Vazio (filtro atual)." : "Vazio. Execute ações acima para gerar logs."}
+                  {opsLogs.length ? "Vazio (filtros atuais)." : "Vazio. Execute ações acima para gerar logs."}
                 </td>
               </tr>
             ) : null}
@@ -128,4 +209,3 @@ export default function OpsLogsSection({
     </div>
   );
 }
-
