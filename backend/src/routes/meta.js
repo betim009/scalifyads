@@ -8,8 +8,8 @@ import { metaFetchMe } from '../meta/graph.js'
 import { coerceAccessToken, resolveAccessToken } from '../meta/accessToken.js'
 import { metaCreateCampaign, metaFetchCampaign, metaListAdAccountCampaigns } from '../meta/campaigns.js'
 import { slugify } from '../lib/slugify.js'
-import { metaCreateAdSet, metaCreateAdSetStub } from '../meta/adsets.js'
-import { metaCreateAd, metaCreateAdStub } from '../meta/ads.js'
+import { metaCreateAdSet, metaCreateAdSetStub, metaFetchAdSet } from '../meta/adsets.js'
+import { metaCreateAd, metaCreateAdStub, metaFetchAd } from '../meta/ads.js'
 
 function parseDateOrNull(value) {
   if (typeof value !== 'string' || !value.trim()) return null
@@ -887,6 +887,70 @@ export function metaRouter() {
       } catch (err) {
         const status = typeof err?.status === 'number' ? err.status : 502
         return jsonError(res, status, err?.message ?? 'Meta campaign fetch failed', err?.details)
+      }
+    })
+  )
+
+  router.get(
+    '/adsets/:id',
+    asyncHandler(async (req, res) => {
+      if (!req.app.locals.dbEnabled) {
+        return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
+      }
+
+      const metaAdSetId = normalizeNonEmptyString(req.params.id)
+      if (!metaAdSetId) {
+        return jsonError(res, 400, 'Invalid meta ad set id')
+      }
+
+      const pool = getPool()
+      const accessToken = await resolveAccessToken(pool, req)
+      if (!accessToken) {
+        return jsonError(
+          res,
+          400,
+          'Missing accessToken (provide body.accessToken, META_ACCESS_TOKEN, or save via /tokens)'
+        )
+      }
+
+      try {
+        const adset = await metaFetchAdSet({ metaAdSetId, accessToken })
+        return res.json({ ok: true, meta_adset: adset })
+      } catch (err) {
+        const status = typeof err?.status === 'number' ? err.status : 502
+        return jsonError(res, status, err?.message ?? 'Meta ad set fetch failed', err?.details)
+      }
+    })
+  )
+
+  router.get(
+    '/ads/:id',
+    asyncHandler(async (req, res) => {
+      if (!req.app.locals.dbEnabled) {
+        return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
+      }
+
+      const metaAdId = normalizeNonEmptyString(req.params.id)
+      if (!metaAdId) {
+        return jsonError(res, 400, 'Invalid meta ad id')
+      }
+
+      const pool = getPool()
+      const accessToken = await resolveAccessToken(pool, req)
+      if (!accessToken) {
+        return jsonError(
+          res,
+          400,
+          'Missing accessToken (provide body.accessToken, META_ACCESS_TOKEN, or save via /tokens)'
+        )
+      }
+
+      try {
+        const ad = await metaFetchAd({ metaAdId, accessToken })
+        return res.json({ ok: true, meta_ad: ad })
+      } catch (err) {
+        const status = typeof err?.status === 'number' ? err.status : 502
+        return jsonError(res, status, err?.message ?? 'Meta ad fetch failed', err?.details)
       }
     })
   )

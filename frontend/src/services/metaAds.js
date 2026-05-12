@@ -1,4 +1,4 @@
-import { apiPost } from "./http.js";
+import { apiGet, apiPost } from "./http.js";
 
 export async function createMetaAd(payload) {
   const data = await apiPost("/api/meta/ads", payload ?? {});
@@ -10,3 +10,8 @@ export async function createMetaAd(payload) {
   };
 }
 
+export async function getMetaAd(metaAdId) {
+  const id = String(metaAdId || "").trim();
+  const data = await apiGet(`/api/meta/ads/${encodeURIComponent(id)}`);
+  return { ok: true, metaAd: data?.meta_ad ?? null };
+}

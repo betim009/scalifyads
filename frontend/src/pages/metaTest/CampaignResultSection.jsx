@@ -4,10 +4,6 @@ export default function CampaignResultSection({
   created,
   createdCountryCode,
   countryCodeToFlag,
-  createdLoading,
-  refreshDisabled,
-  onRefreshGraph,
-  graphInfoText,
 }) {
   return (
     <div className="card" style={{ padding: 18, marginTop: 16 }}>
@@ -73,16 +69,6 @@ export default function CampaignResultSection({
           `generated_campaigns.meta_ad_id`: <b>{created?.generatedCampaign?.meta_ad_id || "—"}</b>
         </div>
       </div>
-
-      <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-        <button type="button" className="pillOutline" disabled={refreshDisabled} onClick={onRefreshGraph}>
-          {createdLoading ? "Consultando..." : "Consultar status no Graph"}
-        </button>
-        <div className="muted" style={{ fontWeight: 800 }}>
-          {graphInfoText}
-        </div>
-      </div>
     </div>
   );
 }
-

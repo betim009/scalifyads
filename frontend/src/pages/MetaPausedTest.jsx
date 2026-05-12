@@ -15,8 +15,8 @@ import CampaignResultSection from "./metaTest/CampaignResultSection.jsx";
 import CampaignBatchSection from "./metaTest/CampaignBatchSection.jsx";
 import { getCountries } from "../services/reference.js";
 import { createMetaCampaignSimple, getMetaCampaign, listMetaAdAccountCampaigns } from "../services/metaCampaigns.js";
-import { createMetaAdSet } from "../services/metaAdSets.js";
-import { createMetaAd } from "../services/metaAds.js";
+import { createMetaAdSet, getMetaAdSet } from "../services/metaAdSets.js";
+import { createMetaAd, getMetaAd } from "../services/metaAds.js";
 import { getMetaStatus, validateMetaToken } from "../services/metaStatus.js";
 import { countryCodeToFlag } from "../services/fallbacks.js";
 import { listGeneratedCampaigns } from "../services/generatedCampaigns.js";
@@ -52,6 +52,8 @@ export default function MetaPausedTest() {
   const [created, setCreated] = useState(null);
   const [campaignCreating, setCampaignCreating] = useState(false);
   const [createdLoading, setCreatedLoading] = useState(false);
+  const [adSetGraphLoading, setAdSetGraphLoading] = useState(false);
+  const [adGraphLoading, setAdGraphLoading] = useState(false);
 
   const [metaLoading, setMetaLoading] = useState(false);
   const [metaError, setMetaError] = useState("");
@@ -186,8 +188,10 @@ export default function MetaPausedTest() {
   const stepAdOk = createdMetaAdId !== "";
   const campaignEntityModeLabel = createdMetaCampaignId ? (createdMetaCampaignIdIsReal ? "REAL" : "STUB") : "—";
   const adSetEntityId = normalizeNonEmptyString(created?.metaAdSet?.id) || createdMetaAdSetId;
+  const adSetEntityIdIsReal = isRealMetaId(adSetEntityId);
   const adSetEntityModeLabel = adSetEntityId ? (isRealMetaId(adSetEntityId) ? "REAL" : "STUB") : "—";
   const adEntityId = normalizeNonEmptyString(created?.metaAd?.id) || createdMetaAdId;
+  const adEntityIdIsReal = isRealMetaId(adEntityId);
   const adEntityModeLabel = adEntityId ? (isRealMetaId(adEntityId) ? "REAL" : "STUB") : "—";
 
   const canCreateAdSet =
@@ -444,6 +448,120 @@ export default function MetaPausedTest() {
         countryCode={countryCode}
         countryNameByCode={countryNameByCode}
       />
+
+      <div className="card" style={{ padding: 18, marginTop: 16 }}>
+        <div style={{ fontWeight: 900, fontSize: 16 }}>Graph (REAL) — atualizar status</div>
+        <div className="muted" style={{ marginTop: 8, fontWeight: 800, lineHeight: 1.55 }}>
+          Usa `GET /api/meta/*/:id` via backend. STUB não consulta Graph.
+        </div>
+
+        <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          <button
+            type="button"
+            className="pillOutline"
+            disabled={
+              createdLoading || isCreatingAny || !backendStatus?.hasAccessToken || !createdMetaCampaignIdIsReal
+            }
+            onClick={async () => {
+              setCreatedLoading(true);
+              setError("");
+              setErrorDetails(null);
+              setSuccess("");
+              try {
+                const res = await getMetaCampaign(createdMetaCampaignId);
+                setCreated((prev) => ({
+                  ...(prev ?? {}),
+                  metaCampaign: res.metaCampaign ?? prev?.metaCampaign ?? null,
+                }));
+                setSuccess("Campaign atualizada via Graph.");
+                pushLog({ action: "meta.campaign.get", ok: true, details: { metaCampaignId: createdMetaCampaignId } });
+              } catch (err) {
+                const captured = captureError(err, "Falha ao consultar Campaign no Graph.");
+                pushLog({
+                  action: "meta.campaign.get",
+                  ok: false,
+                  error: captured.message || "error",
+                  details: { metaCampaignId: createdMetaCampaignId, errorDetails: captured.details },
+                });
+              } finally {
+                setCreatedLoading(false);
+              }
+            }}
+          >
+            {createdLoading ? "Consultando Campaign..." : "Consultar Campaign no Graph"}
+          </button>
+
+          <button
+            type="button"
+            className="pillOutline"
+            disabled={adSetGraphLoading || isCreatingAny || !backendStatus?.hasAccessToken || !adSetEntityIdIsReal}
+            onClick={async () => {
+              setAdSetGraphLoading(true);
+              setError("");
+              setErrorDetails(null);
+              setSuccess("");
+              try {
+                const res = await getMetaAdSet(adSetEntityId);
+                setCreated((prev) => ({
+                  ...(prev ?? {}),
+                  metaAdSet: res.metaAdSet ?? prev?.metaAdSet ?? null,
+                }));
+                setSuccess("AdSet atualizado via Graph.");
+                pushLog({ action: "meta.adset.get", ok: true, details: { metaAdSetId: adSetEntityId } });
+              } catch (err) {
+                const captured = captureError(err, "Falha ao consultar AdSet no Graph.");
+                pushLog({
+                  action: "meta.adset.get",
+                  ok: false,
+                  error: captured.message || "error",
+                  details: { metaAdSetId: adSetEntityId, errorDetails: captured.details },
+                });
+              } finally {
+                setAdSetGraphLoading(false);
+              }
+            }}
+          >
+            {adSetGraphLoading ? "Consultando AdSet..." : "Consultar AdSet no Graph"}
+          </button>
+
+          <button
+            type="button"
+            className="pillOutline"
+            disabled={adGraphLoading || isCreatingAny || !backendStatus?.hasAccessToken || !adEntityIdIsReal}
+            onClick={async () => {
+              setAdGraphLoading(true);
+              setError("");
+              setErrorDetails(null);
+              setSuccess("");
+              try {
+                const res = await getMetaAd(adEntityId);
+                setCreated((prev) => ({
+                  ...(prev ?? {}),
+                  metaAd: res.metaAd ?? prev?.metaAd ?? null,
+                }));
+                setSuccess("Ad atualizado via Graph.");
+                pushLog({ action: "meta.ad.get", ok: true, details: { metaAdId: adEntityId } });
+              } catch (err) {
+                const captured = captureError(err, "Falha ao consultar Ad no Graph.");
+                pushLog({
+                  action: "meta.ad.get",
+                  ok: false,
+                  error: captured.message || "error",
+                  details: { metaAdId: adEntityId, errorDetails: captured.details },
+                });
+              } finally {
+                setAdGraphLoading(false);
+              }
+            }}
+          >
+            {adGraphLoading ? "Consultando Ad..." : "Consultar Ad no Graph"}
+          </button>
+
+          <div className="muted" style={{ fontWeight: 800 }}>
+            Requer token no backend + IDs reais (não `stub-*`).
+          </div>
+        </div>
+      </div>
       <CampaignBatchSection
         isBusy={loading || isCreatingAny}
         countriesSource={countriesSource}
@@ -637,37 +755,6 @@ export default function MetaPausedTest() {
           created={created}
           createdCountryCode={createdCountryCode}
           countryCodeToFlag={countryCodeToFlag}
-          createdLoading={createdLoading}
-          refreshDisabled={createdLoading || isCreatingAny || !backendStatus?.hasAccessToken || !isRealMetaId(created.metaCampaign?.id)}
-          onRefreshGraph={async () => {
-            setCreatedLoading(true);
-            setError("");
-            setErrorDetails(null);
-            try {
-              const res = await getMetaCampaign(created.metaCampaign.id);
-              setCreated((prev) => ({
-                ...(prev ?? {}),
-                metaCampaign: res.metaCampaign ?? prev?.metaCampaign ?? null,
-              }));
-              setSuccess("Status atualizado via Graph.");
-              pushLog({ action: "meta.campaign.get", ok: true, details: { metaCampaignId: created.metaCampaign.id } });
-            } catch (err) {
-              const captured = captureError(err, "Falha ao consultar Campaign no Graph.");
-              pushLog({
-                action: "meta.campaign.get",
-                ok: false,
-                error: captured.message || "error",
-                details: { metaCampaignId: created.metaCampaign.id, errorDetails: captured.details },
-              });
-            } finally {
-              setCreatedLoading(false);
-            }
-          }}
-          graphInfoText={
-            isRealMetaId(created.metaCampaign?.id)
-              ? "Usa `GET /api/meta/campaigns/:id` via backend."
-              : "STUB não consulta Graph."
-          }
         />
       ) : null}
 
