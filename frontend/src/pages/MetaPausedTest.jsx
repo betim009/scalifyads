@@ -486,6 +486,7 @@ export default function MetaPausedTest() {
       <StepCampaignSection
         refresh={refresh}
         refreshDisabled={loading || isCreatingAny}
+        refreshLoading={loading}
         dataModeLabel={dataModeLabel}
         name={name}
         setName={setName}

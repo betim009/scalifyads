@@ -1,6 +1,7 @@
 export default function StepCampaignSection({
   refresh,
   refreshDisabled,
+  refreshLoading,
   dataModeLabel,
   name,
   setName,
@@ -40,7 +41,7 @@ export default function StepCampaignSection({
           </div>
         </div>
         <button type="button" className="pillOutline" onClick={refresh} disabled={refreshDisabled}>
-          Atualizar
+          {refreshLoading ? "Atualizando..." : "Atualizar"}
         </button>
       </div>
 
