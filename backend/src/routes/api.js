@@ -7,6 +7,7 @@ import { metaRouter } from './meta.js'
 import { financeRouter } from './finance.js'
 import { automationRouter } from './automation.js'
 import { opsLogsRouter } from './opsLogs.js'
+import { creativeAssetsRouter } from './creativeAssets.js'
 
 export function apiRouter() {
   const router = Router()
@@ -23,6 +24,7 @@ export function apiRouter() {
   router.use('/finance', financeRouter())
   router.use('/automation', automationRouter())
   router.use('/ops-logs', opsLogsRouter())
+  router.use('/creative-assets', creativeAssetsRouter())
 
   return router
 }

@@ -1,4 +1,5 @@
 import express from 'express'
+import path from 'node:path'
 import { initDb } from './db.js'
 import { healthRouter } from './routes/health.js'
 import { apiRouter } from './routes/api.js'
@@ -11,6 +12,9 @@ const app = express()
 app.locals.dbEnabled = Boolean(dbStatus?.enabled)
 
 app.use(express.json())
+
+// Dev static uploads (no auth). Never store tokens here.
+app.use('/uploads', express.static(path.resolve('uploads')))
 
 // Minimal dev CORS (avoid extra dependency)
 app.use((req, res, next) => {
