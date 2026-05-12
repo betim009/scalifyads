@@ -81,6 +81,7 @@ export default function GeneratedStructureSection({
               <th>Nome</th>
               <th>Status</th>
               <th>Effective</th>
+              <th>Creative</th>
               <th>Ref</th>
             </tr>
           </thead>
@@ -96,6 +97,7 @@ export default function GeneratedStructureSection({
                 <td style={{ fontWeight: 900 }}>{row.name || "—"}</td>
                 <td className="muted" style={{ fontWeight: 900 }}>{row.status || "—"}</td>
                 <td className="muted" style={{ fontWeight: 900 }}>{row.effective_status || "—"}</td>
+                <td className="muted" style={{ fontWeight: 800 }}>—</td>
                 <td className="muted" style={{ fontWeight: 800 }}>
                   {row.generated_campaign_id || "—"}
                 </td>
@@ -112,6 +114,7 @@ export default function GeneratedStructureSection({
                 <td style={{ fontWeight: 900 }}>{row.name || "—"}</td>
                 <td className="muted" style={{ fontWeight: 900 }}>{row.status || "—"}</td>
                 <td className="muted" style={{ fontWeight: 900 }}>{row.effective_status || "—"}</td>
+                <td className="muted" style={{ fontWeight: 800 }}>{row.creative_draft_id || "—"}</td>
                 <td className="muted" style={{ fontWeight: 800 }}>
                   {row.generated_adset_id ? `adset:${row.generated_adset_id}` : row.generated_campaign_id || "—"}
                 </td>
@@ -119,14 +122,14 @@ export default function GeneratedStructureSection({
             ))}
             {!loading && !error && !(generatedAdSets ?? []).length && !(generatedAds ?? []).length && hasSelection ? (
               <tr>
-                <td colSpan={8} className="muted" style={{ fontWeight: 800 }}>
+                <td colSpan={9} className="muted" style={{ fontWeight: 800 }}>
                   Vazio. Crie AdSet/Ad ou clique em “Carregar estrutura”.
                 </td>
               </tr>
             ) : null}
             {loading && hasSelection && !(generatedAdSets ?? []).length && !(generatedAds ?? []).length ? (
               <tr>
-                <td colSpan={8} className="muted" style={{ fontWeight: 800 }}>
+                <td colSpan={9} className="muted" style={{ fontWeight: 800 }}>
                   Carregando...
                 </td>
               </tr>
@@ -137,4 +140,3 @@ export default function GeneratedStructureSection({
     </div>
   );
 }
-

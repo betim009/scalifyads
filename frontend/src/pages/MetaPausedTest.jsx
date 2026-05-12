@@ -84,6 +84,7 @@ export default function MetaPausedTest() {
   const [adSetCreating, setAdSetCreating] = useState(false);
   const [adName, setAdName] = useState("");
   const [adCreativeId, setAdCreativeId] = useState("");
+  const [adCreativeDraftId, setAdCreativeDraftId] = useState("");
   const [adCreating, setAdCreating] = useState(false);
 
   // Evidência de persistência local
@@ -202,6 +203,7 @@ export default function MetaPausedTest() {
         if (typeof parsed.adSetOptimizationGoal === "string") setAdSetOptimizationGoal(parsed.adSetOptimizationGoal);
         if (typeof parsed.adName === "string") setAdName(parsed.adName);
         if (typeof parsed.adCreativeId === "string") setAdCreativeId(parsed.adCreativeId);
+        if (typeof parsed.adCreativeDraftId === "string") setAdCreativeDraftId(parsed.adCreativeDraftId);
       }
     } catch {
       // ignore
@@ -222,6 +224,7 @@ export default function MetaPausedTest() {
         adSetOptimizationGoal,
         adName,
         adCreativeId,
+        adCreativeDraftId,
       };
       localStorage.setItem("metaTest.draft.v1", JSON.stringify(draft));
     } catch {
@@ -239,6 +242,7 @@ export default function MetaPausedTest() {
     adSetOptimizationGoal,
     adName,
     adCreativeId,
+    adCreativeDraftId,
   ]);
 
   const countryOptions = useMemo(() => countries ?? [], [countries]);
@@ -549,6 +553,7 @@ export default function MetaPausedTest() {
       const code = nextCountryCode || "XX";
       setAdName(`Ad ${code} — Image 1`);
     }
+    setAdCreativeDraftId("");
 
     pushLog({
       action: "db.generated_campaigns.select",
@@ -1256,6 +1261,9 @@ export default function MetaPausedTest() {
         setAdName={setAdName}
         adCreativeId={adCreativeId}
         setAdCreativeId={setAdCreativeId}
+        creativeDraftId={adCreativeDraftId}
+        setCreativeDraftId={setAdCreativeDraftId}
+        creativeDraftOptions={creativeDrafts}
         canCreateAd={canCreateAd}
         adCreating={adCreating}
         onCreateAd={async () => {
@@ -1267,6 +1275,7 @@ export default function MetaPausedTest() {
             const payload = {
               generatedCampaignId: createdGeneratedCampaignId,
               name: adName.trim(),
+              ...(normalizeNonEmptyString(adCreativeDraftId) ? { creativeDraftId: adCreativeDraftId } : null),
               ...(flowMode === "REAL" ? { creativeId: adCreativeId.trim() } : null),
               mode: flowMode,
             };
@@ -1284,6 +1293,7 @@ export default function MetaPausedTest() {
                 mode: res.mode ?? flowMode,
                 generatedCampaignId: createdGeneratedCampaignId,
                 metaAdId: res?.metaAd?.id ?? null,
+                creativeDraftId: normalizeNonEmptyString(adCreativeDraftId) || null,
               },
             });
             setSuccess(`Ad criado (${res.mode || flowMode}) — status obrigatório: PAUSED.`);

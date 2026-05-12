@@ -4,6 +4,9 @@ export default function StepAdSection({
   setAdName,
   adCreativeId,
   setAdCreativeId,
+  creativeDraftId,
+  setCreativeDraftId,
+  creativeDraftOptions,
   canCreateAd,
   adCreating,
   onCreateAd,
@@ -89,6 +92,37 @@ export default function StepAdSection({
             }}
           />
         </label>
+
+        <label style={{ display: "grid", gap: 6 }}>
+          <span className="muted" style={{ fontWeight: 900 }}>
+            Creative draft (local)
+          </span>
+          <select
+            value={creativeDraftId || ""}
+            onChange={(e) => setCreativeDraftId(e.target.value)}
+            disabled={!creativeDraftOptions?.length}
+            style={{
+              height: 38,
+              borderRadius: 12,
+              border: "1px solid #e5e7eb",
+              padding: "0 12px",
+              fontSize: 13,
+              fontWeight: 800,
+              outline: "none",
+              background: "#ffffff",
+            }}
+          >
+            <option value="">(nenhum)</option>
+            {(creativeDraftOptions ?? []).map((d) => (
+              <option key={d.id} value={d.id}>
+                {(d.headline || d.primary_text || d.id).slice(0, 60)}
+              </option>
+            ))}
+          </select>
+          <div className="muted" style={{ fontWeight: 800 }}>
+            Persistido no DB; útil para rastreabilidade e futura criação de Creative REAL.
+          </div>
+        </label>
       </div>
 
       <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
@@ -117,6 +151,7 @@ export default function StepAdSection({
     generatedCampaignId: createdGeneratedCampaignId || null,
     name: normalizeNonEmptyString(adName) || null,
     creativeId: flowMode === "REAL" ? normalizeNonEmptyString(adCreativeId) || null : undefined,
+    creativeDraftId: normalizeNonEmptyString(creativeDraftId) || null,
     mode: flowMode,
   },
   null,
@@ -127,4 +162,3 @@ export default function StepAdSection({
     </div>
   );
 }
-
