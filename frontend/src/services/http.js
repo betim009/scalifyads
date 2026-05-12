@@ -53,6 +53,30 @@ export async function apiRequest(path, { method = "GET", body, headers, signal }
   return json;
 }
 
+export async function apiPostFormData(path, formData, { headers, signal } = {}) {
+  const url = buildUrl(path);
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      ...(headers ?? null),
+      // DO NOT set Content-Type for FormData (browser will set boundary).
+    },
+    body: formData,
+    signal,
+  });
+
+  const json = await readJson(res);
+  if (!res.ok) {
+    const message =
+      json?.error?.message ||
+      json?.error ||
+      json?.message ||
+      `Request failed (${res.status})`;
+    throw new HttpError(message, { status: res.status, body: json });
+  }
+  return json;
+}
+
 export function apiGet(path, opts) {
   return apiRequest(path, { ...(opts ?? null), method: "GET" });
 }

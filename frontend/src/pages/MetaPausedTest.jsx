@@ -8,6 +8,7 @@ import OpsLogsSection from "./metaTest/OpsLogsSection.jsx";
 import OpsLogsDbSection from "./metaTest/OpsLogsDbSection.jsx";
 import GeneratedCampaignsSection from "./metaTest/GeneratedCampaignsSection.jsx";
 import GeneratedStructureSection from "./metaTest/GeneratedStructureSection.jsx";
+import CreativeAssetsSection from "./metaTest/CreativeAssetsSection.jsx";
 import StepAdSetSection from "./metaTest/StepAdSetSection.jsx";
 import StepAdSection from "./metaTest/StepAdSection.jsx";
 import StepCampaignSection from "./metaTest/StepCampaignSection.jsx";
@@ -23,6 +24,7 @@ import { getMetaStatus, validateMetaToken } from "../services/metaStatus.js";
 import { countryCodeToFlag } from "../services/fallbacks.js";
 import { getGeneratedCampaignStructure, listGeneratedCampaigns } from "../services/generatedCampaigns.js";
 import { listOpsLogs } from "../services/opsLogs.js";
+import { listCreativeAssets, uploadCreativeAsset } from "../services/creativeAssets.js";
 import useOpsLogs from "./metaTest/useOpsLogs.js";
 import {
   isRealMetaId,
@@ -100,6 +102,12 @@ export default function MetaPausedTest() {
   const [dbOpsLogsErrorDetails, setDbOpsLogsErrorDetails] = useState(null);
   const [dbOpsLogs, setDbOpsLogs] = useState([]);
 
+  const [assetsLoading, setAssetsLoading] = useState(false);
+  const [assetsError, setAssetsError] = useState("");
+  const [assetsErrorDetails, setAssetsErrorDetails] = useState(null);
+  const [creativeAssets, setCreativeAssets] = useState([]);
+  const [assetUploading, setAssetUploading] = useState(false);
+
   const { opsLogs, setOpsLogs, opsLogsFilter, setOpsLogsFilter, filteredOpsLogs, pushLog } = useOpsLogs();
 
   const isCreatingAny = campaignCreating || adSetCreating || adCreating;
@@ -163,6 +171,7 @@ export default function MetaPausedTest() {
     refresh();
     refreshBackendStatus();
     refreshLocalGenerated();
+    refreshCreativeAssets();
     try {
       const raw = localStorage.getItem("metaTest.draft.v1");
       const parsed = raw ? JSON.parse(raw) : null;
@@ -361,6 +370,22 @@ export default function MetaPausedTest() {
       setDbOpsLogsErrorDetails(err?.body?.error?.details ?? err?.body ?? null);
     } finally {
       setDbOpsLogsLoading(false);
+    }
+  }
+
+  async function refreshCreativeAssets() {
+    setAssetsLoading(true);
+    setAssetsError("");
+    setAssetsErrorDetails(null);
+    try {
+      const res = await listCreativeAssets({ limit: 50 });
+      setCreativeAssets(res.creativeAssets ?? []);
+    } catch (err) {
+      setCreativeAssets([]);
+      setAssetsError(err?.message ? String(err.message) : "Falha ao carregar assets (DB/API indisponível).");
+      setAssetsErrorDetails(err?.body?.error?.details ?? err?.body ?? null);
+    } finally {
+      setAssetsLoading(false);
     }
   }
 
@@ -851,6 +876,48 @@ export default function MetaPausedTest() {
         onDismissError={() => {
           setStructureError("");
           setStructureErrorDetails(null);
+        }}
+        safeJson={safeJson}
+      />
+
+      <CreativeAssetsSection
+        loading={assetsLoading}
+        error={assetsError}
+        errorDetails={assetsErrorDetails}
+        assets={creativeAssets}
+        onRefresh={refreshCreativeAssets}
+        refreshDisabled={assetsLoading || loading || isCreatingAny}
+        onDismissError={() => {
+          setAssetsError("");
+          setAssetsErrorDetails(null);
+        }}
+        uploadDisabled={assetUploading || loading || isCreatingAny}
+        onUpload={async (file) => {
+          if (!file) return;
+          setAssetUploading(true);
+          setError("");
+          setErrorDetails(null);
+          setSuccess("");
+          try {
+            const res = await uploadCreativeAsset(file);
+            pushLog({
+              action: "creative.asset.upload",
+              ok: true,
+              details: { id: res?.creativeAsset?.id ?? null, mime: res?.creativeAsset?.mime_type ?? null, size: res?.creativeAsset?.size_bytes ?? null },
+            });
+            setSuccess("Asset enviado e persistido.");
+            await refreshCreativeAssets();
+          } catch (err) {
+            const captured = captureError(err, "Falha ao enviar asset.");
+            pushLog({
+              action: "creative.asset.upload",
+              ok: false,
+              error: captured.message || "error",
+              details: { errorDetails: captured.details },
+            });
+          } finally {
+            setAssetUploading(false);
+          }
         }}
         safeJson={safeJson}
       />
