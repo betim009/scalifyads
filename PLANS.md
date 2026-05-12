@@ -150,7 +150,7 @@ Fontes únicas (para reduzir drift):
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-12 18:40]
+Última atualização: [2026-05-12 18:42]
 
 Regras:
 
@@ -241,6 +241,7 @@ Regras:
 - [x] Persistir estados REAL/STUB (`generated_campaigns.meta_run_mode`) (commit: b8ac3bc)
 - [ ] Persistir falhas operacionais
 - [ ] Persistir histórico Meta
+- [x] `/meta-test`: registrar snapshots do Graph em `ops_logs` (meta.*.get) (commit: 7489ed7)
 - [ ] Persistir status de execução
 - [x] Persistir estrutura Campaign/AdSet/Ad
 - [x] `/meta-test`: exibir estrutura persistida (generated_adsets/generated_ads) para registro selecionado (commit: 402f699)
@@ -295,7 +296,7 @@ Histórico/itens concluídos:
 
 ## Decision Log (Ativo)
 
-Última atualização: [2026-05-12 18:40]
+Última atualização: [2026-05-12 18:42]
 
 Mantém apenas decisões ainda válidas para execução atual. Histórico completo: ver `ARCHIVE.md` em `## Decision Log (histórico completo)`.
 
@@ -370,6 +371,7 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 - [2026-05-12 18:28] Decisão: persistir logs operacionais do `/meta-test` no Postgres (`ops_logs`) via `POST /api/ops-logs`, com redaction best-effort de chaves sensíveis e tolerância a DB offline. (commit: 6ab378e)
 - [2026-05-12 18:30] Decisão: adicionar visualização de logs persistidos (DB) no `/meta-test` para auditoria/trace sem depender do localStorage do navegador. (commit: ad17b42)
 - [2026-05-12 18:40] Decisão: persistir estado operacional REAL/STUB no DB (`generated_campaigns.meta_run_mode`) para reduzir inferência via prefixo `stub-*` e melhorar rastreabilidade. (commit: b8ac3bc)
+- [2026-05-12 18:42] Decisão: usar `ops_logs` como trilha histórica mínima para snapshots do Graph (Campaign/AdSet/Ad) no `/meta-test`, evitando schema de histórico dedicado nesta fase. (commit: 7489ed7)
 
 ## Blockers
 
