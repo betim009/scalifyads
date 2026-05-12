@@ -12,6 +12,9 @@ export default function ShortcutsCard({ stepCampaignOk, stepAdSetOk, stepAdOk })
         <a className="pillOutline" href="#meta-test-backend-status">
           Status backend
         </a>
+        <a className="pillOutline" href="#meta-test-recovery">
+          Recovery
+        </a>
         <a className="pillOutline" href="#meta-test-db">
           DB (generated_campaigns)
         </a>

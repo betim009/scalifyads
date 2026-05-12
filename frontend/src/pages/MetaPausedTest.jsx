@@ -344,6 +344,45 @@ export default function MetaPausedTest() {
     }
   }
 
+  async function handleCopyRecoveryBundle() {
+    setError("");
+    setErrorDetails(null);
+    setSuccess("");
+    if (!createdGeneratedCampaignId) {
+      setError("Selecione um registro de `generated_campaigns` primeiro.");
+      setErrorDetails(null);
+      return;
+    }
+
+    try {
+      const payload = {
+        generatedCampaignId: createdGeneratedCampaignId,
+        meta: {
+          metaCampaignId: created?.metaCampaign?.id ?? created?.generatedCampaign?.meta_campaign_id ?? null,
+          metaAdSetId: created?.metaAdSet?.id ?? created?.generatedCampaign?.meta_adset_id ?? null,
+          metaAdId: created?.metaAd?.id ?? created?.generatedCampaign?.meta_ad_id ?? null,
+          runMode: created?.mode ?? mode ?? null,
+        },
+        generatedCampaign: created?.generatedCampaign ?? null,
+        generatedAdSets: structureForId === createdGeneratedCampaignId ? structureAdSets : [],
+        generatedAds: structureForId === createdGeneratedCampaignId ? structureAds : [],
+        opsLogsDb: dbOpsLogs.slice(0, 200),
+      };
+
+      await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+      setSuccess("Bundle de recuperação copiado para a área de transferência.");
+      pushLog({ action: "ops.recovery_bundle.copy", ok: true, details: { generatedCampaignId: createdGeneratedCampaignId } });
+    } catch (err) {
+      setError("Não foi possível copiar o bundle de recuperação.");
+      setErrorDetails(err?.message ? String(err.message) : null);
+      pushLog({
+        action: "ops.recovery_bundle.copy",
+        ok: false,
+        error: err?.message ? String(err.message) : "error",
+      });
+    }
+  }
+
   function selectGeneratedCampaignRow(gc) {
     const metaCampaignId = normalizeNonEmptyString(gc?.meta_campaign_id);
     const inferredMode = normalizeNonEmptyString(gc?.meta_run_mode) || (metaCampaignId ? (metaCampaignId.startsWith("stub-") ? "STUB" : "REAL") : "REAL");
@@ -423,6 +462,18 @@ export default function MetaPausedTest() {
         dbModeLabel={dbModeLabel}
         syncProviderLabel={syncProviderLabel}
       />
+
+      <div id="meta-test-recovery" className="card" style={{ padding: 18, marginTop: 16 }}>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+          <div style={{ fontWeight: 900 }}>Recuperação operacional</div>
+          <button type="button" className="pillOutline" disabled={!createdGeneratedCampaignId} onClick={handleCopyRecoveryBundle}>
+            Copiar bundle (DB + logs)
+          </button>
+        </div>
+        <div className="muted" style={{ marginTop: 8, fontWeight: 800, lineHeight: 1.55 }}>
+          Exporta um JSON com IDs, registro selecionado, estrutura persistida e logs do DB para troubleshooting rápido.
+        </div>
+      </div>
 
       <div className="card" style={{ padding: 18 }}>
         <div style={{ fontWeight: 900 }}>Regras (segurança)</div>
