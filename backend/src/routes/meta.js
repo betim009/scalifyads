@@ -737,6 +737,11 @@ export function metaRouter() {
       const mode = modeRaw === 'STUB' ? 'STUB' : 'REAL'
 
       const creativeId = normalizeNonEmptyString(req.body?.creativeId)
+      const creativeDraftId = normalizeNonEmptyString(req.body?.creativeDraftId)
+      if (creativeDraftId && !isUuid(creativeDraftId)) {
+        return jsonError(res, 400, 'Invalid creativeDraftId')
+      }
+
       if (mode === 'REAL' && !creativeId) {
         return jsonError(res, 400, 'Missing creativeId (expected existing creative id)')
       }
@@ -853,17 +858,19 @@ export function metaRouter() {
               INSERT INTO generated_ads (
                 generated_campaign_id,
                 generated_adset_id,
+                creative_draft_id,
                 meta_ad_id,
                 name,
                 run_mode,
                 status,
                 effective_status
               )
-              VALUES ($1, $2, $3, $4, $5, $6, $7)
+              VALUES ($1, $2, $3::uuid, $4, $5, $6, $7, $8)
             `,
             [
               generatedCampaignId,
               generatedAdSetRowId,
+              creativeDraftId,
               String(created.id),
               name,
               mode,

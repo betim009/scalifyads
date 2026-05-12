@@ -112,6 +112,7 @@ export function generatedCampaignsRouter() {
             id,
             generated_campaign_id,
             generated_adset_id,
+            creative_draft_id,
             meta_ad_id,
             name,
             status,
