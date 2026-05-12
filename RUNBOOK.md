@@ -80,6 +80,14 @@
 
 - `generated_campaigns.meta_run_mode` persiste o modo operacional inferido/executado (`REAL`/`STUB`) para reduzir ambiguidade no `/meta-test`.
 
+### Creative Assets — Upload local (dev)
+
+Última atualização: [2026-05-12 18:54]
+
+- Listar assets persistidos: `GET /api/creative-assets?limit=50`
+- Upload (multipart): `POST /api/creative-assets/upload` (field `file`)
+- Acesso ao arquivo: `GET /uploads/creative-assets/<stored_name>` (servido pelo backend)
+
 ### Registros operacionais (cronológico)
 
 Esta seção deve ser atualizada sempre que:

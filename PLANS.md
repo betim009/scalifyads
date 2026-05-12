@@ -150,7 +150,7 @@ Fontes únicas (para reduzir drift):
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-12 18:49]
+Última atualização: [2026-05-12 18:54]
 
 Regras:
 
@@ -250,7 +250,7 @@ Regras:
 
 ### P4 — Creative Flow MVP
 
-- [ ] Upload real de mídia
+- [x] Upload real de mídia (upload local + persistência em `creative_assets`) (commits: 1101817, 649a800)
 - [ ] Persistência de creatives
 - [ ] Criar estrutura de copy
 - [ ] Criar estrutura headline/description
@@ -297,7 +297,7 @@ Histórico/itens concluídos:
 
 ## Decision Log (Ativo)
 
-Última atualização: [2026-05-12 18:48]
+Última atualização: [2026-05-12 18:54]
 
 Mantém apenas decisões ainda válidas para execução atual. Histórico completo: ver `ARCHIVE.md` em `## Decision Log (histórico completo)`.
 
@@ -376,6 +376,7 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 - [2026-05-12 18:44] Decisão: adicionar “recovery bundle” (JSON export) no `/meta-test` para rastreabilidade e troubleshooting rápido sem depender de prints/descrições manuais. (commit: 86995d6)
 - [2026-05-12 18:47] Decisão: persistir resumo de execução no `generated_campaigns` (`ops_last_action/ok/at`) para visibilidade rápida sem abrir `ops_logs`. (commit: 7c329b1)
 - [2026-05-12 18:48] Decisão: drafts do `/meta-test` persistem localmente (`localStorage`) nesta fase para evitar schema/persistência de usuário no DB antes de definir auth/ownership. (commit: 378296d)
+- [2026-05-12 18:54] Decisão: Creative Flow começa com upload local (backend serve `/uploads/*` + tabela `creative_assets`) para evidência operacional sem integrar storage externo nesta fase. (commits: 1101817, 649a800)
 
 ## Blockers
 
