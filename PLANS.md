@@ -150,7 +150,7 @@ Fontes únicas (para reduzir drift):
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-12 18:15]
+Última atualização: [2026-05-12 18:16]
 
 Regras:
 
@@ -203,6 +203,7 @@ Regras:
 ### P2 — Fluxo progressivo Meta
 
 - [ ] Consolidar fluxo Campaign → AdSet → Ad
+- [x] `/meta-test`: prefill de nomes padrão (AdSet/Ad) ao criar/selecionar Campaign (commit: a0a5494)
 - [x] Separar estados operacionais por entidade
 - [x] `/meta-test`: extrair seção de logs em componente dedicado (reduzir arquivo gigante)
 - [x] `/meta-test`: extrair seção de DB (`generated_campaigns`) em componente dedicado
