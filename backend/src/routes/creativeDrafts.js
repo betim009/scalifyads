@@ -124,6 +124,81 @@ export function creativeDraftsRouter() {
     })
   )
 
+  router.post(
+    '/:id/duplicate',
+    asyncHandler(async (req, res) => {
+      if (!req.app.locals.dbEnabled) {
+        return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
+      }
+
+      const sourceId = req.params.id
+      if (!isUuid(sourceId)) {
+        return jsonError(res, 400, 'Invalid creative draft id')
+      }
+
+      const pool = getPool()
+      const { rows: found, rowCount } = await pool.query(
+        `
+          SELECT
+            generated_campaign_id,
+            creative_asset_id,
+            primary_text,
+            headline,
+            description,
+            cta_type,
+            destination_url
+          FROM creative_drafts
+          WHERE id = $1
+        `,
+        [sourceId]
+      )
+
+      if (rowCount === 0) {
+        return jsonError(res, 404, 'Creative draft not found')
+      }
+
+      const src = found[0]
+      const { rows } = await pool.query(
+        `
+          INSERT INTO creative_drafts (
+            generated_campaign_id,
+            creative_asset_id,
+            primary_text,
+            headline,
+            description,
+            cta_type,
+            destination_url,
+            status,
+            meta_creative_id
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, 'draft', NULL)
+          RETURNING
+            id,
+            generated_campaign_id,
+            creative_asset_id,
+            primary_text,
+            headline,
+            description,
+            cta_type,
+            destination_url,
+            status,
+            meta_creative_id,
+            created_at
+        `,
+        [
+          src.generated_campaign_id,
+          src.creative_asset_id,
+          src.primary_text,
+          src.headline,
+          src.description,
+          src.cta_type,
+          src.destination_url
+        ]
+      )
+
+      return res.status(201).json({ ok: true, creative_draft: rows[0] })
+    })
+  )
+
   return router
 }
-
