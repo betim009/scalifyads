@@ -152,7 +152,7 @@ Fontes únicas (para reduzir drift):
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-13 13:19]
+Última atualização: [2026-05-13 14:09]
 
 Regras:
 
@@ -205,6 +205,7 @@ Regras:
 - [x] `/meta-test`: exibir REAL/STUB por entidade (Campaign/AdSet/Ad) na estrutura Meta
 - [x] Refinar responsividade
 - [x] `/meta-test`: tornar grids responsivos (auto-fit/minmax) para telas menores
+- [x] `/meta-test`: exigir `destinationUrl` no draft antes de publicar Creative REAL (evitar erro operacional) (commit: 7a86ab3)
 
 ### P2 — Fluxo progressivo Meta
 
