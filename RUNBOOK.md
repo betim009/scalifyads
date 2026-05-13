@@ -42,7 +42,7 @@
 
 ### Meta — Operações principais (backend)
 
-Última atualização: [2026-05-12 19:02]
+Última atualização: [2026-05-13 14:09]
 
 - Criar Campaign REAL (PAUSED): `POST /api/meta/campaigns`
 - Criar Campaign REAL/STUB mínima (PAUSED): `POST /api/meta/campaigns/simple`
@@ -52,6 +52,15 @@
 - Consultar AdSet no Graph (via backend): `GET /api/meta/adsets/{meta_adset_id}`
 - Consultar Ad no Graph (via backend): `GET /api/meta/ads/{meta_ad_id}`
 - Listar Campaigns PAUSED por Ad Account (via backend): `GET /api/meta/ad-accounts/:id/campaigns?pausedOnly=true&limit=100`
+
+Exemplos (`curl`, sempre `PAUSED` e sem token no frontend):
+
+- Criar AdSet REAL/STUB:
+  - `curl -X POST http://localhost:3001/api/meta/adsets -H 'Content-Type: application/json' -d '{\"generatedCampaignId\":\"<generated_campaign_uuid>\",\"name\":\"AdSet BR\",\"dailyBudgetCents\":1000,\"billingEvent\":\"IMPRESSIONS\",\"optimizationGoal\":\"LINK_CLICKS\",\"mode\":\"REAL\"}'`
+- Criar Ad REAL (requer `creativeId` existente e AdSet criado):
+  - `curl -X POST http://localhost:3001/api/meta/ads -H 'Content-Type: application/json' -d '{\"generatedCampaignId\":\"<generated_campaign_uuid>\",\"name\":\"Ad BR — 1\",\"creativeId\":\"<meta_creative_id>\",\"creativeDraftId\":\"<creative_draft_uuid>\",\"mode\":\"REAL\"}'`
+- Criar Ad STUB (não requer `creativeId`):
+  - `curl -X POST http://localhost:3001/api/meta/ads -H 'Content-Type: application/json' -d '{\"generatedCampaignId\":\"<generated_campaign_uuid>\",\"name\":\"Ad BR — STUB\",\"creativeDraftId\":\"<creative_draft_uuid>\",\"mode\":\"STUB\"}'`
 
 ### Meta — Sync / Automação (dev)
 
