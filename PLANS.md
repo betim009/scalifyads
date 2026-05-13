@@ -53,7 +53,7 @@ Construir o **Campaign Builder**, uma aplicação web que substitui a planilha o
 
 ## Snapshot (Estado Atual)
 
-Última atualização: [2026-05-13 13:17]
+Última atualização: [2026-05-13 13:19]
 
 O que está funcional hoje:
 
@@ -73,6 +73,7 @@ O que está funcional hoje:
   - logs operacionais básicos (frontend-only, sem token)
   - visualização explícita de estrutura Meta (Campaign → AdSet → Ad)
   - publicação de Creative REAL (AdCreative) a partir de `creative_drafts` (page_id via env/body; upload de imagem via backend quando houver asset)
+  - evidência de Creative REAL via Graph (consulta do AdCreative no backend + exibição no `/meta-test`)
 - O fluxo operacional começou a ser separado conceitualmente entre:
   - Campaign
   - AdSet
@@ -151,7 +152,7 @@ Fontes únicas (para reduzir drift):
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-13 13:17]
+Última atualização: [2026-05-13 13:19]
 
 Regras:
 
@@ -257,6 +258,7 @@ Regras:
 - [x] Criar estrutura headline/description (commits: 07757eb, 6ca9629)
 - [x] Associar creative ao Ad (creative_draft_id em `generated_ads` + UI seleção) (commits: 1fa8d8f, 5a6e520)
 - [x] Publicar Creative REAL a partir de `creative_drafts` (endpoint + UI) (commit: cac550e)
+- [x] `/meta-test`: consultar Creative REAL (Graph) para evidência operacional
 - [ ] Validar creative REAL
 - [x] Exibir preview operacional (preview texto + mídia) (commit: f8689c5)
 - [x] Preparar variações futuras (duplicar creative drafts) (commits: ba2322f, 41c1d13)

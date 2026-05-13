@@ -27,7 +27,7 @@ import { getGeneratedCampaignStructure, listGeneratedCampaigns } from "../servic
 import { listOpsLogs } from "../services/opsLogs.js";
 import { listCreativeAssets, uploadCreativeAsset } from "../services/creativeAssets.js";
 import { createCreativeDraft, duplicateCreativeDraft, listCreativeDrafts } from "../services/creativeDrafts.js";
-import { publishMetaCreativeDraft } from "../services/metaCreatives.js";
+import { getMetaCreative, publishMetaCreativeDraft } from "../services/metaCreatives.js";
 import useOpsLogs from "./metaTest/useOpsLogs.js";
 import {
   isRealMetaId,
@@ -90,6 +90,8 @@ export default function MetaPausedTest() {
   const [metaInstagramActorId, setMetaInstagramActorId] = useState("");
   const [adCreating, setAdCreating] = useState(false);
   const [creativePublishing, setCreativePublishing] = useState(false);
+  const [creativeGetLoading, setCreativeGetLoading] = useState(false);
+  const [creativeGetResult, setCreativeGetResult] = useState(null);
 
   // Evidência de persistência local
   const [localLoading, setLocalLoading] = useState(false);
@@ -327,6 +329,14 @@ export default function MetaPausedTest() {
     flowMode === "REAL" &&
     Boolean(backendStatus?.hasAccessToken) &&
     normalizeNonEmptyString(adCreativeDraftId) !== "";
+
+  const canFetchCreative =
+    !loading &&
+    !isCreatingAny &&
+    !creativeGetLoading &&
+    flowMode === "REAL" &&
+    Boolean(backendStatus?.hasAccessToken) &&
+    normalizeNonEmptyString(adCreativeId) !== "";
 
   async function refreshLocalGenerated() {
     setLocalLoading(true);
@@ -1312,6 +1322,34 @@ export default function MetaPausedTest() {
         setMetaInstagramActorId={setMetaInstagramActorId}
         canPublishCreative={canPublishCreative}
         creativePublishing={creativePublishing}
+        canFetchCreative={canFetchCreative}
+        creativeGetLoading={creativeGetLoading}
+        creativeGetResult={creativeGetResult}
+        onFetchCreative={async () => {
+          const id = normalizeNonEmptyString(adCreativeId);
+          if (!id) return;
+
+          setCreativeGetLoading(true);
+          setError("");
+          setErrorDetails(null);
+          setSuccess("");
+          try {
+            const res = await getMetaCreative(id);
+            setCreativeGetResult(res?.metaCreative ?? null);
+            pushLog({ action: "creative.get", ok: true, details: { metaCreativeId: id } });
+            setSuccess(`Creative consultado no Graph — id: ${id}`);
+          } catch (err) {
+            const captured = captureError(err, "Falha ao consultar Creative no Graph.");
+            pushLog({
+              action: "creative.get",
+              ok: false,
+              error: captured.message || "error",
+              details: { metaCreativeId: id, errorDetails: captured.details },
+            });
+          } finally {
+            setCreativeGetLoading(false);
+          }
+        }}
         onPublishCreative={async () => {
           const id = normalizeNonEmptyString(adCreativeDraftId);
           if (!id) return;

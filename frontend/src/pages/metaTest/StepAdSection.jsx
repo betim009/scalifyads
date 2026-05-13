@@ -14,6 +14,10 @@ export default function StepAdSection({
   canPublishCreative,
   creativePublishing,
   onPublishCreative,
+  canFetchCreative,
+  creativeGetLoading,
+  creativeGetResult,
+  onFetchCreative,
   canCreateAd,
   adCreating,
   onCreateAd,
@@ -191,10 +195,29 @@ export default function StepAdSection({
           <button type="button" className="pillOutline" disabled={!canPublishCreative} onClick={onPublishCreative}>
             {creativePublishing ? "Publicando..." : "Publicar Creative REAL"}
           </button>
+          <button type="button" className="pillOutline" disabled={!canFetchCreative} onClick={onFetchCreative}>
+            {creativeGetLoading ? "Consultando..." : "Consultar Creative (Graph)"}
+          </button>
           <div className="muted" style={{ fontWeight: 800 }}>
             Requer modo REAL + token no backend + `creativeDraftId` com `destinationUrl`.
           </div>
         </div>
+
+        <details style={{ marginTop: 12 }}>
+          <summary style={{ cursor: "pointer", fontWeight: 900 }}>Evidência: Creative (Graph)</summary>
+          <pre
+            style={{
+              marginTop: 10,
+              background: "#0b1220",
+              color: "#e5e7eb",
+              padding: 12,
+              borderRadius: 12,
+              overflowX: "auto",
+            }}
+          >
+{JSON.stringify(creativeGetResult ?? null, null, 2)}
+          </pre>
+        </details>
       </div>
 
       <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
