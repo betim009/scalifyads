@@ -98,7 +98,7 @@
 
 ### Meta — Creative REAL (AdCreative)
 
-Última atualização: [2026-05-13 13:15]
+Última atualização: [2026-05-13 14:09]
 
 - Publicar Creative REAL a partir de um `creative_draft` (token no backend): `POST /api/meta/creative-drafts/:id/publish`
   - Requer `creative_drafts.destination_url` preenchido (use `destinationUrl` ao criar o draft).
@@ -106,6 +106,15 @@
   - `instagramActorId` é opcional (body ou env `META_INSTAGRAM_ACTOR_ID`).
   - Se houver `creative_asset_id`, o backend faz upload da imagem na Meta (`adimages`) e usa `image_hash`.
 - Consultar Creative no Graph (via backend): `GET /api/meta/creatives/{meta_creative_id}`
+
+Exemplos (`curl`, sem token no frontend):
+
+- Publicar (usa `META_PAGE_ID` do backend se `pageId` for omitido):
+  - `curl -X POST http://localhost:3001/api/meta/creative-drafts/<creative_draft_uuid>/publish -H 'Content-Type: application/json' -d '{}'`
+- Publicar informando `pageId` (e `force` opcional):
+  - `curl -X POST http://localhost:3001/api/meta/creative-drafts/<creative_draft_uuid>/publish -H 'Content-Type: application/json' -d '{\"pageId\":\"<page_id>\",\"instagramActorId\":\"<ig_actor_id>\",\"force\":false}'`
+- Consultar Creative no Graph (evidência):
+  - `curl http://localhost:3001/api/meta/creatives/<meta_creative_id>`
 
 ### Registros operacionais (cronológico)
 
