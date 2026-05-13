@@ -27,7 +27,7 @@ import { getGeneratedCampaignStructure, listGeneratedCampaigns } from "../servic
 import { listOpsLogs } from "../services/opsLogs.js";
 import { listCreativeAssets, uploadCreativeAsset } from "../services/creativeAssets.js";
 import { createCreativeDraft, duplicateCreativeDraft, listCreativeDrafts } from "../services/creativeDrafts.js";
-import { getMetaCreative, publishMetaCreativeDraft } from "../services/metaCreatives.js";
+import { publishCreativeDraftAndExtractId, fetchMetaCreative } from "./metaTest/actions/creativeActions.js";
 import useOpsLogs from "./metaTest/useOpsLogs.js";
 import {
   isRealMetaId,
@@ -1342,8 +1342,8 @@ export default function MetaPausedTest() {
           setErrorDetails(null);
           setSuccess("");
           try {
-            const res = await getMetaCreative(id);
-            setCreativeGetResult(res?.metaCreative ?? null);
+            const metaCreative = await fetchMetaCreative(id);
+            setCreativeGetResult(metaCreative);
             pushLog({ action: "creative.get", ok: true, details: { metaCreativeId: id } });
             setSuccess(`Creative consultado no Graph — id: ${id}`);
           } catch (err) {
@@ -1367,14 +1367,10 @@ export default function MetaPausedTest() {
           setErrorDetails(null);
           setSuccess("");
           try {
-            const res = await publishMetaCreativeDraft(id, {
-              pageId: normalizeNonEmptyString(metaPageId) || null,
-              instagramActorId: normalizeNonEmptyString(metaInstagramActorId) || null,
+            const { metaId } = await publishCreativeDraftAndExtractId(id, {
+              pageId: metaPageId,
+              instagramActorId: metaInstagramActorId,
             });
-            const metaId =
-              normalizeNonEmptyString(res?.metaCreative?.id) ||
-              normalizeNonEmptyString(res?.creativeDraft?.meta_creative_id) ||
-              "";
             if (metaId) setAdCreativeId(metaId);
 
             pushLog({
