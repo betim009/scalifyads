@@ -19,8 +19,8 @@ import CampaignResultSection from "./metaTest/CampaignResultSection.jsx";
 import CampaignBatchSection from "./metaTest/CampaignBatchSection.jsx";
 import { getCountries } from "../services/reference.js";
 import { createMetaCampaignSimple, getMetaCampaign, listMetaAdAccountCampaigns } from "../services/metaCampaigns.js";
-import { createMetaAdSet, getMetaAdSet } from "../services/metaAdSets.js";
-import { createMetaAd, getMetaAd } from "../services/metaAds.js";
+import { getMetaAdSet } from "../services/metaAdSets.js";
+import { getMetaAd } from "../services/metaAds.js";
 import { getMetaStatus, validateMetaToken } from "../services/metaStatus.js";
 import { countryCodeToFlag } from "../services/fallbacks.js";
 import { getGeneratedCampaignStructure, listGeneratedCampaigns } from "../services/generatedCampaigns.js";
@@ -28,6 +28,8 @@ import { listOpsLogs } from "../services/opsLogs.js";
 import { listCreativeAssets, uploadCreativeAsset } from "../services/creativeAssets.js";
 import { createCreativeDraft, duplicateCreativeDraft, listCreativeDrafts } from "../services/creativeDrafts.js";
 import { publishCreativeDraftAndExtractId, fetchMetaCreative } from "./metaTest/actions/creativeActions.js";
+import { createAdSet } from "./metaTest/actions/adSetActions.js";
+import { createAd } from "./metaTest/actions/adActions.js";
 import useOpsLogs from "./metaTest/useOpsLogs.js";
 import {
   isRealMetaId,
@@ -1275,7 +1277,7 @@ export default function MetaPausedTest() {
               optimizationGoal: adSetOptimizationGoal.trim(),
               mode: flowMode,
             };
-            const res = await createMetaAdSet(payload);
+            const res = await createAdSet(payload);
             setCreated((prev) => ({
               ...(prev ?? {}),
               mode: res.mode ?? prev?.mode ?? flowMode,
@@ -1407,7 +1409,7 @@ export default function MetaPausedTest() {
               ...(flowMode === "REAL" ? { creativeId: adCreativeId.trim() } : null),
               mode: flowMode,
             };
-            const res = await createMetaAd(payload);
+            const res = await createAd(payload);
             setCreated((prev) => ({
               ...(prev ?? {}),
               mode: res.mode ?? prev?.mode ?? flowMode,
