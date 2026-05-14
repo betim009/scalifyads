@@ -92,6 +92,7 @@ export default function MetaPausedTest() {
   const [metaInstagramActorId, setMetaInstagramActorId] = useState("");
   const [adCreating, setAdCreating] = useState(false);
   const [creativePublishing, setCreativePublishing] = useState(false);
+  const [creativePublishForce, setCreativePublishForce] = useState(false);
   const [creativeGetLoading, setCreativeGetLoading] = useState(false);
   const [creativeGetResult, setCreativeGetResult] = useState(null);
 
@@ -136,6 +137,9 @@ export default function MetaPausedTest() {
     [creativeDrafts, adCreativeDraftId],
   );
   const selectedCreativeDraftHasUrl = normalizeNonEmptyString(selectedCreativeDraft?.destination_url) !== "";
+  const selectedCreativeDraftMetaCreativeId = normalizeNonEmptyString(selectedCreativeDraft?.meta_creative_id);
+  const selectedCreativeDraftMetaCreativeIdIsReal =
+    selectedCreativeDraftMetaCreativeId !== "" && isRealMetaId(selectedCreativeDraftMetaCreativeId);
 
   const { opsLogs, setOpsLogs, opsLogsFilter, setOpsLogsFilter, filteredOpsLogs, pushLog } = useOpsLogs();
 
@@ -225,6 +229,10 @@ export default function MetaPausedTest() {
       // ignore
     }
   }, []);
+
+  useEffect(() => {
+    setCreativePublishForce(false);
+  }, [adCreativeDraftId]);
 
   useEffect(() => {
     try {
@@ -337,7 +345,8 @@ export default function MetaPausedTest() {
     flowMode === "REAL" &&
     Boolean(backendStatus?.hasAccessToken) &&
     normalizeNonEmptyString(adCreativeDraftId) !== "" &&
-    selectedCreativeDraftHasUrl;
+    selectedCreativeDraftHasUrl &&
+    (!selectedCreativeDraftMetaCreativeIdIsReal || creativePublishForce);
 
   const canFetchCreative =
     !loading &&
@@ -1329,6 +1338,10 @@ export default function MetaPausedTest() {
         setMetaPageId={setMetaPageId}
         metaInstagramActorId={metaInstagramActorId}
         setMetaInstagramActorId={setMetaInstagramActorId}
+        creativePublishForce={creativePublishForce}
+        setCreativePublishForce={setCreativePublishForce}
+        selectedCreativeDraftMetaCreativeId={selectedCreativeDraftMetaCreativeId}
+        selectedCreativeDraftMetaCreativeIdIsReal={selectedCreativeDraftMetaCreativeIdIsReal}
         canPublishCreative={canPublishCreative}
         creativeDraftHasUrl={selectedCreativeDraftHasUrl}
         creativePublishing={creativePublishing}
@@ -1369,11 +1382,13 @@ export default function MetaPausedTest() {
           setErrorDetails(null);
           setSuccess("");
           try {
-            const { metaId } = await publishCreativeDraftAndExtractId(id, {
+            const { metaId, metaCreative } = await publishCreativeDraftAndExtractId(id, {
               pageId: metaPageId,
               instagramActorId: metaInstagramActorId,
+              force: creativePublishForce,
             });
             if (metaId) setAdCreativeId(metaId);
+            if (metaCreative) setCreativeGetResult(metaCreative);
 
             pushLog({
               action: "creative.publish",

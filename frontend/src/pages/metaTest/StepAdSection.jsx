@@ -11,6 +11,10 @@ export default function StepAdSection({
   setMetaPageId,
   metaInstagramActorId,
   setMetaInstagramActorId,
+  creativePublishForce,
+  setCreativePublishForce,
+  selectedCreativeDraftMetaCreativeId,
+  selectedCreativeDraftMetaCreativeIdIsReal,
   canPublishCreative,
   creativeDraftHasUrl,
   creativePublishing,
@@ -203,9 +207,28 @@ export default function StepAdSection({
             Requer modo REAL + token no backend + `creativeDraftId` com `destinationUrl`.
           </div>
         </div>
+
+        <label style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 10, userSelect: "none" }}>
+          <input
+            type="checkbox"
+            checked={creativePublishForce === true}
+            onChange={(e) => setCreativePublishForce(e.target.checked)}
+            disabled={flowMode === "STUB"}
+          />
+          <span className="muted" style={{ fontWeight: 900 }}>
+            Force republish (sobrescreve `meta_creative_id` existente no draft)
+          </span>
+        </label>
+
         {creativeDraftId && !creativeDraftHasUrl ? (
           <div className="muted" style={{ marginTop: 8, fontWeight: 900, color: "#991b1b" }}>
             Draft selecionado sem `destinationUrl` — publique só depois de preencher a URL no draft.
+          </div>
+        ) : null}
+        {selectedCreativeDraftMetaCreativeId && selectedCreativeDraftMetaCreativeIdIsReal && !creativePublishForce ? (
+          <div className="muted" style={{ marginTop: 8, fontWeight: 900, color: "#991b1b" }}>
+            Draft já possui `meta_creative_id`: <b>{selectedCreativeDraftMetaCreativeId}</b>. Marque{" "}
+            <b>Force republish</b> para publicar novamente.
           </div>
         ) : null}
 

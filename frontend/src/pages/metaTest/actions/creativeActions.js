@@ -6,13 +6,17 @@ function normalizeNonEmptyString(value) {
   return trimmed ? trimmed : "";
 }
 
-export async function publishCreativeDraftAndExtractId(creativeDraftId, { pageId, instagramActorId } = {}) {
+export async function publishCreativeDraftAndExtractId(
+  creativeDraftId,
+  { pageId, instagramActorId, force } = {},
+) {
   const id = normalizeNonEmptyString(creativeDraftId);
   if (!id) throw new Error("creativeDraftId is required");
 
   const res = await publishMetaCreativeDraft(id, {
     pageId: normalizeNonEmptyString(pageId) || null,
     instagramActorId: normalizeNonEmptyString(instagramActorId) || null,
+    force: force === true,
   });
 
   const metaId =
@@ -30,4 +34,3 @@ export async function fetchMetaCreative(metaCreativeId) {
   const res = await getMetaCreative(id);
   return res?.metaCreative ?? null;
 }
-
