@@ -23,12 +23,16 @@
 
 ### Setup rápido (Docker + DB)
 
-Última atualização: [2026-05-08 08:48]
+Última atualização: [2026-05-14 20:06]
 
 - Subir stack: `docker compose up -d`
 - Smoke tests (host):
   - `curl http://localhost:3001/healthz`
   - `curl http://localhost:3001/api/countries`
+- Se as portas estiverem ocupadas no host, sobrescreva no `.env`:
+  - `DB_HOST_PORT` (default `5433`)
+  - `BACKEND_HOST_PORT` (default `3001`)
+  - `FRONTEND_HOST_PORT` (default `5173`)
 - Migrations + seed:
   - `docker compose exec backend npm run migrate`
   - `docker compose exec backend npm run seed`
@@ -132,6 +136,15 @@ Esta seção deve ser atualizada sempre que:
 - Algo não for implementado pelo Codex
 - Um bug for encontrado
 - Um fluxo estiver incompleto
+
+[2026-05-14 20:06]
+
+- Ambiente: Docker daemon voltou a operar neste host.
+  - Observação: a porta `5433` já estava em uso por outro projeto; para subir este stack foi necessário usar override (ex: `DB_HOST_PORT=5434 FRONTEND_HOST_PORT=5174 docker compose up -d`).
+- Bloqueio (P4/P5 — Creative/Ad REAL): token atual valida (`POST /api/meta/validate` OK), mas não há Pages retornadas via Graph para uso no AdCreative:
+  - `GET /me/accounts` → vazio
+  - `GET /act_<ad_account_id>/promote_pages` → vazio
+  - Ação: definir `META_PAGE_ID` (env) ou informar `pageId` no `/meta-test`. Se o token não tiver acesso a uma Page, criar/associar Page e garantir permissões.
 
 [2026-05-13 13:19]
 

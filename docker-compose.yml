@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: campaign_builder
     ports:
-      - "5433:5432"
+      - "${DB_HOST_PORT:-5433}:5432"
     volumes:
       - campaign_builder_db:/var/lib/postgresql/data
     healthcheck:
@@ -29,7 +29,7 @@ services:
       - ./backend:/app
       - backend_node_modules:/app/node_modules
     ports:
-      - "3001:3001"
+      - "${BACKEND_HOST_PORT:-3001}:3001"
     depends_on:
       db:
         condition: service_healthy
@@ -39,12 +39,12 @@ services:
     working_dir: /app
     command: sh -c "npm ci && npm run dev -- --host 0.0.0.0 --port 5173"
     environment:
-      VITE_BACKEND_URL: http://localhost:3001
+      VITE_BACKEND_URL: http://localhost:${BACKEND_HOST_PORT:-3001}
     volumes:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules
     ports:
-      - "5173:5173"
+      - "${FRONTEND_HOST_PORT:-5173}:5173"
 
 volumes:
   campaign_builder_db:

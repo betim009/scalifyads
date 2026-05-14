@@ -10,6 +10,12 @@ Para habilitar sync/criação real via Meta Graph/Marketing API no backend, crie
 
     cp .env.example .env
 
+Se alguma porta do host já estiver ocupada, você pode sobrescrever no `.env`:
+
+- `DB_HOST_PORT` (default `5433`)
+- `BACKEND_HOST_PORT` (default `3001`)
+- `FRONTEND_HOST_PORT` (default `5173`)
+
 Preencha (opcional):
 
 - `META_ACCESS_TOKEN=...`
@@ -59,9 +65,10 @@ Obs: o nome do volume pode variar conforme o nome da pasta/projeto. Se necessár
 
 ### Endereços
 
-- Postgres exposto no host em `localhost:5433`.
-- Backend em `http://localhost:3001/healthz`.
-- Frontend em `http://localhost:5173`.
+- Defaults:
+  - Postgres: `localhost:5433` (override: `DB_HOST_PORT`)
+  - Backend: `http://localhost:3001/healthz` (override: `BACKEND_HOST_PORT`)
+  - Frontend: `http://localhost:5173` (override: `FRONTEND_HOST_PORT`)
 
 ## Desenvolvimento local (sem Docker para Node)
 
