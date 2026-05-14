@@ -22,6 +22,7 @@ import { createMetaCampaignSimple, getMetaCampaign, listMetaAdAccountCampaigns }
 import { getMetaAdSet } from "../services/metaAdSets.js";
 import { getMetaAd } from "../services/metaAds.js";
 import { getMetaStatus, validateMetaToken } from "../services/metaStatus.js";
+import { getMetaDiagnostics } from "../services/metaStatus.js";
 import { listMetaPages } from "../services/metaPages.js";
 import { countryCodeToFlag } from "../services/fallbacks.js";
 import { getGeneratedCampaignStructure, listGeneratedCampaigns } from "../services/generatedCampaigns.js";
@@ -79,6 +80,10 @@ export default function MetaPausedTest() {
   const [validateError, setValidateError] = useState("");
   const [validateErrorDetails, setValidateErrorDetails] = useState(null);
   const [validateMe, setValidateMe] = useState(null);
+  const [diagnosticsLoading, setDiagnosticsLoading] = useState(false);
+  const [diagnosticsError, setDiagnosticsError] = useState("");
+  const [diagnosticsErrorDetails, setDiagnosticsErrorDetails] = useState(null);
+  const [diagnosticsMe, setDiagnosticsMe] = useState(null);
 
   // AdSet/Ad (fluxo mínimo incremental)
   const [adSetName, setAdSetName] = useState("");
@@ -939,6 +944,15 @@ export default function MetaPausedTest() {
         validateMe={validateMe}
         setValidateMe={setValidateMe}
         validateMetaToken={validateMetaToken}
+        diagnosticsLoading={diagnosticsLoading}
+        setDiagnosticsLoading={setDiagnosticsLoading}
+        diagnosticsError={diagnosticsError}
+        setDiagnosticsError={setDiagnosticsError}
+        diagnosticsErrorDetails={diagnosticsErrorDetails}
+        setDiagnosticsErrorDetails={setDiagnosticsErrorDetails}
+        diagnosticsMe={diagnosticsMe}
+        setDiagnosticsMe={setDiagnosticsMe}
+        getMetaDiagnostics={getMetaDiagnostics}
         pushLog={pushLog}
       />
 

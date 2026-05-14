@@ -18,6 +18,15 @@ export default function BackendStatusSection({
   validateMe,
   setValidateMe,
   validateMetaToken,
+  diagnosticsLoading,
+  setDiagnosticsLoading,
+  diagnosticsError,
+  setDiagnosticsError,
+  diagnosticsErrorDetails,
+  setDiagnosticsErrorDetails,
+  diagnosticsMe,
+  setDiagnosticsMe,
+  getMetaDiagnostics,
   pushLog,
 }) {
   return (
@@ -177,6 +186,37 @@ export default function BackendStatusSection({
         >
           {validateLoading ? "Validando..." : "Validar token (Graph /me)"}
         </button>
+        <button
+          type="button"
+          className="pillOutline"
+          disabled={diagnosticsLoading || isCreatingAny || !backendStatus?.hasAccessToken}
+          onClick={async () => {
+            setDiagnosticsLoading(true);
+            setDiagnosticsError("");
+            setDiagnosticsErrorDetails(null);
+            setDiagnosticsMe(null);
+            try {
+              const res = await getMetaDiagnostics();
+              setDiagnosticsMe(res.me ?? null);
+              pushLog({ action: "meta.diagnostics", ok: true, details: { me: res?.me ?? null } });
+            } catch (err) {
+              setDiagnosticsMe(null);
+              setDiagnosticsError(err?.message ? String(err.message) : "Falha ao consultar diagnostics.");
+              const details = err?.body?.error?.details ?? err?.body ?? null;
+              setDiagnosticsErrorDetails(details);
+              pushLog({
+                action: "meta.diagnostics",
+                ok: false,
+                error: err?.message ? String(err.message) : "error",
+                details,
+              });
+            } finally {
+              setDiagnosticsLoading(false);
+            }
+          }}
+        >
+          {diagnosticsLoading ? "Consultando..." : "Diagnostics (permissões)"}
+        </button>
         <div className="muted" style={{ fontWeight: 800 }}>
           {backendStatus?.hasAccessToken ? "Recomendado antes de criar REAL." : "Adicione token no backend para habilitar REAL."}
         </div>
@@ -226,6 +266,60 @@ export default function BackendStatusSection({
             {validateMe?.name ? `${validateMe.name} (${validateMe.id})` : validateMe?.id ?? "—"}
           </div>
         </div>
+      ) : null}
+
+      {diagnosticsError ? (
+        <div className="card" style={{ padding: 14, marginTop: 12, borderColor: "#fecaca", color: "#991b1b" }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+            <div style={{ fontWeight: 900 }}>Erro (diagnostics)</div>
+            <button
+              type="button"
+              className="pillOutline"
+              onClick={() => {
+                setDiagnosticsError("");
+                setDiagnosticsErrorDetails(null);
+              }}
+              style={{ height: 32, padding: "0 12px", fontSize: 12, fontWeight: 900 }}
+            >
+              Fechar
+            </button>
+          </div>
+          <div style={{ marginTop: 6, fontWeight: 700 }}>{diagnosticsError}</div>
+          {diagnosticsErrorDetails ? (
+            <pre
+              style={{
+                marginTop: 12,
+                background: "#0b1220",
+                color: "#e5e7eb",
+                padding: 12,
+                borderRadius: 12,
+                overflowX: "auto",
+                whiteSpace: "pre-wrap",
+              }}
+            >
+{safeJson(diagnosticsErrorDetails)}
+            </pre>
+          ) : null}
+        </div>
+      ) : null}
+
+      {diagnosticsMe ? (
+        <details style={{ marginTop: 12 }}>
+          <summary style={{ cursor: "pointer", fontWeight: 900 }}>Diagnostics (token)</summary>
+          <pre
+            style={{
+              marginTop: 10,
+              background: "#0b1220",
+              color: "#e5e7eb",
+              padding: 12,
+              borderRadius: 12,
+              overflowX: "auto",
+              whiteSpace: "pre-wrap",
+            }}
+          >
+{safeJson(diagnosticsMe)}
+          </pre>
+        </details>
       ) : null}
     </div>
   );

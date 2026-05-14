@@ -53,7 +53,7 @@ Construir o **Campaign Builder**, uma aplicação web que substitui a planilha o
 
 ## Snapshot (Estado Atual)
 
-Última atualização: [2026-05-14 20:13]
+Última atualização: [2026-05-14 20:16]
 
 O que está funcional hoje:
 
@@ -81,6 +81,7 @@ O que está funcional hoje:
   - `docker-compose.yml` agora permite override de portas do host (`DB_HOST_PORT`/`BACKEND_HOST_PORT`/`FRONTEND_HOST_PORT`) para evitar conflitos locais (defaults mantidos) (commit: bb1c792)
   - `/meta-test`: botão “Listar Pages (Graph)” para obter `pageId` (Creative REAL) diretamente do backend (sem expor token)
   - endpoint `GET /api/meta/diagnostics` (backend) para evidenciar permissões do token quando Creative REAL estiver bloqueado por Page
+  - `/meta-test`: botão “Diagnostics (permissões)” no status do backend para troubleshooting de token sem expor segredo
 - O fluxo operacional começou a ser separado conceitualmente entre:
   - Campaign
   - AdSet

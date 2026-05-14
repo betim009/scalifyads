@@ -17,3 +17,8 @@ export async function validateMetaToken() {
   const data = await apiPost("/api/meta/validate", {});
   return { ok: true, me: data?.me ?? null };
 }
+
+export async function getMetaDiagnostics() {
+  const data = await apiGet("/api/meta/diagnostics");
+  return { ok: true, me: data?.me ?? null, dbEnabled: Boolean(data?.db_enabled) };
+}
