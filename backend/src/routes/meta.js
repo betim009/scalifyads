@@ -384,6 +384,33 @@ export function metaRouter() {
     })
   )
 
+  router.get(
+    '/diagnostics',
+    asyncHandler(async (req, res) => {
+      const dbEnabled = Boolean(req.app.locals.dbEnabled)
+      const pool = dbEnabled ? getPool() : null
+      const accessToken = dbEnabled
+        ? await resolveAccessToken(pool, req)
+        : coerceAccessToken(process.env.META_ACCESS_TOKEN)
+
+      if (!accessToken) {
+        return jsonError(res, 400, 'Missing accessToken (set META_ACCESS_TOKEN env or save via /tokens)')
+      }
+
+      try {
+        const me = await metaFetchMe({ accessToken, fields: ['id', 'name', 'permissions'] })
+        return res.json({
+          ok: true,
+          db_enabled: dbEnabled,
+          me
+        })
+      } catch (err) {
+        const status = typeof err?.status === 'number' ? err.status : 502
+        return jsonError(res, status, err?.message ?? 'Meta diagnostics failed', err?.details)
+      }
+    })
+  )
+
   router.post(
     '/tokens',
     asyncHandler(async (req, res) => {

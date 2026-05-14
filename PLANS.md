@@ -53,7 +53,7 @@ Construir o **Campaign Builder**, uma aplicação web que substitui a planilha o
 
 ## Snapshot (Estado Atual)
 
-Última atualização: [2026-05-14 20:11]
+Última atualização: [2026-05-14 20:13]
 
 O que está funcional hoje:
 
@@ -80,6 +80,7 @@ O que está funcional hoje:
   - `/api/meta/status` e `/api/meta/validate` agora funcionam mesmo sem DB (usam apenas `META_ACCESS_TOKEN` env) para troubleshooting mais rápido quando o Postgres/Docker estiver indisponível (commit: 2eabf2d)
   - `docker-compose.yml` agora permite override de portas do host (`DB_HOST_PORT`/`BACKEND_HOST_PORT`/`FRONTEND_HOST_PORT`) para evitar conflitos locais (defaults mantidos) (commit: bb1c792)
   - `/meta-test`: botão “Listar Pages (Graph)” para obter `pageId` (Creative REAL) diretamente do backend (sem expor token)
+  - endpoint `GET /api/meta/diagnostics` (backend) para evidenciar permissões do token quando Creative REAL estiver bloqueado por Page
 - O fluxo operacional começou a ser separado conceitualmente entre:
   - Campaign
   - AdSet

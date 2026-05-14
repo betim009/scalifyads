@@ -44,6 +44,7 @@
 - Diagnóstico: `curl http://localhost:3001/api/meta/status`
 - Validar token (Graph `/me` via backend): `curl -X POST http://localhost:3001/api/meta/validate -H 'Content-Type: application/json' -d '{}'`
 - Listar Pages disponíveis (para obter `pageId` do Creative REAL): `curl "http://localhost:3001/api/meta/pages?metaAdAccountId=act_<id>"`
+- Diagnóstico completo (inclui permissões do token): `curl http://localhost:3001/api/meta/diagnostics`
 
 ### Meta — Operações principais (backend)
 
