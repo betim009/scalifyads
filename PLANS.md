@@ -427,13 +427,14 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 
 ## Blockers
 
-Última atualização: [2026-05-15 13:11]
+Última atualização: [2026-05-15 13:19]
 
 - Execução com DB/stack depende do daemon do Docker estar rodando (`docker compose up -d`). Ver `RUNBOOK.md`.
 - Para validar P4/P5 (Creative/Ad REAL) é necessário `META_PAGE_ID` (env) ou `pageId` no `/meta-test` + token com acesso a uma Page (no momento, nenhuma Page foi listada via Graph com o token atual).
   - Evidência (ambiente atual): `GET /api/meta/status` → `has_access_token=true` e `has_page_id=false`; `POST /api/meta/validate` OK; `GET /api/meta/pages?metaAdAccountId=act_259174718403969` → `my_pages=[]` e `promote_pages=[]`; permissões incluem `pages_show_list` (ver `GET /api/meta/diagnostics`).
   - Mitigação: `/api/meta/pages` agora tenta também `me/businesses` + `owned_pages` para descobrir `pageId` (commit: c67e164), e o `/meta-test` exibe sugestões de `pageId` quando houver (commit: a4e302e).
   - Mitigação: `/api/meta/pages` tenta também descobrir o `business` do Ad Account (`act_*`) e listar `owned_pages` desse business (commit: 204e1b3); `/meta-test` inclui isso nas sugestões (commit: ba67fc3).
+  - Mitigação: endpoint read-only `GET /api/meta/pages/:id` + botão “Validar Page ID” no `/meta-test` (commits: 6ccabf6, bd1969e).
   - Mitigação: `docker-compose.yml` faz passthrough de `META_PAGE_ID`/`META_INSTAGRAM_ACTOR_ID` para o backend (commit: b1c3d72).
 
 ## Risks
