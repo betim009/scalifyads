@@ -15,6 +15,7 @@ import {
   FilterListIcon,
   LanguageIcon,
   PercentIcon,
+  RocketLaunchIcon,
   SortIcon,
 } from "../styles/icons.js";
 
@@ -91,8 +92,23 @@ export default function Dashboard() {
 
           <section className="gridActions" aria-label="Ações">
             <ActionCard
-              title="Criar Nova Campanha"
-              description="Crie campanhas globais em minutos com automação inteligente"
+              title="Console Meta (/meta-test)"
+              description="Fluxo operacional progressivo (Campaign → AdSet → Ad) + troubleshooting sem expor token"
+              items={[
+                {
+                  icon: <RocketLaunchIcon fontSize="small" />,
+                  text: "Operação REAL/STUB (sempre PAUSED no REAL)",
+                },
+                { icon: <BoltIcon fontSize="small" />, text: "Graph + persistência + evidência operacional" },
+              ]}
+              buttonVariant="primary"
+              buttonIcon={<RocketLaunchIcon fontSize="small" />}
+              buttonText="Abrir /meta-test"
+              onButtonClick={() => navigate("/meta-test")}
+            />
+            <ActionCard
+              title="Criar Nova Campanha (Legado)"
+              description="Fluxo legado de geração global (mantido por compatibilidade)"
               items={[
                 { icon: <BoltIcon fontSize="small" />, text: "Automação completa" },
                 {
@@ -100,7 +116,7 @@ export default function Dashboard() {
                   text: `${countriesCount} países simultâneos`,
                 },
               ]}
-              buttonVariant="primary"
+              buttonVariant="secondary"
               buttonIcon={<AddIcon fontSize="small" />}
               buttonText="Nova Campanha"
               onButtonClick={() => navigate("/nova-campanha")}

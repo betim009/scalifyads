@@ -385,7 +385,29 @@ export default function NovaCampanha() {
           alignItems: "start",
         }}
       >
-            <div style={{ display: "grid", gap: 24 }}>
+        <div style={{ display: "grid", gap: 24 }}>
+          <section
+            className="card"
+            style={{
+              padding: 18,
+              border: "1px solid #fed7aa",
+              background: "#fffbeb",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 14, alignItems: "flex-start" }}>
+              <div style={{ display: "grid", gap: 8 }}>
+                <div style={{ fontWeight: 900, color: "#92400e" }}>Fluxo legado</div>
+                <InfoLine
+                  icon={<InfoOutlinedIcon fontSize="small" style={{ color: "#f97316" }} />}
+                  tone="#92400e"
+                  text="Para operação Meta Ads (REAL/STUB), troubleshooting e evidência operacional, use o console /meta-test."
+                />
+              </div>
+              <button type="button" className="pillOutline" onClick={() => navigate("/meta-test")}>
+                Abrir /meta-test
+              </button>
+            </div>
+          </section>
               <section className="card" style={{ padding: 24 }}>
                 <SectionTitle step={1} title="Configuração" />
 
