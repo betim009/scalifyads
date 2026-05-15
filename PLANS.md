@@ -180,7 +180,7 @@ GOVERNANÇA CONTÍNUA:
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-15 13:26]
+Última atualização: [2026-05-15 17:09]
 
 Regras:
 
@@ -229,6 +229,7 @@ Regras:
 - [x] Melhorar navegação operacional
 - [x] `/meta-test`: adicionar atalhos (anchors) para navegação entre seções
 - [x] `/meta-test`: atalhos incluem Graph/DB estrutura/logs DB (commit: c6b5eee)
+- [x] `/meta-test`: batch — adicionar botão “Limpar” (países selecionados)
 - [x] Melhorar percepção REAL vs STUB
 - [x] `/meta-test`: exibir REAL/STUB por entidade (Campaign/AdSet/Ad) na estrutura Meta
 - [x] Refinar responsividade

@@ -138,17 +138,26 @@ export default function CampaignBatchSection({
       description="Gera Campaigns independentes por país (todas nascem `PAUSED`)."
       defaultOpen={false}
       headerRight={
-        <button
-          type="button"
-          className="pillOutline"
-          onClick={() => setSelectedCountryCodes(countryOptions.map((c) => c.code))}
-          disabled={isBusy || batchRunning || !countryOptions.length}
-        >
-          Selecionar todos
-        </button>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <button
+            type="button"
+            className="pillOutline"
+            onClick={() => setSelectedCountryCodes(countryOptions.map((c) => c.code))}
+            disabled={isBusy || batchRunning || !countryOptions.length}
+          >
+            Selecionar todos
+          </button>
+          <button
+            type="button"
+            className="pillOutline"
+            onClick={() => setSelectedCountryCodes([])}
+            disabled={isBusy || batchRunning || selectedCountryCodes.length === 0}
+          >
+            Limpar
+          </button>
+        </div>
       }
     >
-
       <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "end" }}>
         <label style={{ display: "grid", gap: 6, minWidth: 220 }}>
           <span className="muted" style={{ fontWeight: 900 }}>
