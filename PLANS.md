@@ -180,7 +180,7 @@ GOVERNANÇA CONTÍNUA:
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-15 17:09]
+Última atualização: [2026-05-15 17:13]
 
 Regras:
 
@@ -230,6 +230,7 @@ Regras:
 - [x] `/meta-test`: adicionar atalhos (anchors) para navegação entre seções
 - [x] `/meta-test`: atalhos incluem Graph/DB estrutura/logs DB (commit: c6b5eee)
 - [x] `/meta-test`: batch — adicionar botão “Limpar” (países selecionados)
+- [x] `/meta-test`: batch — adicionar botões “Copiar resultados”/“Copiar erros” (JSON)
 - [x] Melhorar percepção REAL vs STUB
 - [x] `/meta-test`: exibir REAL/STUB por entidade (Campaign/AdSet/Ad) na estrutura Meta
 - [x] Refinar responsividade
@@ -256,10 +257,10 @@ Regras:
 
 #### Separação contextual
 - [x] Separar visualmente (commit: 8c6f584):
-  - operação
-  - persistência
-  - debug
-  - Graph
+  - [ ] operação
+  - [ ] persistência
+  - [ ] debug
+  - [ ] Graph
   - [x] `/meta-test`: “Campanhas PAUSED na Meta” colapsável e dentro do bloco Graph (commit: 75527a5)
 
 ### P2 — Fluxo progressivo Meta

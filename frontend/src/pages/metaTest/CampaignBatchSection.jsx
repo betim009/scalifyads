@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import CollapsibleCard from "./CollapsibleCard.jsx";
+import { safeJson } from "./metaTestUtils.js";
 
 export default function CampaignBatchSection({
   isBusy,
@@ -154,6 +155,46 @@ export default function CampaignBatchSection({
             disabled={isBusy || batchRunning || selectedCountryCodes.length === 0}
           >
             Limpar
+          </button>
+          <button
+            type="button"
+            className="pillOutline"
+            onClick={async () => {
+              setError("");
+              setErrorDetails(null);
+              setSuccess("");
+              const text = safeJson(batchResults);
+              try {
+                await navigator.clipboard.writeText(text);
+                setSuccess("Batch (resultados) copiado para a área de transferência.");
+              } catch {
+                setError("Não foi possível copiar os resultados do batch.");
+                setErrorDetails(null);
+              }
+            }}
+            disabled={!batchResults.length}
+          >
+            Copiar resultados
+          </button>
+          <button
+            type="button"
+            className="pillOutline"
+            onClick={async () => {
+              setError("");
+              setErrorDetails(null);
+              setSuccess("");
+              const text = safeJson(batchErrors);
+              try {
+                await navigator.clipboard.writeText(text);
+                setSuccess("Batch (erros) copiado para a área de transferência.");
+              } catch {
+                setError("Não foi possível copiar os erros do batch.");
+                setErrorDetails(null);
+              }
+            }}
+            disabled={!batchErrors.length}
+          >
+            Copiar erros
           </button>
         </div>
       }
