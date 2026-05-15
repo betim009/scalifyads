@@ -230,6 +230,7 @@ Regras:
 - [x] Criar modo compacto para troubleshooting (commit: d7467c4)
 - [x] Transformar payloads técnicos em accordions (commit: 2bd673e)
 - [ ] Reduzir excesso de informações simultâneas
+  - [x] `/meta-test`: erro do DB (`generated_campaigns`) em accordion (commit: 578d835)
 
 #### Separação contextual
 - [ ] Separar visualmente:
