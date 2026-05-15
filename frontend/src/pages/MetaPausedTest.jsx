@@ -909,8 +909,6 @@ export default function MetaPausedTest() {
         />
       ) : null}
 
-      <PausedMetaCampaignsSection metaLoading={metaLoading} metaCampaigns={metaCampaigns} />
-
       <StepAdSetSection
         createdMetaCampaignId={createdMetaCampaignId}
         adSetName={adSetName}
@@ -1418,6 +1416,8 @@ export default function MetaPausedTest() {
         subtitle="Consultas diretas via backend (somente IDs reais)"
         tone="graph"
       />
+
+      <PausedMetaCampaignsSection metaLoading={metaLoading} metaCampaigns={metaCampaigns} />
 
       <CollapsibleCard
         id="meta-test-graph-refresh"

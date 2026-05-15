@@ -75,6 +75,13 @@ export default function ShortcutsCard({ stepCampaignOk, stepAdSetOk, stepAdOk })
         </a>
         <a
           className="pillOutline"
+          href="#meta-test-paused-meta-campaigns"
+          onClick={() => ensureCollapsibleOpen("meta-test-paused-meta-campaigns")}
+        >
+          Meta PAUSED
+        </a>
+        <a
+          className="pillOutline"
           href="#meta-test-step-campaign"
           title="Etapa 1 concluída quando existe meta_campaign_id."
           onClick={() => ensureCollapsibleOpen("meta-test-step-campaign")}
