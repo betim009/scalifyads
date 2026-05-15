@@ -160,7 +160,7 @@ Fontes únicas (para reduzir drift):
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-15 12:31]
+Última atualização: [2026-05-15 12:54]
 
 Regras:
 
@@ -239,6 +239,7 @@ Regras:
   - persistência
   - debug
   - Graph
+  - [x] `/meta-test`: “Campanhas PAUSED na Meta” colapsável e dentro do bloco Graph (commit: 75527a5)
 
 ### P2 — Fluxo progressivo Meta
 
