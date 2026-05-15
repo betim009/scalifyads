@@ -13,7 +13,12 @@ import { slugify } from '../lib/slugify.js'
 import { metaCreateAdSet, metaCreateAdSetStub, metaFetchAdSet } from '../meta/adsets.js'
 import { metaCreateAd, metaCreateAdStub, metaFetchAd } from '../meta/ads.js'
 import { metaCreateAdCreative, metaFetchAdCreative, metaUploadAdImage } from '../meta/creatives.js'
-import { metaListAdAccountPromotePages, metaListMyPages } from '../meta/pages.js'
+import {
+  metaListAdAccountPromotePages,
+  metaListBusinessOwnedPages,
+  metaListMyBusinesses,
+  metaListMyPages
+} from '../meta/pages.js'
 
 function parseDateOrNull(value) {
   if (typeof value !== 'string' || !value.trim()) return null
@@ -371,11 +376,24 @@ export function metaRouter() {
           ? await metaListAdAccountPromotePages({ metaAdAccountId, accessToken })
           : []
 
+        const businesses = await metaListMyBusinesses({ accessToken })
+        const ownedPagesByBusiness = []
+        for (const b of businesses) {
+          try {
+            const pages = await metaListBusinessOwnedPages({ businessId: b.id, accessToken })
+            ownedPagesByBusiness.push({ business_id: b.id, business_name: b.name ?? null, pages })
+          } catch {
+            ownedPagesByBusiness.push({ business_id: b.id, business_name: b.name ?? null, pages: [] })
+          }
+        }
+
         return res.json({
           ok: true,
           meta_ad_account_id: metaAdAccountId,
           my_pages: myPages,
-          promote_pages: promotePages
+          promote_pages: promotePages,
+          businesses,
+          owned_pages_by_business: ownedPagesByBusiness
         })
       } catch (err) {
         const status = typeof err?.status === 'number' ? err.status : 502

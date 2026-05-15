@@ -104,6 +104,16 @@ function pickPages(json) {
     .filter((p) => p.id)
 }
 
+function pickBusinesses(json) {
+  const data = Array.isArray(json?.data) ? json.data : []
+  return data
+    .map((b) => ({
+      id: normalizeNonEmptyString(b?.id) ?? null,
+      name: normalizeNonEmptyString(b?.name) ?? null
+    }))
+    .filter((b) => b.id)
+}
+
 export async function metaListMyPages({ accessToken, limit = 50 } = {}) {
   const token = normalizeNonEmptyString(accessToken)
   if (!token) {
@@ -113,6 +123,47 @@ export async function metaListMyPages({ accessToken, limit = 50 } = {}) {
   }
 
   const url = buildUrl('me/accounts', {
+    access_token: token,
+    fields: 'id,name',
+    limit
+  })
+  const json = await fetchJson(url, { retries: 2 })
+  return pickPages(json)
+}
+
+export async function metaListMyBusinesses({ accessToken, limit = 50 } = {}) {
+  const token = normalizeNonEmptyString(accessToken)
+  if (!token) {
+    const err = new Error('accessToken is required')
+    err.status = 400
+    throw err
+  }
+
+  const url = buildUrl('me/businesses', {
+    access_token: token,
+    fields: 'id,name',
+    limit
+  })
+  const json = await fetchJson(url, { retries: 2 })
+  return pickBusinesses(json)
+}
+
+export async function metaListBusinessOwnedPages({ businessId, accessToken, limit = 50 } = {}) {
+  const biz = normalizeNonEmptyString(businessId)
+  if (!biz) {
+    const err = new Error('businessId is required')
+    err.status = 400
+    throw err
+  }
+
+  const token = normalizeNonEmptyString(accessToken)
+  if (!token) {
+    const err = new Error('accessToken is required')
+    err.status = 400
+    throw err
+  }
+
+  const url = buildUrl(`${biz}/owned_pages`, {
     access_token: token,
     fields: 'id,name',
     limit
@@ -144,4 +195,3 @@ export async function metaListAdAccountPromotePages({ metaAdAccountId, accessTok
   const json = await fetchJson(url, { retries: 2 })
   return pickPages(json)
 }
-
