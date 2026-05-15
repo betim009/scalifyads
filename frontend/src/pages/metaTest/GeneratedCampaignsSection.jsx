@@ -1,3 +1,5 @@
+import JsonAccordion from "./JsonAccordion.jsx";
+
 export default function GeneratedCampaignsSection({
   localGenerated,
   localLoading,
@@ -46,21 +48,7 @@ export default function GeneratedCampaignsSection({
             </button>
           </div>
           <div style={{ marginTop: 6, fontWeight: 700 }}>{localError}</div>
-          {localErrorDetails ? (
-            <pre
-              style={{
-                marginTop: 12,
-                background: "#0b1220",
-                color: "#e5e7eb",
-                padding: 12,
-                borderRadius: 12,
-                overflowX: "auto",
-                whiteSpace: "pre-wrap",
-              }}
-            >
-{safeJson(localErrorDetails)}
-            </pre>
-          ) : null}
+          <JsonAccordion title="Detalhes (erro DB)" value={localErrorDetails} safeJson={safeJson} />
         </div>
       ) : null}
 
