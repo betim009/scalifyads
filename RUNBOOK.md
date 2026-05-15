@@ -118,6 +118,7 @@ Exemplos (`curl`, sempre `PAUSED` e sem token no frontend):
 - Publicar Creative REAL a partir de um `creative_draft` (token no backend): `POST /api/meta/creative-drafts/:id/publish`
   - Requer `creative_drafts.destination_url` preenchido (use `destinationUrl` ao criar o draft).
   - `pageId` pode vir do body (`{ "pageId": "..." }`) ou do env `META_PAGE_ID` (obrigatório).
+  - `docker-compose.yml` faz passthrough de `META_PAGE_ID` e `META_INSTAGRAM_ACTOR_ID` (via env/.env do host); após alterar, rode `docker compose restart backend`.
 
 ### Playbook — Validação REAL via `/meta-test` (Creative + Ad)
 
