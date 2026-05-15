@@ -1,4 +1,9 @@
 import JsonAccordion from "./JsonAccordion.jsx";
+import { getBackendBaseUrl } from "../../services/http.js";
+
+function escapeShellSingleQuotes(value) {
+  return String(value ?? "").replace(/'/g, `'\"'\"'`);
+}
 
 export default function StepAdSection({
   createdMetaAdSetId,
@@ -248,6 +253,30 @@ export default function StepAdSection({
           <button type="button" className="pillOutline" disabled={!canPublishCreative} onClick={onPublishCreative}>
             {creativePublishing ? "Publicando..." : "Publicar Creative REAL"}
           </button>
+          <button
+            type="button"
+            className="pillOutline"
+            disabled={flowMode === "STUB" || !normalizeNonEmptyString(creativeDraftId)}
+            onClick={async () => {
+              const baseUrl = getBackendBaseUrl();
+              const id = normalizeNonEmptyString(creativeDraftId);
+              const payload = {
+                ...(normalizeNonEmptyString(metaPageId) ? { pageId: metaPageId.trim() } : null),
+                ...(normalizeNonEmptyString(metaInstagramActorId) ? { instagramActorId: metaInstagramActorId.trim() } : null),
+                force: creativePublishForce === true,
+              };
+              const json = JSON.stringify(payload);
+              const cmd = `curl -X POST '${escapeShellSingleQuotes(`${baseUrl}/api/meta/creative-drafts/${id}/publish`)}' -H 'Content-Type: application/json' -d '${escapeShellSingleQuotes(json)}'`;
+              try {
+                await navigator.clipboard.writeText(cmd);
+              } catch {
+                // ignore
+              }
+            }}
+            title="Copia um comando curl (sem token) para publicar o Creative REAL via backend."
+          >
+            Copiar curl (Publish)
+          </button>
           <button type="button" className="pillOutline" disabled={!canFetchCreative} onClick={onFetchCreative}>
             {creativeGetLoading ? "Consultando..." : "Consultar Creative (Graph)"}
           </button>
@@ -267,6 +296,24 @@ export default function StepAdSection({
             onClick={onListPages}
           >
             {pagesLoading ? "Listando..." : "Listar Pages (Graph)"}
+          </button>
+          <button
+            type="button"
+            className="pillOutline"
+            disabled={flowMode === "STUB" || !normalizeNonEmptyString(metaAdAccountId)}
+            onClick={async () => {
+              const baseUrl = getBackendBaseUrl();
+              const act = metaAdAccountId.trim();
+              const cmd = `curl '${escapeShellSingleQuotes(`${baseUrl}/api/meta/pages?metaAdAccountId=${encodeURIComponent(act)}`)}'`;
+              try {
+                await navigator.clipboard.writeText(cmd);
+              } catch {
+                // ignore
+              }
+            }}
+            title="Copia um comando curl (sem token) para listar Pages via backend."
+          >
+            Copiar curl (Pages)
           </button>
           <div className="muted" style={{ fontWeight: 800 }}>
             Requer modo REAL + token no backend + `creativeDraftId` com `destinationUrl`.
@@ -414,6 +461,31 @@ export default function StepAdSection({
       <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
         <button type="button" className="pillOutline" disabled={!canCreateAd} onClick={onCreateAd}>
           {adCreating ? "Criando..." : `Criar Ad ${flowMode} (PAUSED)`}
+        </button>
+        <button
+          type="button"
+          className="pillOutline"
+          disabled={flowMode !== "REAL" || !normalizeNonEmptyString(createdGeneratedCampaignId)}
+          onClick={async () => {
+            const baseUrl = getBackendBaseUrl();
+            const payload = {
+              generatedCampaignId: createdGeneratedCampaignId,
+              name: normalizeNonEmptyString(adName) ? adName.trim() : "Ad — 1",
+              ...(normalizeNonEmptyString(creativeDraftId) ? { creativeDraftId: creativeDraftId.trim() } : null),
+              ...(normalizeNonEmptyString(adCreativeId) ? { creativeId: adCreativeId.trim() } : null),
+              mode: "REAL",
+            };
+            const json = JSON.stringify(payload);
+            const cmd = `curl -X POST '${escapeShellSingleQuotes(`${baseUrl}/api/meta/ads`)}' -H 'Content-Type: application/json' -d '${escapeShellSingleQuotes(json)}'`;
+            try {
+              await navigator.clipboard.writeText(cmd);
+            } catch {
+              // ignore
+            }
+          }}
+          title="Copia um comando curl (sem token) para criar Ad REAL (PAUSED) via backend."
+        >
+          Copiar curl (Ad REAL)
         </button>
         <div className="muted" style={{ fontWeight: 800 }}>
           Requer AdSet criado acima. REAL exige token no backend e `creativeId`.

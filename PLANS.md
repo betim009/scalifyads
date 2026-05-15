@@ -180,7 +180,7 @@ GOVERNANÇA CONTÍNUA:
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-15 17:24]
+Última atualização: [2026-05-15 17:26]
 
 Regras:
 
@@ -234,6 +234,7 @@ Regras:
 - [x] `/meta-test`: troubleshooting — logs persistidos (DB) com botão “Copiar JSON”
 - [x] `/meta-test`: troubleshooting — status do backend com botão “Copiar JSON”
 - [x] `/meta-test`: troubleshooting — callout quando `META_PAGE_ID` está ausente + snippet copiável (.env)
+- [x] `/meta-test`: troubleshooting — Etapa 3 com botões “Copiar curl” (Publish/Pages/Ad REAL)
 - [x] Melhorar percepção REAL vs STUB
 - [x] `/meta-test`: exibir REAL/STUB por entidade (Campaign/AdSet/Ad) na estrutura Meta
 - [x] Refinar responsividade
