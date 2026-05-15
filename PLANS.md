@@ -160,7 +160,7 @@ Fontes únicas (para reduzir drift):
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-15 11:30]
+Última atualização: [2026-05-15 12:14]
 
 Regras:
 
@@ -228,7 +228,7 @@ Regras:
 
 #### Troubleshooting UX
 - [ ] Criar modo compacto para troubleshooting
-- [ ] Transformar payloads técnicos em accordions
+- [x] Transformar payloads técnicos em accordions (commit: 2bd673e)
 - [ ] Reduzir excesso de informações simultâneas
 
 #### Separação contextual
