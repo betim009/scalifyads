@@ -80,6 +80,34 @@ export default function BackendStatusSection({
         </div>
       ) : null}
 
+      {backendStatus?.hasAccessToken && !backendStatus?.hasPageId ? (
+        <div className="card" style={{ padding: 14, marginTop: 12, borderColor: "#fed7aa", color: "#9a3412" }}>
+          <div style={{ fontWeight: 900 }}>Atenção: `META_PAGE_ID` ausente</div>
+          <div className="muted" style={{ marginTop: 6, fontWeight: 800, color: "#9a3412" }}>
+            Publish de Creative REAL exige `pageId`. Você pode preencher no UI (Etapa 3 → “Listar Pages (Graph)” → “Usar pageId”)
+            ou configurar no backend via env.
+          </div>
+          <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+            <button
+              type="button"
+              className="pillOutline"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText("META_PAGE_ID=\nMETA_INSTAGRAM_ACTOR_ID=\n");
+                  setCopyStatus("Snippet (.env) copiado.");
+                } catch {
+                  setCopyStatus("Falha ao copiar snippet.");
+                } finally {
+                  window.setTimeout(() => setCopyStatus(""), 3500);
+                }
+              }}
+            >
+              Copiar snippet (.env)
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {backendStatusError ? (
         <div className="card" style={{ padding: 14, marginTop: 12, borderColor: "#fecaca", color: "#991b1b" }}>
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
