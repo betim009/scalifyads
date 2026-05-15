@@ -160,7 +160,7 @@ Fontes únicas (para reduzir drift):
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-15 12:23]
+Última atualização: [2026-05-15 12:30]
 
 Regras:
 
@@ -216,10 +216,10 @@ Regras:
 - [x] `/meta-test`: exigir `destinationUrl` no draft antes de publicar Creative REAL (evitar erro operacional) (commit: 7a86ab3)
 #### Estrutura visual
 - [x] Adicionar seções colapsáveis (commit: e2c6603)
-- [ ] Reduzir densidade visual
-- [ ] Melhorar hierarquia visual
-- [ ] Melhorar organização vertical
-- [ ] Melhorar spacing entre seções
+- [x] Reduzir densidade visual (commit: 8c6f584)
+- [x] Melhorar hierarquia visual (commit: 8c6f584)
+- [x] Melhorar organização vertical (commit: 8c6f584)
+- [x] Melhorar spacing entre seções (commit: 8c6f584)
 
 #### Fluxo principal
 - [x] Destacar fluxo principal (commit: 2211df2)
@@ -233,7 +233,7 @@ Regras:
   - [x] `/meta-test`: erro do DB (`generated_campaigns`) em accordion (commit: 578d835)
 
 #### Separação contextual
-- [ ] Separar visualmente:
+- [x] Separar visualmente (commit: 8c6f584):
   - operação
   - persistência
   - debug
