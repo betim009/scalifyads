@@ -160,7 +160,7 @@ Fontes únicas (para reduzir drift):
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-14 16:59]
+Última atualização: [2026-05-15 11:30]
 
 Regras:
 
@@ -214,6 +214,29 @@ Regras:
 - [x] Refinar responsividade
 - [x] `/meta-test`: tornar grids responsivos (auto-fit/minmax) para telas menores
 - [x] `/meta-test`: exigir `destinationUrl` no draft antes de publicar Creative REAL (evitar erro operacional) (commit: 7a86ab3)
+#### Estrutura visual
+- [x] Adicionar seções colapsáveis (commit: e2c6603)
+- [ ] Reduzir densidade visual
+- [ ] Melhorar hierarquia visual
+- [ ] Melhorar organização vertical
+- [ ] Melhorar spacing entre seções
+
+#### Fluxo principal
+- [ ] Destacar fluxo principal
+- [ ] Ocultar detalhes avançados por padrão
+- [ ] Separar operação de troubleshooting
+
+#### Troubleshooting UX
+- [ ] Criar modo compacto para troubleshooting
+- [ ] Transformar payloads técnicos em accordions
+- [ ] Reduzir excesso de informações simultâneas
+
+#### Separação contextual
+- [ ] Separar visualmente:
+  - operação
+  - persistência
+  - debug
+  - Graph
 
 ### P2 — Fluxo progressivo Meta
 
