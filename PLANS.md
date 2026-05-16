@@ -180,7 +180,7 @@ GOVERNANÇA CONTÍNUA:
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-15 17:26]
+Última atualização: [2026-05-16 14:27]
 
 Regras:
 
@@ -251,6 +251,7 @@ Regras:
 - [x] Destacar fluxo principal (commit: 2211df2)
 - [x] Ocultar detalhes avançados por padrão (commit: 2211df2)
 - [x] Separar operação de troubleshooting (commit: 2211df2)
+- [x] `/meta-test`: Etapas 2/3 (AdSet/Ad) colapsáveis por padrão (commit: 98e32a9)
 
 #### Troubleshooting UX
 - [x] Criar modo compacto para troubleshooting (commit: d7467c4)
