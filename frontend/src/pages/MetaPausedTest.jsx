@@ -20,6 +20,7 @@ import PausedMetaCampaignsSection from "./metaTest/PausedMetaCampaignsSection.js
 import MetaStructureCard from "./metaTest/MetaStructureCard.jsx";
 import CampaignResultSection from "./metaTest/CampaignResultSection.jsx";
 import CampaignBatchSection from "./metaTest/CampaignBatchSection.jsx";
+import AdRealAcceptanceCard from "./metaTest/AdRealAcceptanceCard.jsx";
 import { getCountries } from "../services/reference.js";
 import { getMetaCampaign } from "../services/metaCampaigns.js";
 import { getMetaAdSet } from "../services/metaAdSets.js";
@@ -1173,6 +1174,53 @@ export default function MetaPausedTest() {
         createdGeneratedCampaignId={createdGeneratedCampaignId}
         flowMode={flowMode}
         normalizeNonEmptyString={normalizeNonEmptyString}
+      />
+
+      <AdRealAcceptanceCard
+        flowMode={flowMode}
+        created={created}
+        selectedCreativeDraft={selectedCreativeDraft}
+        adCreativeId={adCreativeId}
+        isRealMetaId={isRealMetaId}
+        normalizeNonEmptyString={normalizeNonEmptyString}
+        onCopyEvidence={async () => {
+          setError("");
+          setErrorDetails(null);
+          setSuccess("");
+          try {
+            const payload = {
+              generatedCampaignId: createdGeneratedCampaignId || null,
+              flowMode,
+              meta: {
+                campaignId: created?.metaCampaign?.id ?? null,
+                adsetId: created?.metaAdSet?.id ?? null,
+                adId: created?.metaAd?.id ?? null,
+                adEffectiveStatus: created?.metaAd?.effective_status ?? null,
+              },
+              creativeDraft: selectedCreativeDraft
+                ? {
+                    id: selectedCreativeDraft?.id ?? null,
+                    destination_url: selectedCreativeDraft?.destination_url ?? null,
+                    cta_type: selectedCreativeDraft?.cta_type ?? null,
+                    creative_asset_id: selectedCreativeDraft?.creative_asset_id ?? null,
+                    meta_creative_id: selectedCreativeDraft?.meta_creative_id ?? null,
+                  }
+                : null,
+              adCreativeId: normalizeNonEmptyString(adCreativeId) || null,
+            };
+            await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+            setSuccess("Evidência P5 copiada para a área de transferência.");
+            pushLog({
+              action: "p5.acceptance.copy",
+              ok: true,
+              details: { generatedCampaignId: createdGeneratedCampaignId || null },
+            });
+          } catch (err) {
+            setError("Não foi possível copiar a evidência P5.");
+            setErrorDetails(err?.message ? String(err.message) : null);
+            pushLog({ action: "p5.acceptance.copy", ok: false, error: err?.message ? String(err.message) : "error" });
+          }
+        }}
       />
 
       <SectionDivider
