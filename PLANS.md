@@ -180,7 +180,7 @@ GOVERNANÇA CONTÍNUA:
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-17 14:18]
+Última atualização: [2026-05-17 14:27]
 
 Regras:
 
@@ -344,6 +344,7 @@ Regras:
 - [x] `RUNBOOK.md`: atualizar exemplos P5 (Ad REAL) para `creativeId` opcional via draft (commit: ac709af)
 - [x] Backend: erro acionável quando `creativeId` faltar (menciona fallback via `creativeDraftId.meta_creative_id`)
 - [x] Backend: `POST /api/meta/ads` responde `creative_id_source` (`body|draft|null`) para troubleshooting do P5
+- [x] `/meta-test`: exibir `creative_id_source` no resultado/log ao criar Ad (facilita troubleshooting)
 
 ### P6 — Governança operacional leve
 
