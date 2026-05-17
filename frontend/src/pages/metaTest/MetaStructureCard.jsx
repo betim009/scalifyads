@@ -75,6 +75,11 @@ export default function MetaStructureCard({
               " / " +
               (created?.metaAd?.effective_status ?? created?.generatedCampaign?.meta_ad_effective_status ?? "—")}
           </div>
+          {created?.metaAdCreate?.creativeIdSource ? (
+            <div className="muted" style={{ marginTop: 8, fontWeight: 800 }}>
+              creativeId source: <b>{String(created.metaAdCreate.creativeIdSource)}</b>
+            </div>
+          ) : null}
           {!created?.generatedCampaign?.meta_ad_id ? (
             <div className="muted" style={{ marginTop: 8, fontWeight: 800 }}>
               Creative (sem upload complexo)
@@ -90,4 +95,3 @@ export default function MetaStructureCard({
     </div>
   );
 }
-

@@ -5,6 +5,7 @@ export async function createMetaAd(payload) {
   return {
     ok: true,
     mode: data?.mode ?? null,
+    creativeIdSource: data?.creative_id_source ?? null,
     metaAd: data?.meta_ad ?? null,
     generatedCampaign: data?.generated_campaign ?? null,
   };

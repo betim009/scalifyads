@@ -1144,6 +1144,10 @@ export default function MetaPausedTest() {
             setCreated((prev) => ({
               ...(prev ?? {}),
               mode: res.mode ?? prev?.mode ?? flowMode,
+              metaAdCreate: {
+                ...(prev?.metaAdCreate ?? {}),
+                creativeIdSource: res.creativeIdSource ?? prev?.metaAdCreate?.creativeIdSource ?? null,
+              },
               metaAd: res.metaAd ?? prev?.metaAd ?? null,
               generatedCampaign: res.generatedCampaign ?? prev?.generatedCampaign ?? null,
             }));
@@ -1155,6 +1159,7 @@ export default function MetaPausedTest() {
                 generatedCampaignId: createdGeneratedCampaignId,
                 metaAdId: res?.metaAd?.id ?? null,
                 creativeDraftId: normalizeNonEmptyString(adCreativeDraftId) || null,
+                creativeIdSource: res?.creativeIdSource ?? null,
               },
             });
             setSuccess(`Ad criado (${res.mode || flowMode}) — status obrigatório: PAUSED.`);
