@@ -43,6 +43,15 @@ function normalizeMetaAdAccountId(value) {
   return `act_${stripped}`
 }
 
+function normalizeLimit(value, { fallback = 50, min = 1, max = 200 } = {}) {
+  if (value === undefined || value === null) return fallback
+  const n = Number.parseInt(String(value), 10)
+  if (!Number.isFinite(n)) return fallback
+  if (n < min) return min
+  if (n > max) return max
+  return n
+}
+
 function normalizeCountryCode(value) {
   const raw = normalizeNonEmptyString(value)
   if (!raw) return null
@@ -371,18 +380,19 @@ export function metaRouter() {
       }
 
       const metaAdAccountId = normalizeMetaAdAccountId(req.query?.metaAdAccountId)
+      const limit = normalizeLimit(req.query?.limit, { fallback: 50, min: 1, max: 200 })
 
       try {
-        const myPages = await metaListMyPages({ accessToken })
+        const myPages = await metaListMyPages({ accessToken, limit })
         const promotePages = metaAdAccountId
-          ? await metaListAdAccountPromotePages({ metaAdAccountId, accessToken })
+          ? await metaListAdAccountPromotePages({ metaAdAccountId, accessToken, limit })
           : []
 
-        const businesses = await metaListMyBusinesses({ accessToken })
+        const businesses = await metaListMyBusinesses({ accessToken, limit })
         const ownedPagesByBusiness = []
         for (const b of businesses) {
           try {
-            const pages = await metaListBusinessOwnedPages({ businessId: b.id, accessToken })
+            const pages = await metaListBusinessOwnedPages({ businessId: b.id, accessToken, limit })
             ownedPagesByBusiness.push({ business_id: b.id, business_name: b.name ?? null, pages })
           } catch {
             ownedPagesByBusiness.push({ business_id: b.id, business_name: b.name ?? null, pages: [] })
@@ -397,7 +407,8 @@ export function metaRouter() {
             if (adAccountBusiness?.id) {
               ownedPagesFromAdAccountBusiness = await metaListBusinessOwnedPages({
                 businessId: adAccountBusiness.id,
-                accessToken
+                accessToken,
+                limit
               })
             }
           } catch {

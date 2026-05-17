@@ -114,7 +114,15 @@ function pickBusinesses(json) {
     .filter((b) => b.id)
 }
 
-export async function metaListMyPages({ accessToken, limit = 50 } = {}) {
+function clampInt(value, { min, max, fallback }) {
+  const n = Number.parseInt(String(value), 10)
+  if (!Number.isFinite(n)) return fallback
+  if (typeof min === 'number' && n < min) return min
+  if (typeof max === 'number' && n > max) return max
+  return n
+}
+
+async function fetchAllPages(path, { accessToken, fields, limit = 50, maxItems = 250 } = {}) {
   const token = normalizeNonEmptyString(accessToken)
   if (!token) {
     const err = new Error('accessToken is required')
@@ -122,30 +130,74 @@ export async function metaListMyPages({ accessToken, limit = 50 } = {}) {
     throw err
   }
 
-  const url = buildUrl('me/accounts', {
-    access_token: token,
-    fields: 'id,name',
-    limit
-  })
-  const json = await fetchJson(url, { retries: 2 })
-  return pickPages(json)
+  const pageLimit = clampInt(limit, { min: 1, max: 200, fallback: 50 })
+  const hardLimit = clampInt(maxItems, { min: 1, max: 2000, fallback: 250 })
+
+  let after = null
+  const out = []
+
+  while (out.length < hardLimit) {
+    const url = buildUrl(path, {
+      access_token: token,
+      fields,
+      limit: pageLimit,
+      after
+    })
+    const json = await fetchJson(url, { retries: 2 })
+    const pages = pickPages(json)
+    out.push(...pages)
+
+    const nextAfter = normalizeNonEmptyString(json?.paging?.cursors?.after) ?? null
+    if (!nextAfter) break
+    after = nextAfter
+  }
+
+  const unique = new Map()
+  for (const p of out) unique.set(p.id, p)
+  return Array.from(unique.values()).slice(0, hardLimit)
+}
+
+async function fetchAllBusinesses(path, { accessToken, fields, limit = 50, maxItems = 250 } = {}) {
+  const token = normalizeNonEmptyString(accessToken)
+  if (!token) {
+    const err = new Error('accessToken is required')
+    err.status = 400
+    throw err
+  }
+
+  const pageLimit = clampInt(limit, { min: 1, max: 200, fallback: 50 })
+  const hardLimit = clampInt(maxItems, { min: 1, max: 2000, fallback: 250 })
+
+  let after = null
+  const out = []
+
+  while (out.length < hardLimit) {
+    const url = buildUrl(path, {
+      access_token: token,
+      fields,
+      limit: pageLimit,
+      after
+    })
+    const json = await fetchJson(url, { retries: 2 })
+    const businesses = pickBusinesses(json)
+    out.push(...businesses)
+
+    const nextAfter = normalizeNonEmptyString(json?.paging?.cursors?.after) ?? null
+    if (!nextAfter) break
+    after = nextAfter
+  }
+
+  const unique = new Map()
+  for (const b of out) unique.set(b.id, b)
+  return Array.from(unique.values()).slice(0, hardLimit)
+}
+
+export async function metaListMyPages({ accessToken, limit = 50 } = {}) {
+  return fetchAllPages('me/accounts', { accessToken, fields: 'id,name', limit, maxItems: 500 })
 }
 
 export async function metaListMyBusinesses({ accessToken, limit = 50 } = {}) {
-  const token = normalizeNonEmptyString(accessToken)
-  if (!token) {
-    const err = new Error('accessToken is required')
-    err.status = 400
-    throw err
-  }
-
-  const url = buildUrl('me/businesses', {
-    access_token: token,
-    fields: 'id,name',
-    limit
-  })
-  const json = await fetchJson(url, { retries: 2 })
-  return pickBusinesses(json)
+  return fetchAllBusinesses('me/businesses', { accessToken, fields: 'id,name', limit, maxItems: 500 })
 }
 
 export async function metaListBusinessOwnedPages({ businessId, accessToken, limit = 50 } = {}) {
@@ -156,20 +208,7 @@ export async function metaListBusinessOwnedPages({ businessId, accessToken, limi
     throw err
   }
 
-  const token = normalizeNonEmptyString(accessToken)
-  if (!token) {
-    const err = new Error('accessToken is required')
-    err.status = 400
-    throw err
-  }
-
-  const url = buildUrl(`${biz}/owned_pages`, {
-    access_token: token,
-    fields: 'id,name',
-    limit
-  })
-  const json = await fetchJson(url, { retries: 2 })
-  return pickPages(json)
+  return fetchAllPages(`${biz}/owned_pages`, { accessToken, fields: 'id,name', limit, maxItems: 500 })
 }
 
 export async function metaFetchAdAccountBusiness({ metaAdAccountId, accessToken } = {}) {
@@ -229,18 +268,5 @@ export async function metaListAdAccountPromotePages({ metaAdAccountId, accessTok
     throw err
   }
 
-  const token = normalizeNonEmptyString(accessToken)
-  if (!token) {
-    const err = new Error('accessToken is required')
-    err.status = 400
-    throw err
-  }
-
-  const url = buildUrl(`${act}/promote_pages`, {
-    access_token: token,
-    fields: 'id,name',
-    limit
-  })
-  const json = await fetchJson(url, { retries: 2 })
-  return pickPages(json)
+  return fetchAllPages(`${act}/promote_pages`, { accessToken, fields: 'id,name', limit, maxItems: 500 })
 }
