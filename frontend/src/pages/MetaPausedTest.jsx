@@ -1,5 +1,6 @@
 import PageShell from "../components/PageShell.jsx";
 import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import ShortcutsCard from "./metaTest/ShortcutsCard.jsx";
 import FlowProgressCard from "./metaTest/FlowProgressCard.jsx";
 import ModeStatusCard from "./metaTest/ModeStatusCard.jsx";
@@ -63,6 +64,7 @@ const OBJECTIVE_OPTIONS = [
 ];
 
 export default function MetaPausedTest() {
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -277,6 +279,22 @@ export default function MetaPausedTest() {
         if (typeof parsed.metaInstagramActorId === "string") setMetaInstagramActorId(parsed.metaInstagramActorId);
         if (typeof parsed.previewAdFormat === "string") setPreviewAdFormat(parsed.previewAdFormat);
       }
+    } catch {
+      // ignore
+    }
+
+    // Optional: deep-link prefill (ex: from `/nova-campanha`).
+    // Query params are treated as an explicit override over the saved draft.
+    try {
+      const params = new URLSearchParams(location.search || "");
+      const nameParam = normalizeNonEmptyString(params.get("name"));
+      if (nameParam) setName(nameParam);
+
+      const pageIdParam = normalizeNonEmptyString(params.get("pageId") || params.get("metaPageId"));
+      if (pageIdParam) setMetaPageId(pageIdParam);
+
+      const destinationUrlParam = normalizeNonEmptyString(params.get("destinationUrl"));
+      if (destinationUrlParam) setDraftDestinationUrl(destinationUrlParam);
     } catch {
       // ignore
     }

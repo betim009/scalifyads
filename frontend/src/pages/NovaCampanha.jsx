@@ -282,6 +282,29 @@ export default function NovaCampanha() {
     return `fb_campaign=${clean}`;
   }, [nicheParam]);
 
+  const metaTestDeepLink = useMemo(() => {
+    const params = new URLSearchParams();
+
+    const cleanName = (campaignName ?? "").trim();
+    if (cleanName) params.set("name", cleanName);
+
+    const cleanPageId = (pageId ?? "").trim();
+    if (cleanPageId) params.set("pageId", cleanPageId);
+
+    let destinationUrl = (finalUrl ?? "").trim();
+    if (destinationUrl && !/^https?:\/\//i.test(destinationUrl)) {
+      destinationUrl = `https://${destinationUrl}`;
+    }
+    const utm = (autoUtm ?? "").trim();
+    if (destinationUrl && utm) {
+      destinationUrl = destinationUrl.includes("?") ? `${destinationUrl}&${utm}` : `${destinationUrl}?${utm}`;
+    }
+    if (destinationUrl) params.set("destinationUrl", destinationUrl);
+
+    const qs = params.toString();
+    return qs ? `/meta-test?${qs}` : "/meta-test";
+  }, [campaignName, pageId, finalUrl, autoUtm]);
+
   function updateArrayValue(setter, idx, nextValue) {
     setter((prev) => prev.map((v, i) => (i === idx ? nextValue : v)));
   }
@@ -403,7 +426,7 @@ export default function NovaCampanha() {
                   text="Para operação Meta Ads (REAL/STUB), troubleshooting e evidência operacional, use o console /meta-test."
                 />
               </div>
-              <button type="button" className="pillOutline" onClick={() => navigate("/meta-test")}>
+              <button type="button" className="pillOutline" onClick={() => navigate(metaTestDeepLink)}>
                 Abrir /meta-test
               </button>
             </div>
