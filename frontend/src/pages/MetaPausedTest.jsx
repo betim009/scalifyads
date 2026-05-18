@@ -757,6 +757,9 @@ export default function MetaPausedTest() {
             metaReadyLabel={metaReadyLabel}
             dbModeLabel={dbModeLabel}
             syncProviderLabel={syncProviderLabel}
+            backendStatusLoading={backendStatusLoading}
+            hasPageId={Boolean(backendStatus?.hasPageId)}
+            hasInstagramActorId={Boolean(backendStatus?.hasInstagramActorId)}
           />
           <div style={{ marginTop: 16 }}>
             <LatestExecutionsCard
