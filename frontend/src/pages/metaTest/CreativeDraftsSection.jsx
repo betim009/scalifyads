@@ -1,18 +1,28 @@
 import { getBackendBaseUrl } from "../../services/http.js";
 import CollapsibleCard from "./CollapsibleCard.jsx";
 import JsonAccordion from "./JsonAccordion.jsx";
+import { useState } from "react";
 
 export default function CreativeDraftsSection({
   generatedCampaignId,
   assets,
   drafts,
+  templates,
+  templatesLoading,
+  templatesError,
+  templatesErrorDetails,
   loading,
   error,
   errorDetails,
   refreshDisabled,
   onRefresh,
+  refreshTemplatesDisabled,
+  onRefreshTemplates,
   createDisabled,
   onCreate,
+  templateBusy,
+  onSaveTemplateFromDraft,
+  onApplyTemplate,
   onDismissError,
   safeJson,
   draftAssetId,
@@ -29,9 +39,11 @@ export default function CreativeDraftsSection({
   setDestinationUrl,
   onDuplicate,
 }) {
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const baseUrl = getBackendBaseUrl();
   const selectedAsset = (assets ?? []).find((a) => a.id === draftAssetId) ?? null;
   const selectedAssetUrl = selectedAsset?.url ? `${baseUrl}${selectedAsset.url}` : null;
+  const templateList = Array.isArray(templates) ? templates : [];
 
   return (
     <CollapsibleCard
@@ -201,6 +213,74 @@ export default function CreativeDraftsSection({
         </div>
 
         <div className="card" style={{ padding: 14, marginTop: 12 }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+            <div className="muted" style={{ fontWeight: 900 }}>
+              Templates (copy/creative)
+            </div>
+            <button
+              type="button"
+              className="pillOutline"
+              onClick={onRefreshTemplates}
+              disabled={refreshTemplatesDisabled}
+              style={{ height: 32, padding: "0 12px", fontSize: 12, fontWeight: 900 }}
+            >
+              {templatesLoading ? "Atualizando..." : "Atualizar templates"}
+            </button>
+          </div>
+
+          {templatesError ? (
+            <div className="card" style={{ padding: 12, marginTop: 10, borderColor: "#fecaca", color: "#991b1b" }}>
+              <div style={{ fontWeight: 900 }}>Erro</div>
+              <div style={{ marginTop: 6, fontWeight: 700 }}>{templatesError}</div>
+              <JsonAccordion title="Detalhes (erro templates)" value={templatesErrorDetails} safeJson={safeJson} />
+            </div>
+          ) : null}
+
+          <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "end" }}>
+            <label style={{ display: "grid", gap: 6, minWidth: 260 }}>
+              <span className="muted" style={{ fontWeight: 900 }}>
+                Selecionar template
+              </span>
+              <select
+                value={selectedTemplateId}
+                onChange={(e) => setSelectedTemplateId(e.target.value)}
+                disabled={refreshTemplatesDisabled}
+                style={{
+                  height: 38,
+                  borderRadius: 12,
+                  border: "1px solid #e5e7eb",
+                  padding: "0 12px",
+                  fontSize: 13,
+                  fontWeight: 800,
+                  outline: "none",
+                  background: "#ffffff",
+                }}
+              >
+                <option value="">(selecione)</option>
+                {templateList.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {(t.name || t.id).slice(0, 80)}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <button
+              type="button"
+              className="pillOutline"
+              onClick={() => onApplyTemplate(selectedTemplateId)}
+              disabled={!selectedTemplateId || createDisabled || templateBusy}
+            >
+              Aplicar (criar draft)
+            </button>
+
+            <div className="muted" style={{ fontWeight: 800 }}>
+              Dica: use “Salvar template” na tabela de drafts abaixo.
+            </div>
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: 14, marginTop: 12 }}>
           <div className="muted" style={{ fontWeight: 900 }}>
             Preview (operacional)
           </div>
@@ -285,14 +365,26 @@ export default function CreativeDraftsSection({
                 <td className="muted" style={{ fontWeight: 900 }}>{d.status || "—"}</td>
                 <td className="muted" style={{ fontWeight: 800 }}>{d.meta_creative_id || "—"}</td>
                 <td>
-                  <button
-                    type="button"
-                    className="pillOutline"
-                    onClick={() => onDuplicate(d.id)}
-                    style={{ height: 32, padding: "0 12px", fontSize: 12, fontWeight: 900 }}
-                  >
-                    Duplicar
-                  </button>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      className="pillOutline"
+                      onClick={() => onDuplicate(d.id)}
+                      disabled={templateBusy}
+                      style={{ height: 32, padding: "0 12px", fontSize: 12, fontWeight: 900 }}
+                    >
+                      Duplicar
+                    </button>
+                    <button
+                      type="button"
+                      className="pillOutline"
+                      onClick={() => onSaveTemplateFromDraft(d.id)}
+                      disabled={templateBusy}
+                      style={{ height: 32, padding: "0 12px", fontSize: 12, fontWeight: 900 }}
+                    >
+                      Salvar template
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

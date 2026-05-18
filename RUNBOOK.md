@@ -124,6 +124,14 @@ Exemplos (`curl`, sempre `PAUSED` e sem token no frontend):
 - Listar drafts: `GET /api/creative-drafts?generatedCampaignId=<uuid>&limit=50`
 - Criar draft: `POST /api/creative-drafts`
 
+### Creative Templates — Templates de copy/creative (dev)
+
+Última atualização: [2026-05-18 20:31]
+
+- Listar templates: `GET /api/creative-templates?limit=50`
+- Criar template a partir de draft: `POST /api/creative-templates/from-draft/<creative_draft_uuid>` (body opcional: `{ "name": "..." }`)
+- Aplicar template (cria draft): `POST /api/creative-templates/<template_uuid>/apply` (body: `{ "generatedCampaignId": "<uuid>" }`)
+
 ### Meta — Creative REAL (AdCreative)
 
 Última atualização: [2026-05-13 14:09]

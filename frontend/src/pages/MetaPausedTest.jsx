@@ -33,6 +33,11 @@ import { listOpsLogs } from "../services/opsLogs.js";
 import { listCreativeAssets, uploadCreativeAsset } from "../services/creativeAssets.js";
 import { createCreativeDraft, duplicateCreativeDraft, listCreativeDrafts } from "../services/creativeDrafts.js";
 import {
+  applyCreativeTemplate,
+  createCreativeTemplateFromDraft,
+  listCreativeTemplates,
+} from "../services/creativeTemplates.js";
+import {
   fetchMetaCreative,
   fetchMetaCreativePreviews,
   publishCreativeDraftAndExtractId,
@@ -176,6 +181,12 @@ export default function MetaPausedTest() {
   const [draftCtaType, setDraftCtaType] = useState("");
   const [draftDestinationUrl, setDraftDestinationUrl] = useState("");
 
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [templatesError, setTemplatesError] = useState("");
+  const [templatesErrorDetails, setTemplatesErrorDetails] = useState(null);
+  const [creativeTemplates, setCreativeTemplates] = useState([]);
+  const [templateActionLoading, setTemplateActionLoading] = useState(false);
+
   const selectedCreativeDraft = useMemo(
     () => (creativeDrafts ?? []).find((d) => d?.id === adCreativeDraftId) ?? null,
     [creativeDrafts, adCreativeDraftId],
@@ -276,6 +287,7 @@ export default function MetaPausedTest() {
     refreshBackendStatus();
     refreshLocalGenerated();
     refreshCreativeAssets();
+    refreshCreativeTemplates();
     refreshCreativeDrafts(createdGeneratedCampaignId);
     try {
       const raw = localStorage.getItem("metaTest.draft.v1");
@@ -570,6 +582,22 @@ export default function MetaPausedTest() {
       setDraftsErrorDetails(extractErrorDetails(err));
     } finally {
       setDraftsLoading(false);
+    }
+  }
+
+  async function refreshCreativeTemplates() {
+    setTemplatesLoading(true);
+    setTemplatesError("");
+    setTemplatesErrorDetails(null);
+    try {
+      const res = await listCreativeTemplates({ limit: 50 });
+      setCreativeTemplates(res.creativeTemplates ?? []);
+    } catch (err) {
+      setCreativeTemplates([]);
+      setTemplatesError(err?.message ? String(err.message) : "Falha ao carregar templates (DB/API indisponível).");
+      setTemplatesErrorDetails(extractErrorDetails(err));
+    } finally {
+      setTemplatesLoading(false);
     }
   }
 
@@ -1653,11 +1681,17 @@ export default function MetaPausedTest() {
         generatedCampaignId={createdGeneratedCampaignId}
         assets={creativeAssets}
         drafts={creativeDrafts}
+        templates={creativeTemplates}
+        templatesLoading={templatesLoading}
+        templatesError={templatesError}
+        templatesErrorDetails={templatesErrorDetails}
         loading={draftsLoading}
         error={draftsError}
         errorDetails={draftsErrorDetails}
         refreshDisabled={draftsLoading || loading || isCreatingAny || !createdGeneratedCampaignId}
         onRefresh={() => refreshCreativeDrafts(createdGeneratedCampaignId)}
+        refreshTemplatesDisabled={templatesLoading || loading || templateActionLoading}
+        onRefreshTemplates={refreshCreativeTemplates}
         createDisabled={draftCreating || loading || isCreatingAny || !createdGeneratedCampaignId}
         onCreate={async () => {
           if (!createdGeneratedCampaignId) return;
@@ -1718,6 +1752,7 @@ export default function MetaPausedTest() {
         setCtaType={setDraftCtaType}
         destinationUrl={draftDestinationUrl}
         setDestinationUrl={setDraftDestinationUrl}
+        templateBusy={templateActionLoading}
         onDuplicate={async (draftId) => {
           if (!draftId) return;
           setError("");
@@ -1740,6 +1775,60 @@ export default function MetaPausedTest() {
               error: captured.message || "error",
               details: { errorDetails: captured.details },
             });
+          }
+        }}
+        onSaveTemplateFromDraft={async (draftId) => {
+          if (!draftId) return;
+          setTemplateActionLoading(true);
+          setError("");
+          setErrorDetails(null);
+          setSuccess("");
+          try {
+            const res = await createCreativeTemplateFromDraft(draftId);
+            pushLog({
+              action: "creative.template.create_from_draft",
+              ok: true,
+              details: { sourceDraftId: draftId, id: res?.creativeTemplate?.id ?? null },
+            });
+            setSuccess("Template criado a partir do draft.");
+            await refreshCreativeTemplates();
+          } catch (err) {
+            const captured = captureError(err, "Falha ao criar template.");
+            pushLog({
+              action: "creative.template.create_from_draft",
+              ok: false,
+              error: captured.message || "error",
+              details: { errorDetails: captured.details },
+            });
+          } finally {
+            setTemplateActionLoading(false);
+          }
+        }}
+        onApplyTemplate={async (templateId) => {
+          if (!templateId || !createdGeneratedCampaignId) return;
+          setTemplateActionLoading(true);
+          setError("");
+          setErrorDetails(null);
+          setSuccess("");
+          try {
+            const res = await applyCreativeTemplate(templateId, { generatedCampaignId: createdGeneratedCampaignId });
+            pushLog({
+              action: "creative.template.apply",
+              ok: true,
+              details: { templateId, generatedCampaignId: createdGeneratedCampaignId, draftId: res?.creativeDraft?.id ?? null },
+            });
+            setSuccess("Template aplicado (draft criado).");
+            await refreshCreativeDrafts(createdGeneratedCampaignId);
+          } catch (err) {
+            const captured = captureError(err, "Falha ao aplicar template.");
+            pushLog({
+              action: "creative.template.apply",
+              ok: false,
+              error: captured.message || "error",
+              details: { errorDetails: captured.details },
+            });
+          } finally {
+            setTemplateActionLoading(false);
           }
         }}
       />
