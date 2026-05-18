@@ -11,7 +11,8 @@ export function schedulerRouter() {
         ok: true,
         schedulers: {
           automation: req.app.locals.automationScheduler ?? null,
-          metaStatus: req.app.locals.metaStatusScheduler ?? null
+          metaStatus: req.app.locals.metaStatusScheduler ?? null,
+          metaMetrics: req.app.locals.metaMetricsScheduler ?? null
         }
       })
     })
@@ -19,4 +20,3 @@ export function schedulerRouter() {
 
   return router
 }
-

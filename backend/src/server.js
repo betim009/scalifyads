@@ -3,6 +3,7 @@ import path from 'node:path'
 import { initDb } from './db.js'
 import { startAutomationScheduler } from './scheduler/automationScheduler.js'
 import { startMetaStatusScheduler } from './scheduler/metaStatusScheduler.js'
+import { startMetaMetricsScheduler } from './scheduler/metaMetricsScheduler.js'
 import { healthRouter } from './routes/health.js'
 import { apiRouter } from './routes/api.js'
 
@@ -15,6 +16,7 @@ app.locals.dbEnabled = Boolean(dbStatus?.enabled)
 
 startAutomationScheduler(app)
 startMetaStatusScheduler(app)
+startMetaMetricsScheduler(app)
 
 app.use(express.json())
 
