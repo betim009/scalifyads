@@ -738,15 +738,32 @@ export default function MetaPausedTest() {
       subtitle="Fluxo progressivo operacional — criação REAL sempre PAUSED"
       backFallbackTo="/configuracoes"
     >
-      <ShortcutsCard stepCampaignOk={stepCampaignOk} stepAdSetOk={stepAdSetOk} stepAdOk={stepAdOk} />
-      <FlowProgressCard stepCampaignOk={stepCampaignOk} stepAdSetOk={stepAdSetOk} stepAdOk={stepAdOk} />
-      <ModeStatusCard
-        runModeLabel={runModeLabel}
-        dataModeLabel={dataModeLabel}
-        metaReadyLabel={metaReadyLabel}
-        dbModeLabel={dbModeLabel}
-        syncProviderLabel={syncProviderLabel}
-      />
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
+        <div
+          style={{
+            flex: "0 1 360px",
+            minWidth: 260,
+            maxWidth: 420,
+            position: "sticky",
+            top: 16,
+            alignSelf: "flex-start",
+            marginTop: 16,
+          }}
+        >
+          <ModeStatusCard
+            runModeLabel={runModeLabel}
+            dataModeLabel={dataModeLabel}
+            metaReadyLabel={metaReadyLabel}
+            dbModeLabel={dbModeLabel}
+            syncProviderLabel={syncProviderLabel}
+          />
+          <FlowProgressCard stepCampaignOk={stepCampaignOk} stepAdSetOk={stepAdSetOk} stepAdOk={stepAdOk} />
+          <div style={{ marginTop: 16 }}>
+            <ShortcutsCard stepCampaignOk={stepCampaignOk} stepAdSetOk={stepAdSetOk} stepAdOk={stepAdOk} />
+          </div>
+        </div>
+
+        <div style={{ flex: "1 1 680px", minWidth: 320 }}>
 
       <CollapsibleCard
         id="meta-test-recovery"
@@ -1781,6 +1798,8 @@ export default function MetaPausedTest() {
         fetchGraphAdSet={fetchGraphAdSet}
         fetchGraphAd={fetchGraphAd}
       />
+        </div>
+      </div>
     </PageShell>
   );
 }

@@ -400,11 +400,11 @@ Regras:
 
 ## Backlog Ativo — Próxima Fase Operacional
 
-Última atualização: [2026-05-18 19:40]
+Última atualização: [2026-05-18 19:45]
 ### P8 — Console operacional
 
 - [ ] Consolidar layout operacional definitivo
-- [ ] Criar sidebar operacional contextual
+- [x] Criar sidebar operacional contextual
 - [ ] Melhorar leitura de status Meta
 - [ ] Criar visão resumida da estrutura Campaign → AdSet → Ad
 - [ ] Melhorar timeline operacional
