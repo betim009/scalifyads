@@ -179,85 +179,95 @@ export default function CampanhaDetalhes() {
                   </td>
                   <td>
                     {!gc.meta_campaign_id || String(gc.meta_campaign_id).startsWith("stub-") ? (
-                      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                        <input
-                          value={metaIdDraftByGeneratedId[gc.id] ?? ""}
-                          onChange={(e) =>
-                            setMetaIdDraftByGeneratedId((prev) => ({
-                              ...prev,
-                              [gc.id]: e.target.value,
-                            }))
-                          }
-                          placeholder="meta_campaign_id"
-                          style={{
-                            height: 36,
-                            borderRadius: 12,
-                            border: "1px solid #e5e7eb",
-                            padding: "0 12px",
-                            fontSize: 13,
-                            fontWeight: 700,
-                            outline: "none",
-                            background: "#ffffff",
-                            minWidth: 200,
-                          }}
-                        />
-                        <button
-                          type="button"
-                          className="pillOutline"
-                          disabled={busy || loading || String(metaIdDraftByGeneratedId[gc.id] ?? "").trim() === ""}
-                          onClick={async () => {
-                            setBusy(true);
-                            setError("");
-                            try {
-                              await markGeneratedPublished(gc.id, {
-                                metaCampaignId: String(metaIdDraftByGeneratedId[gc.id]).trim(),
-                              });
-                              await refresh();
-                            } catch (err) {
-                              setError(
-                                err?.message ? String(err.message) : "Falha ao vincular metaCampaignId."
-                              );
-                            } finally {
-                              setBusy(false);
-                            }
-                          }}
-                        >
-                          Vincular
-                        </button>
-                        <button
-                          type="button"
-                          className="pillOutline"
-                          disabled={busy || loading}
-                          onClick={async () => {
-                            setBusy(true);
-                            setError("");
-                            try {
-                              await markGeneratedPublished(gc.id, { metaCampaignId: `stub-${gc.id}` });
-                              await refresh();
-                            } catch (err) {
-                              setError(
-                                err?.message ? String(err.message) : "Falha ao marcar como publicada."
-                              );
-                            } finally {
-                              setBusy(false);
-                            }
-                          }}
-                        >
-                          Usar stub
-                        </button>
-                        <button
-                          type="button"
-                          className="pillOutline"
-                          disabled={busy || loading}
-                          onClick={() => {
-                            const params = new URLSearchParams();
-                            params.set("generatedCampaignId", String(gc.id));
-                            params.set("name", String(gc.name || ""));
-                            navigate(`/meta-test?${params.toString()}`);
-                          }}
-                        >
-                          Abrir /meta-test
-                        </button>
+                      <div style={{ display: "grid", gap: 10 }}>
+                        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                          <button
+                            type="button"
+                            className="pillOutline"
+                            disabled={busy || loading}
+                            onClick={() => {
+                              const params = new URLSearchParams();
+                              params.set("generatedCampaignId", String(gc.id));
+                              params.set("name", String(gc.name || ""));
+                              navigate(`/meta-test?${params.toString()}`);
+                            }}
+                          >
+                            Abrir /meta-test
+                          </button>
+                        </div>
+
+                        <details>
+                          <summary style={{ cursor: "pointer", fontWeight: 900, color: "#6b7280" }}>
+                            Ações avançadas (legado)
+                          </summary>
+                          <div style={{ marginTop: 10, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                            <input
+                              value={metaIdDraftByGeneratedId[gc.id] ?? ""}
+                              onChange={(e) =>
+                                setMetaIdDraftByGeneratedId((prev) => ({
+                                  ...prev,
+                                  [gc.id]: e.target.value,
+                                }))
+                              }
+                              placeholder="meta_campaign_id"
+                              style={{
+                                height: 36,
+                                borderRadius: 12,
+                                border: "1px solid #e5e7eb",
+                                padding: "0 12px",
+                                fontSize: 13,
+                                fontWeight: 700,
+                                outline: "none",
+                                background: "#ffffff",
+                                minWidth: 200,
+                              }}
+                            />
+                            <button
+                              type="button"
+                              className="pillOutline"
+                              disabled={busy || loading || String(metaIdDraftByGeneratedId[gc.id] ?? "").trim() === ""}
+                              onClick={async () => {
+                                setBusy(true);
+                                setError("");
+                                try {
+                                  await markGeneratedPublished(gc.id, {
+                                    metaCampaignId: String(metaIdDraftByGeneratedId[gc.id]).trim(),
+                                  });
+                                  await refresh();
+                                } catch (err) {
+                                  setError(
+                                    err?.message ? String(err.message) : "Falha ao vincular metaCampaignId."
+                                  );
+                                } finally {
+                                  setBusy(false);
+                                }
+                              }}
+                            >
+                              Vincular
+                            </button>
+                            <button
+                              type="button"
+                              className="pillOutline"
+                              disabled={busy || loading}
+                              onClick={async () => {
+                                setBusy(true);
+                                setError("");
+                                try {
+                                  await markGeneratedPublished(gc.id, { metaCampaignId: `stub-${gc.id}` });
+                                  await refresh();
+                                } catch (err) {
+                                  setError(
+                                    err?.message ? String(err.message) : "Falha ao marcar como publicada."
+                                  );
+                                } finally {
+                                  setBusy(false);
+                                }
+                              }}
+                            >
+                              Usar stub
+                            </button>
+                          </div>
+                        </details>
                       </div>
                     ) : (
                       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
