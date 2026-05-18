@@ -185,8 +185,16 @@ export default function MetaPausedTest() {
   const isCreatingAny = campaignCreating || adSetCreating || adCreating;
 
   function captureError(err, fallbackMessage) {
-    const message = err?.message ? String(err.message) : fallbackMessage || "Erro";
     const details = extractErrorDetails(err);
+    const metaUserMsg =
+      typeof details?.error_user_msg === "string" && details.error_user_msg.trim()
+        ? details.error_user_msg.trim()
+        : "";
+    const metaUserTitle =
+      typeof details?.error_user_title === "string" && details.error_user_title.trim()
+        ? details.error_user_title.trim()
+        : "";
+    const message = metaUserMsg || metaUserTitle || (err?.message ? String(err.message) : "") || fallbackMessage || "Erro";
     setError(message);
     setErrorDetails(details);
     setSuccess("");
