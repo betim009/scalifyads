@@ -23,9 +23,6 @@ import CampaignBatchSection from "./metaTest/CampaignBatchSection.jsx";
 import AdRealAcceptanceCard from "./metaTest/AdRealAcceptanceCard.jsx";
 import CreativeRealAcceptanceCard from "./metaTest/CreativeRealAcceptanceCard.jsx";
 import { getCountries } from "../services/reference.js";
-import { getMetaCampaign } from "../services/metaCampaigns.js";
-import { getMetaAdSet } from "../services/metaAdSets.js";
-import { getMetaAd } from "../services/metaAds.js";
 import { countryCodeToFlag } from "../services/fallbacks.js";
 import { getGeneratedCampaignStructure, listGeneratedCampaigns } from "../services/generatedCampaigns.js";
 import { listOpsLogs } from "../services/opsLogs.js";
@@ -35,6 +32,7 @@ import { publishCreativeDraftAndExtractId, fetchMetaCreative } from "./metaTest/
 import { createCampaignSimple, listPausedCampaigns } from "./metaTest/actions/campaignActions.js";
 import { createAdSet } from "./metaTest/actions/adSetActions.js";
 import { createAd } from "./metaTest/actions/adActions.js";
+import { fetchGraphAd, fetchGraphAdSet, fetchGraphCampaign } from "./metaTest/actions/graphActions.js";
 import {
   fetchBackendDiagnostics,
   fetchBackendStatus,
@@ -1598,7 +1596,7 @@ export default function MetaPausedTest() {
               setErrorDetails(null);
               setSuccess("");
               try {
-                const res = await getMetaCampaign(createdMetaCampaignId);
+                const res = await fetchGraphCampaign(createdMetaCampaignId);
                 setCreated((prev) => ({
                   ...(prev ?? {}),
                   metaCampaign: res.metaCampaign ?? prev?.metaCampaign ?? null,
@@ -1636,7 +1634,7 @@ export default function MetaPausedTest() {
               setErrorDetails(null);
               setSuccess("");
               try {
-                const res = await getMetaAdSet(adSetEntityId);
+                const res = await fetchGraphAdSet(adSetEntityId);
                 setCreated((prev) => ({
                   ...(prev ?? {}),
                   metaAdSet: res.metaAdSet ?? prev?.metaAdSet ?? null,
@@ -1675,7 +1673,7 @@ export default function MetaPausedTest() {
               setErrorDetails(null);
               setSuccess("");
               try {
-                const res = await getMetaAd(adEntityId);
+                const res = await fetchGraphAd(adEntityId);
                 setCreated((prev) => ({
                   ...(prev ?? {}),
                   metaAd: res.metaAd ?? prev?.metaAd ?? null,
