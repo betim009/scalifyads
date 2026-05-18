@@ -1,6 +1,6 @@
 import CollapsibleCard from "./CollapsibleCard.jsx";
 import JsonAccordion from "./JsonAccordion.jsx";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { copyTextToClipboard } from "./metaTestUtils.js";
 
 export default function OpsLogsDbSection({
@@ -15,6 +15,25 @@ export default function OpsLogsDbSection({
 }) {
   const [compactMode, setCompactMode] = useState(true);
   const [copyStatus, setCopyStatus] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all"); // all | ok | error
+  const [query, setQuery] = useState("");
+
+  const viewLogs = useMemo(() => {
+    let list = Array.isArray(opsLogs) ? opsLogs : [];
+
+    if (statusFilter === "ok") list = list.filter((l) => Boolean(l?.ok));
+    if (statusFilter === "error") list = list.filter((l) => !l?.ok);
+
+    const q = String(query || "").trim().toLowerCase();
+    if (!q) return list;
+    return list.filter((l) => {
+      try {
+        return JSON.stringify(l).toLowerCase().includes(q);
+      } catch {
+        return false;
+      }
+    });
+  }, [opsLogs, statusFilter, query]);
 
   return (
     <CollapsibleCard
@@ -25,7 +44,17 @@ export default function OpsLogsDbSection({
           Evidência de persistência operacional (source: <b>meta-test</b>).
         </>
       }
-      meta={<>{loading ? "Carregando..." : `${opsLogs.length} log(s)`}</>}
+      meta={
+        <>
+          {loading ? (
+            "Carregando..."
+          ) : (
+            <>
+              Mostrando <b>{viewLogs.length}</b> de <b>{opsLogs.length}</b> log(s).
+            </>
+          )}
+        </>
+      }
       defaultOpen={false}
       headerRight={
         <>
@@ -46,7 +75,7 @@ export default function OpsLogsDbSection({
             className="pillOutline"
             onClick={async () => {
               setCopyStatus("");
-              const text = safeJson(opsLogs ?? []);
+              const text = safeJson(viewLogs ?? []);
               try {
                 await copyTextToClipboard(text);
                 setCopyStatus("Copiado.");
@@ -56,7 +85,7 @@ export default function OpsLogsDbSection({
                 window.setTimeout(() => setCopyStatus(""), 3500);
               }
             }}
-            disabled={!opsLogs.length}
+            disabled={!viewLogs.length}
           >
             Copiar JSON
           </button>
@@ -91,6 +120,65 @@ export default function OpsLogsDbSection({
         </div>
       ) : null}
 
+      <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "end" }}>
+        <label style={{ display: "grid", gap: 6, minWidth: 220 }}>
+          <span className="muted" style={{ fontWeight: 900 }}>
+            Status
+          </span>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            style={{
+              height: 38,
+              borderRadius: 12,
+              border: "1px solid #e5e7eb",
+              padding: "0 12px",
+              fontSize: 13,
+              fontWeight: 900,
+              outline: "none",
+              background: "#ffffff",
+            }}
+          >
+            <option value="all">Todos</option>
+            <option value="ok">Somente OK</option>
+            <option value="error">Somente erros</option>
+          </select>
+        </label>
+
+        <label style={{ display: "grid", gap: 6, minWidth: 280, flex: 1 }}>
+          <span className="muted" style={{ fontWeight: 900 }}>
+            Buscar
+          </span>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Ex: meta.*, db.*, 1885183..."
+            style={{
+              height: 38,
+              borderRadius: 12,
+              border: "1px solid #e5e7eb",
+              padding: "0 12px",
+              fontSize: 13,
+              fontWeight: 700,
+              outline: "none",
+              background: "#ffffff",
+            }}
+          />
+        </label>
+
+        <button
+          type="button"
+          className="pillOutline"
+          onClick={() => {
+            setStatusFilter("all");
+            setQuery("");
+          }}
+          disabled={statusFilter === "all" && !query}
+        >
+          Limpar filtros
+        </button>
+      </div>
+
       <div style={{ borderTop: "1px solid #e5e7eb", overflowX: "auto" }}>
         <table className="dataTable" style={{ marginTop: 0, fontSize: compactMode ? 12 : undefined }}>
           <thead>
@@ -104,7 +192,7 @@ export default function OpsLogsDbSection({
             </tr>
           </thead>
           <tbody>
-            {opsLogs.map((l) => (
+            {viewLogs.map((l) => (
               <tr key={l.id}>
                 <td className="muted" style={{ fontWeight: 800 }}>
                   {l.created_at ? String(l.created_at).slice(0, 19).replace("T", " ") : "—"}
@@ -125,10 +213,10 @@ export default function OpsLogsDbSection({
                 </td>
               </tr>
             ))}
-            {!opsLogs.length && !loading ? (
+            {!viewLogs.length && !loading ? (
               <tr>
                 <td colSpan={6} className="muted" style={{ fontWeight: 800 }}>
-                  Vazio. Execute ações no `/meta-test` e clique em “Atualizar do DB”.
+                  {opsLogs.length ? "Vazio (filtros atuais)." : "Vazio. Execute ações no `/meta-test` e clique em “Atualizar do DB”."}
                 </td>
               </tr>
             ) : null}
