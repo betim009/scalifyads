@@ -85,8 +85,24 @@ export default function StepAdSection({
     return "";
   }
 
+  function extractIframeSrcFromHtml(html) {
+    const raw = String(html || "");
+    if (!raw.trim()) return "";
+    // Best-effort: Meta previews usually return an <iframe ... src="..."> snippet.
+    const match = raw.match(/<iframe[^>]+src=(?:"([^"]+)"|'([^']+)')[^>]*>/i);
+    const src = match?.[1] || match?.[2] || "";
+    try {
+      const url = new URL(src);
+      return url.toString();
+    } catch {
+      return "";
+    }
+  }
+
   const creativePreviewBody = extractPreviewBody(creativePreviewResult);
   const adPreviewBody = extractPreviewBody(adPreviewResult);
+  const creativePreviewUrl = extractIframeSrcFromHtml(creativePreviewBody);
+  const adPreviewUrl = extractIframeSrcFromHtml(adPreviewBody);
 
   const candidates = (() => {
     const list = [];
@@ -577,6 +593,18 @@ export default function StepAdSection({
           >
             Copiar HTML (Creative)
           </button>
+          {creativePreviewUrl ? (
+            <a
+              className="pillOutline"
+              href={creativePreviewUrl}
+              target="_blank"
+              rel="noreferrer"
+              style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+              title="Abre o preview em uma nova aba (URL extraída do iframe)."
+            >
+              Abrir preview (Creative)
+            </a>
+          ) : null}
 
           <button
             type="button"
@@ -602,6 +630,18 @@ export default function StepAdSection({
           >
             Copiar HTML (Ad)
           </button>
+          {adPreviewUrl ? (
+            <a
+              className="pillOutline"
+              href={adPreviewUrl}
+              target="_blank"
+              rel="noreferrer"
+              style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+              title="Abre o preview em uma nova aba (URL extraída do iframe)."
+            >
+              Abrir preview (Ad)
+            </a>
+          ) : null}
           <div className="muted" style={{ fontWeight: 800 }}>
             Requer modo REAL + token no backend. Ad preview exige Ad criado.
           </div>
