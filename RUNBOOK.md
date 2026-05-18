@@ -49,7 +49,7 @@
 
 ### Meta — Operações principais (backend)
 
-Última atualização: [2026-05-17 13:55]
+Última atualização: [2026-05-18 15:04]
 
 - Criar Campaign REAL (PAUSED): `POST /api/meta/campaigns`
 - Criar Campaign REAL/STUB mínima (PAUSED): `POST /api/meta/campaigns/simple`
@@ -60,6 +60,8 @@
 - Consultar Campaign no Graph (via backend): `GET /api/meta/campaigns/{meta_campaign_id}`
 - Consultar AdSet no Graph (via backend): `GET /api/meta/adsets/{meta_adset_id}`
 - Consultar Ad no Graph (via backend): `GET /api/meta/ads/{meta_ad_id}`
+- Consultar preview do Creative (HTML/iframe, ~24h): `GET /api/meta/creatives/{meta_creative_id}/previews?adFormat=DESKTOP_FEED_STANDARD`
+- Consultar preview do Ad (HTML/iframe, ~24h): `GET /api/meta/ads/{meta_ad_id}/previews?adFormat=DESKTOP_FEED_STANDARD`
 - Listar Campaigns PAUSED por Ad Account (via backend): `GET /api/meta/ad-accounts/:id/campaigns?pausedOnly=true&limit=100`
 
 Exemplos (`curl`, sempre `PAUSED` e sem token no frontend):
