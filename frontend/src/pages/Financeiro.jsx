@@ -210,6 +210,10 @@ export default function Financeiro() {
                     <th>Campanha</th>
                     <th>País</th>
                     <th>Gasto</th>
+                    <th>Receita</th>
+                    <th>Lucro</th>
+                    <th>ROI</th>
+                    <th>ROAS</th>
                     <th>Impressões</th>
                     <th>Cliques</th>
                     <th>CPC</th>
@@ -230,6 +234,14 @@ export default function Financeiro() {
                         </span>
                       </td>
                       <td style={{ fontWeight: 900 }}>{r.spend}</td>
+                      <td style={{ fontWeight: 900 }}>{r.revenue}</td>
+                      <td style={{ fontWeight: 900 }}>{r.profit}</td>
+                      <td className="muted" style={{ fontWeight: 900 }}>
+                        {r.roi}
+                      </td>
+                      <td className="muted" style={{ fontWeight: 900 }}>
+                        {r.roas}
+                      </td>
                       <td className="muted" style={{ fontWeight: 800 }}>
                         {r.impressions}
                       </td>

@@ -400,7 +400,7 @@ Regras:
 
 ## Backlog Ativo — Próxima Fase Operacional
 
-Última atualização: [2026-05-18 20:15]
+Última atualização: [2026-05-18 20:16]
 ### P8 — Console operacional
 
 - [ ] Consolidar layout operacional definitivo
@@ -427,8 +427,8 @@ Regras:
 ### P10 — Analytics operacional
 
 - [x] Consolidar ROI/ROAS visual
-- [ ] Melhorar métricas por Campaign
-- [ ] Melhorar métricas por país
+- [x] Melhorar métricas por Campaign
+- [x] Melhorar métricas por país
 - [ ] Timeline de performance
 - [ ] Histórico operacional de spend
 - [ ] Melhorar visualização de lucro/prejuízo

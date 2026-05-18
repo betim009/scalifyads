@@ -288,12 +288,21 @@ export function toFinanceViewModel(overview, { countryNameByCode } = {}) {
     const countryCode = r.country_code;
     const countryName = countryNameByCode?.[countryCode] || countryCode;
     const status = String(r.status || "").toUpperCase() === "ACTIVE" ? "Ativo" : "Pausado";
+    const revenueCents =
+      r.revenue_cents === null || r.revenue_cents === undefined ? null : Number(r.revenue_cents);
+    const profitCents =
+      r.profit_cents === null || r.profit_cents === undefined ? null : Number(r.profit_cents);
+    const roas = r.roas === null || r.roas === undefined ? null : Number(r.roas);
 
     return {
       campaign: r.campaign_name,
       countryCode,
       country: countryName,
       spend: formatCurrencyBRLFromCents(r.spend_cents),
+      revenue: revenueCents === null ? "—" : formatCurrencyBRLFromCents(revenueCents),
+      profit: profitCents === null ? "—" : formatCurrencyBRLFromCents(profitCents),
+      roi: formatPercentOrDash(r.roi_percent, { digits: 0 }),
+      roas: roas === null || !Number.isFinite(roas) ? "—" : `${roas.toFixed(2)}x`,
       impressions: formatInt(r.impressions),
       clicks: formatInt(r.clicks),
       cpc: r.cpc_cents === null ? "—" : formatCurrencyBRLFromCents(r.cpc_cents),

@@ -318,6 +318,7 @@ export function financeRouter() {
             gc.country_code,
             gc.status AS generated_status,
             COALESCE(SUM(cm.spend_cents), 0) AS spend_cents,
+            SUM(cm.revenue_cents) AS revenue_cents,
             COALESCE(SUM(cm.impressions), 0) AS impressions,
             COALESCE(SUM(cm.clicks), 0) AS clicks
           FROM campaign_metrics cm
@@ -352,13 +353,18 @@ export function financeRouter() {
           country_code: r.country_code,
           status: r.generated_status,
           spend_cents: toInt(r.spend_cents),
+          revenue_cents: toNullableInt(r.revenue_cents),
+          profit_cents:
+            toNullableInt(r.revenue_cents) === null ? null : toNullableInt(r.revenue_cents) - toInt(r.spend_cents),
+          roi_percent: computeRoiPercent({ spendCents: toInt(r.spend_cents), revenueCents: toNullableInt(r.revenue_cents) }),
+          roas:
+            toNullableInt(r.revenue_cents) === null || !toInt(r.spend_cents)
+              ? null
+              : Math.round((toNullableInt(r.revenue_cents) / toInt(r.spend_cents)) * 1000) / 1000,
           impressions: toInt(r.impressions),
           clicks: toInt(r.clicks),
           cpc_cents: computeCpcCents({ spendCents: toInt(r.spend_cents), clicks: toInt(r.clicks) }),
-          cpm_cents: computeCpmCents({
-            spendCents: toInt(r.spend_cents),
-            impressions: toInt(r.impressions)
-          })
+          cpm_cents: computeCpmCents({ spendCents: toInt(r.spend_cents), impressions: toInt(r.impressions) })
         }))
       })
     })
