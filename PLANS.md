@@ -180,7 +180,7 @@ GOVERNANÇA CONTÍNUA:
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-17 14:40]
+Última atualização: [2026-05-18 10:11]
 
 Regras:
 
@@ -364,6 +364,7 @@ Regras:
   - [x] Dashboard: destacar console `/meta-test` e rotular “Nova Campanha” como legado (commit: 95ed428)
   - [x] `/nova-campanha`: aviso “Fluxo legado” + atalho para `/meta-test` (commit: 95ed428)
 - [ ] Remover responsabilidades excessivas
+  - [x] `/meta-test`: centralizar helpers de clipboard (`copyTextToClipboard`/`copyJsonToClipboard`) e remover duplicação de `navigator.clipboard.writeText` (commit: f80e2c9)
 - [ ] Migrar partes úteis para `/meta-test`
 - [ ] Isolar partes obsoletas
 - [ ] Melhorar compatibilidade temporária
