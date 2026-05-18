@@ -395,7 +395,7 @@ Histórico/itens concluídos:
 
 ## Decision Log (Ativo)
 
-Última atualização: [2026-05-18 17:14]
+Última atualização: [2026-05-18 17:26]
 
 Mantém apenas decisões ainda válidas para execução atual. Histórico completo: ver `ARCHIVE.md` em `## Decision Log (histórico completo)`.
 
@@ -421,6 +421,7 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 - [2026-05-18 17:07] Decisão: no `/meta-test`, detectar `error_subcode=1885183` no card global de erro e exibir orientação acionável (App Live + roles) para reduzir atrito de troubleshooting no P4/P5. (commit: 1253b69)
 - [2026-05-18 17:12] Decisão: permitir deep-link para o `/meta-test` pré-selecionar `generated_campaign_id` (query param) e expor atalho “Abrir /meta-test” na tabela de `Campanha Detalhes` para continuidade operacional sem duplicar UI. (commits: 8ae538f, 757af11)
 - [2026-05-18 17:14] Decisão: isolar ações de compatibilidade (legado) em `Campanha Detalhes` atrás de UI colapsável para reduzir ruído operacional e manter `/meta-test` como fluxo evolutivo. (commit: 21c05dc)
+- [2026-05-18 17:26] Decisão: documentar deep-links do `/meta-test` no `RUNBOOK.md` para reduzir erro operacional ao retomar fluxo (prefill e preselect por `generatedCampaignId`). (commit: 09f5432)
 - [2026-05-07 13:54] Criação real de campanhas Meta Ads validada em ambiente de desenvolvimento. Durante o desenvolvimento, toda campanha criada via API deve nascer obrigatoriamente com `status: PAUSED` para evitar veiculação acidental.
 - [2026-05-07 14:03] Criação real de campanhas implementada via `POST /api/meta/campaigns` + persistência em `generated_campaigns` (`meta_campaign_id`, `meta_ad_account_id`, `meta_user_id`, `meta_status`, `meta_effective_status`, `meta_objective`); UI passa a exibir `STUB`/`REAL` e status Meta.
 - [2026-05-07 14:49] `POST /api/generated-campaigns/:id/mark-published` deixa de setar `ACTIVE` automaticamente (evitar estado local indevido); passa a apenas vincular `meta_campaign_id`.
