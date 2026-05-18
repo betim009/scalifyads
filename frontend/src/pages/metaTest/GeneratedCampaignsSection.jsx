@@ -190,6 +190,12 @@ export default function GeneratedCampaignsSection({
               const mode =
                 gc.meta_run_mode ||
                 (metaId && String(metaId).startsWith("stub-") ? "STUB" : metaId ? "REAL" : "—");
+              const modeStyle =
+                mode === "REAL"
+                  ? { background: "#dcfce7", borderColor: "#bbf7d0" }
+                  : mode === "STUB"
+                    ? { background: "#fef3c7", borderColor: "#fde68a" }
+                    : { background: "#f3f4f6", borderColor: "#e5e7eb" };
               const isFocused = createdGeneratedCampaignId && gc.id === createdGeneratedCampaignId;
               return (
                 <tr
@@ -217,7 +223,20 @@ export default function GeneratedCampaignsSection({
                   </td>
                   <td style={{ fontWeight: 900 }}>{gc.name || "—"}</td>
                   <td className="muted" style={{ fontWeight: 900 }}>
-                    {mode}
+                    <span
+                      className="pillOutline"
+                      style={{
+                        ...modeStyle,
+                        padding: "4px 10px",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 8,
+                        fontWeight: 900,
+                        color: "#111827",
+                      }}
+                    >
+                      {mode}
+                    </span>
                   </td>
                   <td className="muted" style={{ fontWeight: 800 }}>
                     {gc.ops_last_action || "—"}

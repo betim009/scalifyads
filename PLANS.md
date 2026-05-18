@@ -411,7 +411,7 @@ Regras:
 - [x] Criar visão “últimas execuções”
 - [x] Melhorar feedback visual de bloqueios Meta
 - [x] Melhorar navegação entre Campaigns geradas (filtros: modo + busca)
-- [ ] Melhorar visualização de REAL/STUB/FALLBACK
+- [x] Melhorar visualização de REAL/STUB/FALLBACK
 
 ### P9 — Scheduler e automação leve
 
