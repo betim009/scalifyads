@@ -180,7 +180,7 @@ GOVERNANÇA CONTÍNUA:
 
 ## Backlog Ativo (ÚNICO)
 
-Última atualização: [2026-05-18 10:11]
+Última atualização: [2026-05-18 14:05]
 
 Regras:
 
@@ -365,6 +365,7 @@ Regras:
   - [x] `/nova-campanha`: aviso “Fluxo legado” + atalho para `/meta-test` (commit: 95ed428)
 - [ ] Remover responsabilidades excessivas
   - [x] `/meta-test`: centralizar helpers de clipboard (`copyTextToClipboard`/`copyJsonToClipboard`) e remover duplicação de `navigator.clipboard.writeText` (commit: f80e2c9)
+  - [x] `/meta-test`: extrair actions de status/pages (status/validate/diagnostics + pages list/validate) para reduzir responsabilidades do `MetaPausedTest.jsx` (commit: 54ed7af)
 - [ ] Migrar partes úteis para `/meta-test`
 - [ ] Isolar partes obsoletas
 - [ ] Melhorar compatibilidade temporária
