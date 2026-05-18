@@ -11,6 +11,14 @@ function isYyyyMmDd(value) {
 export function automationRouter() {
   const router = Router()
 
+  router.get(
+    '/scheduler/status',
+    asyncHandler(async (req, res) => {
+      const scheduler = req.app.locals.automationScheduler ?? { enabled: false, status: 'unknown' }
+      return res.json({ ok: true, scheduler })
+    })
+  )
+
   router.post(
     '/run',
     asyncHandler(async (req, res) => {
@@ -32,4 +40,3 @@ export function automationRouter() {
 
   return router
 }
-

@@ -77,12 +77,14 @@ Exemplos (`curl`, sempre `PAUSED` e sem token no frontend):
 
 ### Meta — Sync / Automação (dev)
 
-Última atualização: [2026-05-08 10:43]
+Última atualização: [2026-05-18 19:57]
 
 - Sync manual de métricas: `POST /api/meta/sync/generated-campaigns/:id`
 - Fallback seguro: se o Graph falhar e `META_SYNC_PROVIDER` não for `meta`, o backend retorna `provider=stub` + campo `fallback` (para fail-fast, use `META_SYNC_PROVIDER=meta`).
 - Executor de automação (dry-run): `curl -X POST http://localhost:3001/api/automation/run -H 'Content-Type: application/json' -d '{"dryRun":true}'`
 - Executor de automação (persistindo logs): `curl -X POST http://localhost:3001/api/automation/run -H 'Content-Type: application/json' -d '{}'`
+- Scheduler (opcional, dev — requer DB): `AUTOMATION_SCHEDULER_ENABLED=true` (intervalo via `AUTOMATION_SCHEDULER_INTERVAL_MS`; opcional `AUTOMATION_SCHEDULER_RUN_ON_STARTUP=true`)
+- Status do scheduler: `GET /api/automation/scheduler/status`
 
 ### DB — Evidência operacional (dev)
 

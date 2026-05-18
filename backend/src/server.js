@@ -1,6 +1,7 @@
 import express from 'express'
 import path from 'node:path'
 import { initDb } from './db.js'
+import { startAutomationScheduler } from './scheduler/automationScheduler.js'
 import { healthRouter } from './routes/health.js'
 import { apiRouter } from './routes/api.js'
 
@@ -10,6 +11,8 @@ const dbStatus = await initDb()
 
 const app = express()
 app.locals.dbEnabled = Boolean(dbStatus?.enabled)
+
+startAutomationScheduler(app)
 
 app.use(express.json())
 
