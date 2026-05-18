@@ -20,3 +20,12 @@ export async function getMetaCreative(metaCreativeId) {
   return { ok: true, metaCreative: data?.meta_creative ?? null };
 }
 
+export async function getMetaCreativePreviews(metaCreativeId, { adFormat } = {}) {
+  const id = String(metaCreativeId || "").trim();
+  if (!id) throw new Error("metaCreativeId is required");
+
+  const fmt = String(adFormat || "").trim();
+  const qs = fmt ? `?adFormat=${encodeURIComponent(fmt)}` : "";
+  const data = await apiGet(`/api/meta/creatives/${encodeURIComponent(id)}/previews${qs}`);
+  return { ok: true, adFormat: data?.ad_format ?? (fmt || null), metaPreviews: data?.meta_previews ?? null };
+}

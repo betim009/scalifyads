@@ -264,3 +264,30 @@ export async function metaCreateAdCreative({
   return created
 }
 
+export async function metaFetchAdCreativePreviews({
+  metaCreativeId,
+  accessToken,
+  adFormat = 'DESKTOP_FEED_STANDARD'
+} = {}) {
+  const id = normalizeNonEmptyString(metaCreativeId)
+  if (!id) {
+    const err = new Error('metaCreativeId is required')
+    err.status = 400
+    throw err
+  }
+
+  const token = normalizeNonEmptyString(accessToken)
+  if (!token) {
+    const err = new Error('accessToken is required')
+    err.status = 400
+    throw err
+  }
+
+  const fmt = normalizeNonEmptyString(adFormat) ?? 'DESKTOP_FEED_STANDARD'
+  const url = buildUrl(`${id}/previews`, {
+    access_token: token,
+    ad_format: fmt
+  })
+
+  return fetchJson(url, { retries: 2 })
+}

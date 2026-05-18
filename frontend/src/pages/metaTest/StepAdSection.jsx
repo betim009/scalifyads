@@ -9,6 +9,7 @@ function escapeShellSingleQuotes(value) {
 
 export default function StepAdSection({
   createdMetaAdSetId,
+  createdMetaAdId,
   adName,
   setAdName,
   adCreativeId,
@@ -40,6 +41,18 @@ export default function StepAdSection({
   creativeGetLoading,
   creativeGetResult,
   onFetchCreative,
+  previewAdFormat,
+  setPreviewAdFormat,
+  creativePreviewLoading,
+  creativePreviewError,
+  creativePreviewErrorDetails,
+  creativePreviewResult,
+  onFetchCreativePreview,
+  adPreviewLoading,
+  adPreviewError,
+  adPreviewErrorDetails,
+  adPreviewResult,
+  onFetchAdPreview,
   pagesLoading,
   pagesResult,
   pagesError,
@@ -61,6 +74,19 @@ export default function StepAdSection({
     normalizeNonEmptyString(creativeDraftId) &&
     selectedCreativeDraftMetaCreativeIdIsReal &&
     !normalizeNonEmptyString(adCreativeId);
+
+  function extractPreviewBody(result) {
+    if (!result) return "";
+    if (typeof result?.body === "string" && result.body.trim()) return result.body.trim();
+    const data = Array.isArray(result?.data) ? result.data : [];
+    for (const item of data) {
+      if (typeof item?.body === "string" && item.body.trim()) return item.body.trim();
+    }
+    return "";
+  }
+
+  const creativePreviewBody = extractPreviewBody(creativePreviewResult);
+  const adPreviewBody = extractPreviewBody(adPreviewResult);
 
   const candidates = (() => {
     const list = [];
@@ -483,6 +509,125 @@ export default function StepAdSection({
         ) : null}
 
         <JsonAccordion title="Evidência: Creative (Graph)" value={creativeGetResult} />
+      </div>
+
+      <div className="card" style={{ padding: 14, marginTop: 12 }}>
+        <div style={{ fontWeight: 900 }}>Previews (Graph) — HTML (24h)</div>
+        <div className="muted" style={{ marginTop: 6, fontWeight: 800, lineHeight: 1.55 }}>
+          Usa `GET /api/meta/creatives/:id/previews` e `GET /api/meta/ads/:id/previews` via backend. Retorna snippet HTML (geralmente um iframe) que expira em ~24h.
+        </div>
+
+        <div
+          style={{
+            marginTop: 12,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+            gap: 12,
+          }}
+        >
+          <label style={{ display: "grid", gap: 6 }}>
+            <span className="muted" style={{ fontWeight: 900 }}>ad_format</span>
+            <select
+              value={previewAdFormat || "DESKTOP_FEED_STANDARD"}
+              onChange={(e) => setPreviewAdFormat(e.target.value)}
+              disabled={flowMode === "STUB"}
+              style={{
+                height: 38,
+                borderRadius: 12,
+                border: "1px solid #e5e7eb",
+                padding: "0 12px",
+                fontSize: 13,
+                fontWeight: 800,
+                outline: "none",
+                background: flowMode === "STUB" ? "#f9fafb" : "#ffffff",
+              }}
+            >
+              <option value="DESKTOP_FEED_STANDARD">DESKTOP_FEED_STANDARD</option>
+              <option value="MOBILE_FEED_STANDARD">MOBILE_FEED_STANDARD</option>
+              <option value="RIGHT_COLUMN_STANDARD">RIGHT_COLUMN_STANDARD</option>
+              <option value="INSTAGRAM_STANDARD">INSTAGRAM_STANDARD</option>
+              <option value="INSTAGRAM_STORY">INSTAGRAM_STORY</option>
+              <option value="FACEBOOK_STORY_MOBILE">FACEBOOK_STORY_MOBILE</option>
+            </select>
+          </label>
+        </div>
+
+        <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          <button
+            type="button"
+            className="pillOutline"
+            disabled={flowMode === "STUB" || creativePreviewLoading || !normalizeNonEmptyString(effectiveCreativeId)}
+            onClick={() => onFetchCreativePreview?.(effectiveCreativeId)}
+            title="Gera preview HTML para o AdCreative."
+          >
+            {creativePreviewLoading ? "Consultando preview (Creative)..." : "Preview Creative (Graph)"}
+          </button>
+          <button
+            type="button"
+            className="pillOutline"
+            disabled={!creativePreviewBody}
+            onClick={async () => {
+              try {
+                await copyTextToClipboard(creativePreviewBody);
+              } catch {
+                // ignore
+              }
+            }}
+            title="Copia o HTML do preview (primeiro body encontrado)."
+          >
+            Copiar HTML (Creative)
+          </button>
+
+          <button
+            type="button"
+            className="pillOutline"
+            disabled={flowMode === "STUB" || adPreviewLoading || !normalizeNonEmptyString(createdMetaAdId)}
+            onClick={() => onFetchAdPreview?.(createdMetaAdId)}
+            title="Gera preview HTML para o Ad."
+          >
+            {adPreviewLoading ? "Consultando preview (Ad)..." : "Preview Ad (Graph)"}
+          </button>
+          <button
+            type="button"
+            className="pillOutline"
+            disabled={!adPreviewBody}
+            onClick={async () => {
+              try {
+                await copyTextToClipboard(adPreviewBody);
+              } catch {
+                // ignore
+              }
+            }}
+            title="Copia o HTML do preview (primeiro body encontrado)."
+          >
+            Copiar HTML (Ad)
+          </button>
+          <div className="muted" style={{ fontWeight: 800 }}>
+            Requer modo REAL + token no backend. Ad preview exige Ad criado.
+          </div>
+        </div>
+
+        {creativePreviewError ? (
+          <div className="muted" style={{ marginTop: 10, fontWeight: 900, color: "#991b1b" }}>
+            Falha ao consultar preview do Creative: {creativePreviewError}
+            <JsonAccordion title="Detalhes (erro preview Creative)" value={creativePreviewErrorDetails} />
+          </div>
+        ) : null}
+        {adPreviewError ? (
+          <div className="muted" style={{ marginTop: 10, fontWeight: 900, color: "#991b1b" }}>
+            Falha ao consultar preview do Ad: {adPreviewError}
+            <JsonAccordion title="Detalhes (erro preview Ad)" value={adPreviewErrorDetails} />
+          </div>
+        ) : null}
+
+        <JsonAccordion
+          title={`Evidência: Preview (Creative) — ad_format: ${previewAdFormat || "—"}`}
+          value={creativePreviewResult}
+        />
+        <JsonAccordion
+          title={`Evidência: Preview (Ad) — ad_format: ${previewAdFormat || "—"}`}
+          value={adPreviewResult}
+        />
       </div>
 
       <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>

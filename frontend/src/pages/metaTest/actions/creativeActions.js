@@ -1,4 +1,8 @@
-import { getMetaCreative, publishMetaCreativeDraft } from "../../../services/metaCreatives.js";
+import {
+  getMetaCreative,
+  getMetaCreativePreviews,
+  publishMetaCreativeDraft,
+} from "../../../services/metaCreatives.js";
 import { normalizeNonEmptyString } from "../metaTestUtils.js";
 
 export async function publishCreativeDraftAndExtractId(
@@ -28,4 +32,12 @@ export async function fetchMetaCreative(metaCreativeId) {
 
   const res = await getMetaCreative(id);
   return res?.metaCreative ?? null;
+}
+
+export async function fetchMetaCreativePreviews(metaCreativeId, { adFormat } = {}) {
+  const id = normalizeNonEmptyString(metaCreativeId);
+  if (!id) throw new Error("metaCreativeId is required");
+
+  const res = await getMetaCreativePreviews(id, { adFormat: normalizeNonEmptyString(adFormat) || undefined });
+  return res?.metaPreviews ?? null;
 }

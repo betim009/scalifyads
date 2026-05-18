@@ -29,10 +29,14 @@ import { getGeneratedCampaignStructure, listGeneratedCampaigns } from "../servic
 import { listOpsLogs } from "../services/opsLogs.js";
 import { listCreativeAssets, uploadCreativeAsset } from "../services/creativeAssets.js";
 import { createCreativeDraft, duplicateCreativeDraft, listCreativeDrafts } from "../services/creativeDrafts.js";
-import { publishCreativeDraftAndExtractId, fetchMetaCreative } from "./metaTest/actions/creativeActions.js";
+import {
+  fetchMetaCreative,
+  fetchMetaCreativePreviews,
+  publishCreativeDraftAndExtractId,
+} from "./metaTest/actions/creativeActions.js";
 import { createCampaignSimple, listPausedCampaigns } from "./metaTest/actions/campaignActions.js";
 import { createAdSet } from "./metaTest/actions/adSetActions.js";
-import { createAd } from "./metaTest/actions/adActions.js";
+import { createAd, fetchMetaAdPreviews } from "./metaTest/actions/adActions.js";
 import { fetchGraphAd, fetchGraphAdSet, fetchGraphCampaign } from "./metaTest/actions/graphActions.js";
 import {
   fetchBackendDiagnostics,
@@ -113,6 +117,15 @@ export default function MetaPausedTest() {
   const [creativePublishForce, setCreativePublishForce] = useState(false);
   const [creativeGetLoading, setCreativeGetLoading] = useState(false);
   const [creativeGetResult, setCreativeGetResult] = useState(null);
+  const [previewAdFormat, setPreviewAdFormat] = useState("DESKTOP_FEED_STANDARD");
+  const [creativePreviewLoading, setCreativePreviewLoading] = useState(false);
+  const [creativePreviewError, setCreativePreviewError] = useState("");
+  const [creativePreviewErrorDetails, setCreativePreviewErrorDetails] = useState(null);
+  const [creativePreviewResult, setCreativePreviewResult] = useState(null);
+  const [adPreviewLoading, setAdPreviewLoading] = useState(false);
+  const [adPreviewError, setAdPreviewError] = useState("");
+  const [adPreviewErrorDetails, setAdPreviewErrorDetails] = useState(null);
+  const [adPreviewResult, setAdPreviewResult] = useState(null);
   const [pagesLoading, setPagesLoading] = useState(false);
   const [pagesError, setPagesError] = useState("");
   const [pagesErrorDetails, setPagesErrorDetails] = useState(null);
@@ -254,6 +267,7 @@ export default function MetaPausedTest() {
         if (typeof parsed.adCreativeDraftId === "string") setAdCreativeDraftId(parsed.adCreativeDraftId);
         if (typeof parsed.metaPageId === "string") setMetaPageId(parsed.metaPageId);
         if (typeof parsed.metaInstagramActorId === "string") setMetaInstagramActorId(parsed.metaInstagramActorId);
+        if (typeof parsed.previewAdFormat === "string") setPreviewAdFormat(parsed.previewAdFormat);
       }
     } catch {
       // ignore
@@ -281,6 +295,7 @@ export default function MetaPausedTest() {
         adCreativeDraftId,
         metaPageId,
         metaInstagramActorId,
+        previewAdFormat,
       };
       localStorage.setItem("metaTest.draft.v1", JSON.stringify(draft));
     } catch {
@@ -301,6 +316,7 @@ export default function MetaPausedTest() {
     adCreativeDraftId,
     metaPageId,
     metaInstagramActorId,
+    previewAdFormat,
   ]);
 
   const countryOptions = useMemo(() => countries ?? [], [countries]);
@@ -1041,6 +1057,76 @@ export default function MetaPausedTest() {
         canFetchCreative={canFetchCreative}
         creativeGetLoading={creativeGetLoading}
         creativeGetResult={creativeGetResult}
+        previewAdFormat={previewAdFormat}
+        setPreviewAdFormat={setPreviewAdFormat}
+        creativePreviewLoading={creativePreviewLoading}
+        creativePreviewError={creativePreviewError}
+        creativePreviewErrorDetails={creativePreviewErrorDetails}
+        creativePreviewResult={creativePreviewResult}
+        onFetchCreativePreview={async (metaCreativeId) => {
+          const id = normalizeNonEmptyString(metaCreativeId);
+          if (!id) return;
+
+          setCreativePreviewLoading(true);
+          setCreativePreviewError("");
+          setCreativePreviewErrorDetails(null);
+          setCreativePreviewResult(null);
+          setError("");
+          setErrorDetails(null);
+          setSuccess("");
+          try {
+            const res = await fetchMetaCreativePreviews(id, { adFormat: previewAdFormat });
+            setCreativePreviewResult(res);
+            pushLog({ action: "creative.previews", ok: true, details: { metaCreativeId: id, adFormat: previewAdFormat } });
+            setSuccess(`Preview (Creative) consultado — id: ${id}`);
+          } catch (err) {
+            setCreativePreviewResult(null);
+            setCreativePreviewError(err?.message ? String(err.message) : "Falha ao consultar preview do Creative.");
+            setCreativePreviewErrorDetails(extractErrorDetails(err));
+            pushLog({
+              action: "creative.previews",
+              ok: false,
+              error: err?.message ? String(err.message) : "error",
+              details: { metaCreativeId: id, adFormat: previewAdFormat, errorDetails: extractErrorDetails(err) },
+            });
+          } finally {
+            setCreativePreviewLoading(false);
+          }
+        }}
+        adPreviewLoading={adPreviewLoading}
+        adPreviewError={adPreviewError}
+        adPreviewErrorDetails={adPreviewErrorDetails}
+        adPreviewResult={adPreviewResult}
+        onFetchAdPreview={async (metaAdId) => {
+          const id = normalizeNonEmptyString(metaAdId);
+          if (!id) return;
+
+          setAdPreviewLoading(true);
+          setAdPreviewError("");
+          setAdPreviewErrorDetails(null);
+          setAdPreviewResult(null);
+          setError("");
+          setErrorDetails(null);
+          setSuccess("");
+          try {
+            const res = await fetchMetaAdPreviews(id, { adFormat: previewAdFormat });
+            setAdPreviewResult(res);
+            pushLog({ action: "ad.previews", ok: true, details: { metaAdId: id, adFormat: previewAdFormat } });
+            setSuccess(`Preview (Ad) consultado — id: ${id}`);
+          } catch (err) {
+            setAdPreviewResult(null);
+            setAdPreviewError(err?.message ? String(err.message) : "Falha ao consultar preview do Ad.");
+            setAdPreviewErrorDetails(extractErrorDetails(err));
+            pushLog({
+              action: "ad.previews",
+              ok: false,
+              error: err?.message ? String(err.message) : "error",
+              details: { metaAdId: id, adFormat: previewAdFormat, errorDetails: extractErrorDetails(err) },
+            });
+          } finally {
+            setAdPreviewLoading(false);
+          }
+        }}
         pagesLoading={pagesLoading}
         pagesResult={pagesResult}
         pagesError={pagesError}
@@ -1184,6 +1270,7 @@ export default function MetaPausedTest() {
           }
         }}
         createdGeneratedCampaignId={createdGeneratedCampaignId}
+        createdMetaAdId={createdMetaAdId}
         flowMode={flowMode}
         normalizeNonEmptyString={normalizeNonEmptyString}
       />

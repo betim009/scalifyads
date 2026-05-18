@@ -11,8 +11,13 @@ import { coerceAccessToken, resolveAccessToken } from '../meta/accessToken.js'
 import { metaCreateCampaign, metaFetchCampaign, metaListAdAccountCampaigns } from '../meta/campaigns.js'
 import { slugify } from '../lib/slugify.js'
 import { metaCreateAdSet, metaCreateAdSetStub, metaFetchAdSet } from '../meta/adsets.js'
-import { metaCreateAd, metaCreateAdStub, metaFetchAd } from '../meta/ads.js'
-import { metaCreateAdCreative, metaFetchAdCreative, metaUploadAdImage } from '../meta/creatives.js'
+import { metaCreateAd, metaCreateAdStub, metaFetchAd, metaFetchAdPreviews } from '../meta/ads.js'
+import {
+  metaCreateAdCreative,
+  metaFetchAdCreative,
+  metaFetchAdCreativePreviews,
+  metaUploadAdImage
+} from '../meta/creatives.js'
 import {
   metaListAdAccountPromotePages,
   metaFetchAdAccountBusiness,
@@ -362,6 +367,43 @@ export function metaRouter() {
       } catch (err) {
         const status = typeof err?.status === 'number' ? err.status : 502
         return jsonError(res, status, err?.message ?? 'Meta creative fetch failed', err?.details)
+      }
+    })
+  )
+
+  router.get(
+    '/creatives/:id/previews',
+    asyncHandler(async (req, res) => {
+      if (!req.app.locals.dbEnabled) {
+        return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
+      }
+
+      const metaCreativeId = normalizeNonEmptyString(req.params.id)
+      if (!metaCreativeId) {
+        return jsonError(res, 400, 'Invalid meta creative id')
+      }
+
+      const adFormat =
+        normalizeNonEmptyString(req.query?.adFormat) ??
+        normalizeNonEmptyString(req.query?.ad_format) ??
+        'DESKTOP_FEED_STANDARD'
+
+      const pool = getPool()
+      const accessToken = await resolveAccessToken(pool, req)
+      if (!accessToken) {
+        return jsonError(
+          res,
+          400,
+          'Missing accessToken (provide body.accessToken, META_ACCESS_TOKEN, or save via /tokens)'
+        )
+      }
+
+      try {
+        const previews = await metaFetchAdCreativePreviews({ metaCreativeId, accessToken, adFormat })
+        return res.json({ ok: true, ad_format: adFormat, meta_previews: previews })
+      } catch (err) {
+        const status = typeof err?.status === 'number' ? err.status : 502
+        return jsonError(res, status, err?.message ?? 'Meta creative previews fetch failed', err?.details)
       }
     })
   )
@@ -1438,6 +1480,43 @@ export function metaRouter() {
       } catch (err) {
         const status = typeof err?.status === 'number' ? err.status : 502
         return jsonError(res, status, err?.message ?? 'Meta ad fetch failed', err?.details)
+      }
+    })
+  )
+
+  router.get(
+    '/ads/:id/previews',
+    asyncHandler(async (req, res) => {
+      if (!req.app.locals.dbEnabled) {
+        return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
+      }
+
+      const metaAdId = normalizeNonEmptyString(req.params.id)
+      if (!metaAdId) {
+        return jsonError(res, 400, 'Invalid meta ad id')
+      }
+
+      const adFormat =
+        normalizeNonEmptyString(req.query?.adFormat) ??
+        normalizeNonEmptyString(req.query?.ad_format) ??
+        'DESKTOP_FEED_STANDARD'
+
+      const pool = getPool()
+      const accessToken = await resolveAccessToken(pool, req)
+      if (!accessToken) {
+        return jsonError(
+          res,
+          400,
+          'Missing accessToken (provide body.accessToken, META_ACCESS_TOKEN, or save via /tokens)'
+        )
+      }
+
+      try {
+        const previews = await metaFetchAdPreviews({ metaAdId, accessToken, adFormat })
+        return res.json({ ok: true, ad_format: adFormat, meta_previews: previews })
+      } catch (err) {
+        const status = typeof err?.status === 'number' ? err.status : 502
+        return jsonError(res, status, err?.message ?? 'Meta ad previews fetch failed', err?.details)
       }
     })
   )

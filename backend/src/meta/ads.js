@@ -200,3 +200,31 @@ export async function metaCreateAd({
   const created = await metaFetchAd({ metaAdId: id, accessToken: token })
   return created
 }
+
+export async function metaFetchAdPreviews({
+  metaAdId,
+  accessToken,
+  adFormat = 'DESKTOP_FEED_STANDARD'
+} = {}) {
+  const id = normalizeNonEmptyString(metaAdId)
+  if (!id) {
+    const err = new Error('metaAdId is required')
+    err.status = 400
+    throw err
+  }
+
+  const token = normalizeNonEmptyString(accessToken)
+  if (!token) {
+    const err = new Error('accessToken is required')
+    err.status = 400
+    throw err
+  }
+
+  const fmt = normalizeNonEmptyString(adFormat) ?? 'DESKTOP_FEED_STANDARD'
+  const url = buildUrl(`${id}/previews`, {
+    access_token: token,
+    ad_format: fmt
+  })
+
+  return fetchJson(url, { retries: 2 })
+}
