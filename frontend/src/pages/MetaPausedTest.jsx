@@ -4,6 +4,7 @@ import { useLocation } from "react-router-dom";
 import ShortcutsCard from "./metaTest/ShortcutsCard.jsx";
 import FlowProgressCard from "./metaTest/FlowProgressCard.jsx";
 import ModeStatusCard from "./metaTest/ModeStatusCard.jsx";
+import LatestExecutionsCard from "./metaTest/LatestExecutionsCard.jsx";
 import BackendStatusSection from "./metaTest/BackendStatusSection.jsx";
 import OpsLogsSection from "./metaTest/OpsLogsSection.jsx";
 import OpsLogsDbSection from "./metaTest/OpsLogsDbSection.jsx";
@@ -757,6 +758,14 @@ export default function MetaPausedTest() {
             dbModeLabel={dbModeLabel}
             syncProviderLabel={syncProviderLabel}
           />
+          <div style={{ marginTop: 16 }}>
+            <LatestExecutionsCard
+              opsLogs={opsLogs}
+              dbOpsLogs={dbOpsLogs}
+              dbOpsLogsLoading={dbOpsLogsLoading}
+              refreshDbOpsLogs={refreshDbOpsLogs}
+            />
+          </div>
           <FlowProgressCard stepCampaignOk={stepCampaignOk} stepAdSetOk={stepAdSetOk} stepAdOk={stepAdOk} />
           <div style={{ marginTop: 16 }}>
             <ShortcutsCard stepCampaignOk={stepCampaignOk} stepAdSetOk={stepAdSetOk} stepAdOk={stepAdOk} />
