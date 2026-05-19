@@ -1090,9 +1090,8 @@ export default function MetaPausedTest() {
           </div>
         </div>
 
-        <div style={{ flex: "1 1 680px", minWidth: 320 }}>
-
-      <CollapsibleCard
+        <div style={{ flex: "1 1 680px", minWidth: 320, marginTop: 16 }}>
+          <CollapsibleCard
         id="meta-test-recovery"
         title="Recuperação operacional"
         description="Exporta um JSON com IDs, registro selecionado, estrutura persistida e logs do DB para troubleshooting rápido."
@@ -1125,9 +1124,9 @@ export default function MetaPausedTest() {
             </button>
           </>
         }
-      />
+          />
 
-      <CollapsibleCard
+          <CollapsibleCard
         id="meta-test-rules"
         title="Regras (segurança)"
         description="Guardrails do lab (token no backend + REAL sempre PAUSED)."
@@ -1138,9 +1137,9 @@ export default function MetaPausedTest() {
           <li>O backend deve ter token via `META_ACCESS_TOKEN` ou `POST /api/meta/tokens`.</li>
           <li>Toda criação REAL deve nascer como `PAUSED` (forçado no backend).</li>
         </ul>
-      </CollapsibleCard>
+          </CollapsibleCard>
 
-      <CollapsibleCard
+          <CollapsibleCard
         id="meta-test-modes"
         title="Modos operacionais"
         description="REAL chama Meta; STUB simula IDs; FALLBACK usa dados locais quando API/DB falha."
@@ -1157,9 +1156,9 @@ export default function MetaPausedTest() {
             <b>FALLBACK</b>: UI usa dados locais quando API/DB não estiverem disponíveis (sempre sinalizado).
           </div>
         </div>
-      </CollapsibleCard>
+          </CollapsibleCard>
 
-      {error ? (
+          {error ? (
         <div className="card" style={{ padding: 18, marginTop: 16, borderColor: "#fecaca", color: "#991b1b" }}>
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
             <div style={{ fontWeight: 900 }}>Erro</div>
@@ -1217,7 +1216,7 @@ export default function MetaPausedTest() {
         </div>
       ) : null}
 
-      {success ? (
+          {success ? (
         <div className="card" style={{ padding: 18, marginTop: 16, borderColor: "#bbf7d0", color: "#14532d" }}>
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
             <div style={{ fontWeight: 900 }}>Sucesso</div>
