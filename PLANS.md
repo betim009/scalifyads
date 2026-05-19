@@ -400,7 +400,7 @@ Regras:
 
 ## Backlog Ativo — Próxima Fase Operacional
 
-Última atualização: [2026-05-19 11:20]
+Última atualização: [2026-05-19 17:09]
 ### P8 — Console operacional
 
 - [ ] Consolidar layout operacional definitivo
@@ -442,8 +442,10 @@ Regras:
 - [x] Templates de países (persistência DB + fallback local; UI no `/meta-test` batch) (commit: 42f7da7)
 - [x] Templates de creatives
 - [x] Templates de copy
-- [ ] Templates operacionais completos
+- [x] Templates operacionais completos (commit: df2edb3)
   - [x] Campaign Templates: deletar/remover via API + UI (commit: cf86657)
+  - [x] Campaign Templates: aplicar template (cria `generated_campaigns` + estrutura) (commit: df2edb3)
+  - [x] Creative Templates: deletar/remover via API + UI (commit: df2edb3)
 
 ### P12 — Workflow operacional
 
