@@ -132,6 +132,14 @@ Exemplos (`curl`, sempre `PAUSED` e sem token no frontend):
 - Criar template a partir de draft: `POST /api/creative-templates/from-draft/<creative_draft_uuid>` (body opcional: `{ "name": "..." }`)
 - Aplicar template (cria draft): `POST /api/creative-templates/<template_uuid>/apply` (body: `{ "generatedCampaignId": "<uuid>" }`)
 
+### Country Templates — Templates de países (dev)
+
+Última atualização: [2026-05-19 09:46]
+
+- Listar templates: `GET /api/country-templates?limit=50`
+- Criar template: `POST /api/country-templates` (body: `{ "name": "LATAM", "codes": ["BR","AR"] }`)
+- Remover template: `DELETE /api/country-templates/<template_uuid>`
+
 ### Meta — Creative REAL (AdCreative)
 
 Última atualização: [2026-05-13 14:09]

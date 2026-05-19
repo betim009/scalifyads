@@ -11,6 +11,7 @@ import { opsLogsRouter } from './opsLogs.js'
 import { creativeAssetsRouter } from './creativeAssets.js'
 import { creativeDraftsRouter } from './creativeDrafts.js'
 import { creativeTemplatesRouter } from './creativeTemplates.js'
+import { countryTemplatesRouter } from './countryTemplates.js'
 
 export function apiRouter() {
   const router = Router()
@@ -31,6 +32,7 @@ export function apiRouter() {
   router.use('/creative-assets', creativeAssetsRouter())
   router.use('/creative-drafts', creativeDraftsRouter())
   router.use('/creative-templates', creativeTemplatesRouter())
+  router.use('/country-templates', countryTemplatesRouter())
 
   return router
 }

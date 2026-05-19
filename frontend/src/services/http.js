@@ -88,3 +88,7 @@ export function apiPost(path, body, opts) {
 export function apiPatch(path, body, opts) {
   return apiRequest(path, { ...(opts ?? null), method: "PATCH", body });
 }
+
+export function apiDelete(path, opts) {
+  return apiRequest(path, { ...(opts ?? null), method: "DELETE" });
+}

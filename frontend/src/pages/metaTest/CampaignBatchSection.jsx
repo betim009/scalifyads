@@ -1,6 +1,36 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import CollapsibleCard from "./CollapsibleCard.jsx";
 import { copyTextToClipboard, extractErrorDetails, safeJson } from "./metaTestUtils.js";
+import { createCountryTemplate, deleteCountryTemplate, listCountryTemplates } from "../../services/countryTemplates.js";
+
+const COUNTRY_TEMPLATES_KEY = "metaTest.countryTemplates.v1";
+
+function loadCountryTemplates() {
+  try {
+    const raw = localStorage.getItem(COUNTRY_TEMPLATES_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistCountryTemplates(next) {
+  try {
+    localStorage.setItem(COUNTRY_TEMPLATES_KEY, JSON.stringify(next));
+  } catch {
+    // ignore
+  }
+}
+
+function newTemplateId() {
+  try {
+    if (typeof crypto?.randomUUID === "function") return crypto.randomUUID();
+  } catch {
+    // ignore
+  }
+  return `tpl-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
 
 export default function CampaignBatchSection({
   isBusy,
@@ -21,6 +51,10 @@ export default function CampaignBatchSection({
 }) {
   const [batchMode, setBatchMode] = useState("REAL");
   const [selectedCountryCodes, setSelectedCountryCodes] = useState([]);
+  const [countryTemplates, setCountryTemplates] = useState(() => loadCountryTemplates());
+  const [countryTemplatesSource, setCountryTemplatesSource] = useState("local");
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [templateName, setTemplateName] = useState("");
   const [batchRunning, setBatchRunning] = useState(false);
   const [batchProgress, setBatchProgress] = useState(null);
   const [batchResults, setBatchResults] = useState([]);
@@ -132,6 +166,38 @@ export default function CampaignBatchSection({
     }
   }
 
+  const selectedTemplate = useMemo(
+    () => countryTemplates.find((t) => t?.id === selectedTemplateId) ?? null,
+    [countryTemplates, selectedTemplateId],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadFromDb() {
+      try {
+        const res = await listCountryTemplates({ limit: 100 });
+        const templates = (res.countryTemplates ?? []).map((t) => ({
+          id: t.id,
+          name: t.name,
+          codes: Array.isArray(t.codes) ? t.codes : [],
+          created_at: t.created_at ?? null,
+        }));
+        if (cancelled) return;
+        setCountryTemplates(templates);
+        setCountryTemplatesSource("db");
+      } catch {
+        if (cancelled) return;
+        setCountryTemplatesSource("local");
+      }
+    }
+
+    loadFromDb();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <CollapsibleCard
       id="meta-test-batch"
@@ -232,11 +298,177 @@ export default function CampaignBatchSection({
             Token ausente no backend → batch REAL indisponível (mude para STUB ou configure token).
           </div>
         ) : null}
-        {countriesSource === "fallback" ? (
-          <div className="muted" style={{ fontWeight: 800 }}>
-            DATA=FALLBACK → DB/API provavelmente indisponível; batch desabilitado.
-          </div>
-        ) : null}
+      {countriesSource === "fallback" ? (
+        <div className="muted" style={{ fontWeight: 800 }}>
+          DATA=FALLBACK → DB/API provavelmente indisponível; batch desabilitado.
+        </div>
+      ) : null}
+      </div>
+
+      <div className="card" style={{ padding: 14, marginTop: 12 }}>
+        <div className="muted" style={{ fontWeight: 900 }}>
+          Templates de países <span style={{ fontWeight: 800 }}>({countryTemplatesSource === "db" ? "DB" : "local"})</span>
+        </div>
+        <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "end" }}>
+          <label style={{ display: "grid", gap: 6, minWidth: 260 }}>
+            <span className="muted" style={{ fontWeight: 900 }}>
+              Selecionar template
+            </span>
+            <select
+              value={selectedTemplateId}
+              onChange={(e) => setSelectedTemplateId(e.target.value)}
+              disabled={batchRunning}
+              style={{
+                height: 38,
+                borderRadius: 12,
+                border: "1px solid #e5e7eb",
+                padding: "0 12px",
+                fontSize: 13,
+                fontWeight: 800,
+                outline: "none",
+                background: "#ffffff",
+              }}
+            >
+              <option value="">(nenhum)</option>
+              {countryTemplates.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {(t.name || t.id).slice(0, 80)}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <button
+            type="button"
+            className="pillOutline"
+            disabled={batchRunning || !selectedTemplate}
+            onClick={() => {
+              const codes = Array.isArray(selectedTemplate?.codes) ? selectedTemplate.codes : [];
+              setSelectedCountryCodes(codes);
+              setSuccess(`Template aplicado: ${selectedTemplate?.name || selectedTemplate?.id}.`);
+            }}
+          >
+            Aplicar
+          </button>
+
+          <label style={{ display: "grid", gap: 6, minWidth: 240, flex: 1 }}>
+            <span className="muted" style={{ fontWeight: 900 }}>
+              Nome do template
+            </span>
+            <input
+              value={templateName}
+              onChange={(e) => setTemplateName(e.target.value)}
+              placeholder="Ex: LATAM (Top)"
+              disabled={batchRunning}
+              style={{
+                height: 38,
+                borderRadius: 12,
+                border: "1px solid #e5e7eb",
+                padding: "0 12px",
+                fontSize: 13,
+                fontWeight: 700,
+                outline: "none",
+                background: "#ffffff",
+              }}
+            />
+          </label>
+
+          <button
+            type="button"
+            className="pillOutline"
+            disabled={batchRunning || !selectedCountryCodes.length || !templateName.trim()}
+            onClick={async () => {
+              setError("");
+              setErrorDetails(null);
+              setSuccess("");
+
+              const name = templateName.trim();
+              const codes = selectedCountryCodes.slice();
+
+              if (countryTemplatesSource === "db") {
+                try {
+                  const res = await createCountryTemplate({ name, codes });
+                  const tpl = res?.countryTemplate ?? null;
+                  if (!tpl?.id) {
+                    setError("Não foi possível salvar o template (resposta inválida).");
+                    setErrorDetails(null);
+                    return;
+                  }
+                  const next = [{ id: tpl.id, name: tpl.name, codes: tpl.codes ?? [], created_at: tpl.created_at ?? null }, ...countryTemplates].slice(
+                    0,
+                    100,
+                  );
+                  setCountryTemplates(next);
+                  setSelectedTemplateId(tpl.id);
+                  setTemplateName("");
+                  setSuccess("Template de países salvo no DB.");
+                  return;
+                } catch (err) {
+                  pushLog({
+                    action: "countryTemplates.create",
+                    ok: false,
+                    error: err?.message ? String(err.message) : "error",
+                    details: { name, codesCount: codes.length },
+                  });
+                  setError("Falha ao salvar no DB. Usando fallback local.");
+                  setErrorDetails(extractErrorDetails(err));
+                  setCountryTemplatesSource("local");
+                }
+              }
+
+              const next = [{ id: newTemplateId(), name, codes }, ...countryTemplates].slice(0, 50);
+              setCountryTemplates(next);
+              persistCountryTemplates(next);
+              setSelectedTemplateId(next[0]?.id ?? "");
+              setTemplateName("");
+              setSuccess("Template de países salvo localmente.");
+            }}
+          >
+            Salvar seleção
+          </button>
+
+          <button
+            type="button"
+            className="pillOutline"
+            disabled={batchRunning || !selectedTemplate}
+            onClick={async () => {
+              setError("");
+              setErrorDetails(null);
+              setSuccess("");
+
+              const currentId = selectedTemplateId;
+
+              if (countryTemplatesSource === "db") {
+                try {
+                  await deleteCountryTemplate(currentId);
+                  const next = countryTemplates.filter((t) => t?.id !== currentId);
+                  setCountryTemplates(next);
+                  setSelectedTemplateId("");
+                  setSuccess("Template removido do DB.");
+                  return;
+                } catch (err) {
+                  pushLog({
+                    action: "countryTemplates.delete",
+                    ok: false,
+                    error: err?.message ? String(err.message) : "error",
+                    details: { templateId: currentId },
+                  });
+                  setError("Falha ao remover do DB. Usando fallback local.");
+                  setErrorDetails(extractErrorDetails(err));
+                  setCountryTemplatesSource("local");
+                }
+              }
+
+              const next = countryTemplates.filter((t) => t?.id !== currentId);
+              setCountryTemplates(next);
+              persistCountryTemplates(next);
+              setSelectedTemplateId("");
+              setSuccess("Template removido (local).");
+            }}
+          >
+            Remover
+          </button>
+        </div>
       </div>
 
       <div style={{ marginTop: 12 }}>
