@@ -12,8 +12,11 @@ export default function CampaignTemplatesSection({
   createFromGeneratedLoading,
   deleteDisabled,
   deleteLoadingId,
+  applyDisabled,
+  applyLoadingId,
   onRefresh,
   onCreateFromGenerated,
+  onApply,
   onDelete,
   onDismissError,
   safeJson,
@@ -104,6 +107,14 @@ export default function CampaignTemplatesSection({
                   </div>
                 </div>
                 <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    className="pillOutline"
+                    disabled={applyDisabled || !t?.id || applyLoadingId === t.id}
+                    onClick={() => onApply?.(t)}
+                  >
+                    {applyLoadingId === t.id ? "Aplicando..." : "Aplicar (criar no DB)"}
+                  </button>
                   <button
                     type="button"
                     className="pillOutline"

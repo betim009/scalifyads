@@ -57,6 +57,45 @@ export function creativeTemplatesRouter() {
     })
   )
 
+  router.delete(
+    '/:id',
+    asyncHandler(async (req, res) => {
+      if (!req.app.locals.dbEnabled) {
+        return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
+      }
+
+      const templateId = req.params.id
+      if (!isUuid(templateId)) {
+        return jsonError(res, 400, 'Invalid creative template id')
+      }
+
+      const pool = getPool()
+      const { rows, rowCount } = await pool.query(
+        `
+          DELETE FROM creative_templates
+          WHERE id = $1
+          RETURNING
+            id,
+            name,
+            creative_asset_id,
+            primary_text,
+            headline,
+            description,
+            cta_type,
+            destination_url,
+            created_at
+        `,
+        [templateId]
+      )
+
+      if (rowCount === 0) {
+        return jsonError(res, 404, 'Creative template not found')
+      }
+
+      return res.json({ ok: true, creative_template: rows[0] })
+    })
+  )
+
   router.post(
     '/',
     asyncHandler(async (req, res) => {
@@ -271,4 +310,3 @@ export function creativeTemplatesRouter() {
 
   return router
 }
-

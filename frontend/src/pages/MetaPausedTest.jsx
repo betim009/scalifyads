@@ -40,10 +40,16 @@ import {
 import { listOpsLogs } from "../services/opsLogs.js";
 import { listCreativeAssets, uploadCreativeAsset } from "../services/creativeAssets.js";
 import { createCreativeDraft, duplicateCreativeDraft, listCreativeDrafts } from "../services/creativeDrafts.js";
-import { createCampaignTemplateFromGenerated, deleteCampaignTemplate, listCampaignTemplates } from "../services/campaignTemplates.js";
+import {
+  applyCampaignTemplate,
+  createCampaignTemplateFromGenerated,
+  deleteCampaignTemplate,
+  listCampaignTemplates,
+} from "../services/campaignTemplates.js";
 import {
   applyCreativeTemplate,
   createCreativeTemplateFromDraft,
+  deleteCreativeTemplate,
   listCreativeTemplates,
 } from "../services/creativeTemplates.js";
 import {
@@ -206,6 +212,7 @@ export default function MetaPausedTest() {
   const [campaignTemplates, setCampaignTemplates] = useState([]);
   const [campaignTemplateCreating, setCampaignTemplateCreating] = useState(false);
   const [campaignTemplateDeletingId, setCampaignTemplateDeletingId] = useState("");
+  const [campaignTemplateApplyingId, setCampaignTemplateApplyingId] = useState("");
   const [templateActionLoading, setTemplateActionLoading] = useState(false);
 
   const selectedCreativeDraft = useMemo(
@@ -769,6 +776,80 @@ export default function MetaPausedTest() {
       setCampaignTemplatesErrorDetails(details);
     } finally {
       setCampaignTemplateDeletingId("");
+    }
+  }
+
+  async function handleApplyCampaignTemplate(t) {
+    const id = normalizeNonEmptyString(t?.id);
+    if (!id) return;
+
+    setError("");
+    setErrorDetails(null);
+    setSuccess("");
+    setCampaignTemplatesError("");
+    setCampaignTemplatesErrorDetails(null);
+
+    setCampaignTemplateApplyingId(id);
+    try {
+      const res = await applyCampaignTemplate(id, {});
+      pushLog({
+        action: "campaign_templates.apply",
+        ok: true,
+        details: {
+          templateId: id,
+          campaignId: res?.campaign?.id ?? null,
+          generatedCampaignId: res?.generatedCampaign?.id ?? null,
+        },
+      });
+      setSuccess("Template aplicado. Novo registro criado em `generated_campaigns`.");
+      if (res?.generatedCampaign) {
+        handleSelectGeneratedCampaignRow(res.generatedCampaign);
+      }
+      await refreshCampaignTemplates();
+      await refreshLocalGenerated();
+    } catch (err) {
+      const details = extractErrorDetails(err);
+      pushLog({
+        action: "campaign_templates.apply",
+        ok: false,
+        error: err?.message ? String(err.message) : "error",
+        details,
+      });
+      setCampaignTemplatesError(err?.message ? String(err.message) : "Falha ao aplicar campaign template (DB/API indisponível).");
+      setCampaignTemplatesErrorDetails(details);
+    } finally {
+      setCampaignTemplateApplyingId("");
+    }
+  }
+
+  async function handleDeleteCreativeTemplate(templateId) {
+    const id = normalizeNonEmptyString(templateId);
+    if (!id) return;
+
+    setError("");
+    setErrorDetails(null);
+    setSuccess("");
+    setTemplatesError("");
+    setTemplatesErrorDetails(null);
+
+    setTemplateActionLoading(true);
+    try {
+      await deleteCreativeTemplate(id);
+      pushLog({ action: "creative_templates.delete", ok: true, details: { templateId: id } });
+      setSuccess("Template removido.");
+      await refreshCreativeTemplates();
+    } catch (err) {
+      const details = extractErrorDetails(err);
+      pushLog({
+        action: "creative_templates.delete",
+        ok: false,
+        error: err?.message ? String(err.message) : "error",
+        details,
+      });
+      setTemplatesError(err?.message ? String(err.message) : "Falha ao remover template (DB/API indisponível).");
+      setTemplatesErrorDetails(details);
+    } finally {
+      setTemplateActionLoading(false);
     }
   }
 
@@ -1867,8 +1948,11 @@ export default function MetaPausedTest() {
         createFromGeneratedLoading={campaignTemplateCreating}
         deleteDisabled={loading || isCreatingAny}
         deleteLoadingId={campaignTemplateDeletingId}
+        applyDisabled={loading || isCreatingAny}
+        applyLoadingId={campaignTemplateApplyingId}
         onRefresh={refreshCampaignTemplates}
         onCreateFromGenerated={handleCreateCampaignTemplateFromSelected}
+        onApply={handleApplyCampaignTemplate}
         onDelete={handleDeleteCampaignTemplate}
         onDismissError={() => {
           setCampaignTemplatesError("");
@@ -1982,6 +2066,7 @@ export default function MetaPausedTest() {
           setDraftsErrorDetails(null);
         }}
         safeJson={safeJson}
+        onDeleteTemplate={handleDeleteCreativeTemplate}
         draftAssetId={draftAssetId}
         setDraftAssetId={setDraftAssetId}
         primaryText={draftPrimaryText}

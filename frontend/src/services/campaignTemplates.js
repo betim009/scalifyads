@@ -21,3 +21,20 @@ export async function deleteCampaignTemplate(templateId) {
   const data = await apiDelete(`/api/campaign-templates/${encodeURIComponent(String(templateId))}`);
   return { ok: true, campaignTemplate: data?.campaign_template ?? null };
 }
+
+export async function applyCampaignTemplate(templateId, { name, countryCode, metaObjective, metaAdAccountId, metaRunMode } = {}) {
+  const data = await apiPost(`/api/campaign-templates/${encodeURIComponent(String(templateId))}/apply`, {
+    name,
+    countryCode,
+    metaObjective,
+    metaAdAccountId,
+    metaRunMode,
+  });
+  return {
+    ok: true,
+    campaign: data?.campaign ?? null,
+    generatedCampaign: data?.generated_campaign ?? null,
+    generatedAdSets: Array.isArray(data?.generated_adsets) ? data.generated_adsets : [],
+    generatedAds: Array.isArray(data?.generated_ads) ? data.generated_ads : [],
+  };
+}

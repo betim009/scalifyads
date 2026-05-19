@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { getPool } from '../db.js'
 import { asyncHandler } from '../lib/asyncHandler.js'
 import { jsonError, parseLimit } from '../lib/http.js'
+import { slugify } from '../lib/slugify.js'
 import { isUuid } from '../lib/validate.js'
 
 function normalizeNonEmptyString(value, { maxLen } = {}) {
@@ -10,6 +11,25 @@ function normalizeNonEmptyString(value, { maxLen } = {}) {
   if (!trimmed) return null
   if (maxLen && trimmed.length > maxLen) return trimmed.slice(0, maxLen)
   return trimmed
+}
+
+async function createUniqueSlug(pool, base) {
+  const cleaned = slugify(base) || `campaign-${Date.now()}`
+  let candidate = cleaned
+  let attempt = 0
+
+  while (true) {
+    const { rowCount } = await pool.query('SELECT 1 FROM campaigns WHERE slug = $1', [candidate])
+    if (rowCount === 0) return candidate
+    attempt += 1
+    candidate = `${cleaned}-${attempt}`
+  }
+}
+
+function normalizeCountryCode(value) {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim().toUpperCase()
+  return trimmed ? trimmed : null
 }
 
 export function campaignTemplatesRouter() {
@@ -210,6 +230,250 @@ export function campaignTemplatesRouter() {
       )
 
       return res.status(201).json({ ok: true, campaign_template: rows[0] })
+    })
+  )
+
+  router.post(
+    '/:id/apply',
+    asyncHandler(async (req, res) => {
+      if (!req.app.locals.dbEnabled) {
+        return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
+      }
+
+      const templateId = req.params.id
+      if (!isUuid(templateId)) {
+        return jsonError(res, 400, 'Invalid campaign template id')
+      }
+
+      const pool = getPool()
+      const { rows: templates, rowCount } = await pool.query(
+        `
+          SELECT
+            id,
+            name,
+            payload,
+            created_at
+          FROM campaign_templates
+          WHERE id = $1
+        `,
+        [templateId]
+      )
+      if (rowCount === 0) {
+        return jsonError(res, 404, 'Campaign template not found')
+      }
+
+      const template = templates[0]
+      const payload = template?.payload && typeof template.payload === 'object' ? template.payload : {}
+      const payloadCampaign = payload?.campaign && typeof payload.campaign === 'object' ? payload.campaign : {}
+      const payloadStructure = payload?.structure && typeof payload.structure === 'object' ? payload.structure : {}
+
+      const overrideName = normalizeNonEmptyString(req.body?.name, { maxLen: 140 })
+      const overrideCountryCode = normalizeCountryCode(req.body?.countryCode)
+      const overrideMetaObjective = normalizeNonEmptyString(req.body?.metaObjective, { maxLen: 64 })
+      const overrideMetaAdAccountId = normalizeNonEmptyString(req.body?.metaAdAccountId, { maxLen: 64 })
+      const overrideMetaRunMode = normalizeNonEmptyString(req.body?.metaRunMode, { maxLen: 16 })
+
+      const name =
+        overrideName ??
+        normalizeNonEmptyString(payloadCampaign?.name, { maxLen: 140 }) ??
+        normalizeNonEmptyString(template?.name, { maxLen: 140 })
+      if (!name) {
+        return jsonError(res, 400, 'Invalid name (template payload missing campaign.name)')
+      }
+
+      const countryCode =
+        overrideCountryCode ??
+        normalizeCountryCode(payloadCampaign?.countryCode) ??
+        normalizeCountryCode(payloadCampaign?.country_code)
+      if (!countryCode) {
+        return jsonError(res, 400, 'Invalid countryCode (template payload missing campaign.countryCode)')
+      }
+
+      const metaObjective =
+        overrideMetaObjective ??
+        normalizeNonEmptyString(payloadCampaign?.metaObjective, { maxLen: 64 }) ??
+        normalizeNonEmptyString(payloadCampaign?.meta_objective, { maxLen: 64 }) ??
+        null
+      const metaAdAccountId =
+        overrideMetaAdAccountId ??
+        normalizeNonEmptyString(payloadCampaign?.metaAdAccountId, { maxLen: 64 }) ??
+        normalizeNonEmptyString(payloadCampaign?.meta_ad_account_id, { maxLen: 64 }) ??
+        null
+
+      const runMode =
+        overrideMetaRunMode ??
+        normalizeNonEmptyString(payload?.source?.metaRunMode, { maxLen: 16 }) ??
+        null
+
+      const client = await pool.connect()
+      try {
+        await client.query('BEGIN')
+
+        const { rowCount: hasCountry } = await client.query(`SELECT 1 FROM countries WHERE code = $1`, [countryCode])
+        if (hasCountry === 0) {
+          await client.query('ROLLBACK')
+          return jsonError(res, 400, 'Invalid countryCode (not found)', { countryCode })
+        }
+
+        const slug = await createUniqueSlug(client, name)
+        const insertedCampaign = await client.query(
+          `
+            INSERT INTO campaigns (slug, name, status, scope, objective_key, created_by_user_id, config)
+            VALUES ($1, $2, 'draft', 'global', NULL, NULL, $3::jsonb)
+            RETURNING id, slug, name, status, scope, objective_key, created_by_user_id, config, created_at
+          `,
+          [
+            slug,
+            name,
+            JSON.stringify({
+              source: 'campaign_template.apply',
+              metaAdAccountId,
+              metaObjective,
+              templateId,
+            }),
+          ]
+        )
+        const campaign = insertedCampaign.rows[0]
+
+        const insertedGenerated = await client.query(
+          `
+            INSERT INTO generated_campaigns (
+              campaign_id,
+              country_code,
+              name,
+              status,
+              meta_ad_account_id,
+              meta_objective,
+              meta_run_mode
+            )
+            VALUES ($1::uuid, $2, $3, 'PAUSED', $4, $5, $6)
+            RETURNING
+              id,
+              campaign_id,
+              country_code,
+              meta_campaign_id,
+              meta_run_mode,
+              meta_ad_account_id,
+              meta_user_id,
+              meta_status,
+              meta_effective_status,
+              meta_objective,
+              meta_adset_id,
+              meta_adset_status,
+              meta_adset_effective_status,
+              meta_ad_id,
+              meta_ad_status,
+              meta_ad_effective_status,
+              ops_last_action,
+              ops_last_ok,
+              ops_last_at,
+              ops_state,
+              name,
+              status,
+              created_at
+          `,
+          [campaign.id, countryCode, name, metaAdAccountId, metaObjective, runMode]
+        )
+        const generatedCampaign = insertedGenerated.rows[0]
+
+        const sourceAdsets = Array.isArray(payloadStructure?.adsets) ? payloadStructure.adsets : []
+        const sourceAds = Array.isArray(payloadStructure?.ads) ? payloadStructure.ads : []
+
+        const adsetIdMap = new Map()
+        const createdAdsets = []
+
+        for (const adset of sourceAdsets.slice(0, 50)) {
+          const adsetName = normalizeNonEmptyString(adset?.name, { maxLen: 140 }) ?? 'AdSet'
+          const inserted = await client.query(
+            `
+              INSERT INTO generated_adsets (generated_campaign_id, meta_adset_id, name, status, effective_status, run_mode)
+              VALUES ($1::uuid, NULL, $2, 'PAUSED', NULL, $3)
+              RETURNING id, generated_campaign_id, meta_adset_id, name, status, effective_status, created_at, run_mode
+            `,
+            [generatedCampaign.id, adsetName, runMode]
+          )
+          const row = inserted.rows[0]
+          createdAdsets.push(row)
+          const oldId = normalizeNonEmptyString(adset?.id, { maxLen: 80 })
+          if (oldId) adsetIdMap.set(oldId, row.id)
+        }
+
+        const createdAds = []
+        for (const ad of sourceAds.slice(0, 200)) {
+          const adName = normalizeNonEmptyString(ad?.name, { maxLen: 140 }) ?? 'Ad'
+          const oldAdsetId = normalizeNonEmptyString(ad?.generated_adset_id, { maxLen: 80 }) ?? normalizeNonEmptyString(ad?.generatedAdsetId, { maxLen: 80 })
+          const mappedAdsetId = oldAdsetId && adsetIdMap.has(oldAdsetId) ? adsetIdMap.get(oldAdsetId) : null
+          const creativeDraftId = isUuid(ad?.creative_draft_id) ? ad.creative_draft_id : isUuid(ad?.creativeDraftId) ? ad.creativeDraftId : null
+
+          const inserted = await client.query(
+            `
+              INSERT INTO generated_ads (
+                generated_campaign_id,
+                generated_adset_id,
+                meta_ad_id,
+                name,
+                status,
+                effective_status,
+                run_mode,
+                creative_draft_id
+              )
+              VALUES ($1::uuid, $2::uuid, NULL, $3, 'PAUSED', NULL, $4, $5::uuid)
+              RETURNING
+                id,
+                generated_campaign_id,
+                generated_adset_id,
+                creative_draft_id,
+                meta_ad_id,
+                name,
+                status,
+                effective_status,
+                created_at,
+                run_mode
+            `,
+            [generatedCampaign.id, mappedAdsetId, adName, runMode, creativeDraftId]
+          )
+          createdAds.push(inserted.rows[0])
+        }
+
+        try {
+          await client.query(
+            `
+              INSERT INTO generated_campaign_events (generated_campaign_id, event_type, payload)
+              VALUES ($1::uuid, 'campaign_template.applied', $2::jsonb)
+            `,
+            [
+              generatedCampaign.id,
+              JSON.stringify({
+                templateId,
+                templateName: template?.name ?? null,
+                overrides: {
+                  name: overrideName ?? null,
+                  countryCode: overrideCountryCode ?? null,
+                  metaObjective: overrideMetaObjective ?? null,
+                  metaAdAccountId: overrideMetaAdAccountId ?? null,
+                  metaRunMode: overrideMetaRunMode ?? null,
+                },
+              }),
+            ]
+          )
+        } catch {
+          // best-effort
+        }
+
+        await client.query('COMMIT')
+        return res.status(201).json({
+          ok: true,
+          campaign,
+          generated_campaign: generatedCampaign,
+          generated_adsets: createdAdsets,
+          generated_ads: createdAds,
+        })
+      } catch (err) {
+        await client.query('ROLLBACK')
+        throw err
+      } finally {
+        client.release()
+      }
     })
   )
 

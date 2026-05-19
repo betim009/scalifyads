@@ -23,6 +23,7 @@ export default function CreativeDraftsSection({
   templateBusy,
   onSaveTemplateFromDraft,
   onApplyTemplate,
+  onDeleteTemplate,
   onDismissError,
   safeJson,
   draftAssetId,
@@ -272,6 +273,19 @@ export default function CreativeDraftsSection({
               disabled={!selectedTemplateId || createDisabled || templateBusy}
             >
               Aplicar (criar draft)
+            </button>
+
+            <button
+              type="button"
+              className="pillOutline"
+              onClick={() => {
+                if (!selectedTemplateId) return;
+                onDeleteTemplate?.(selectedTemplateId);
+                setSelectedTemplateId("");
+              }}
+              disabled={!selectedTemplateId || createDisabled || templateBusy}
+            >
+              Remover template
             </button>
 
             <div className="muted" style={{ fontWeight: 800 }}>

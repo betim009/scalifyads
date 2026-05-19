@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from "./http.js";
+import { apiDelete, apiGet, apiPost } from "./http.js";
 
 export async function listCreativeTemplates({ limit = 50 } = {}) {
   const query = new URLSearchParams();
@@ -21,3 +21,7 @@ export async function applyCreativeTemplate(templateId, { generatedCampaignId } 
   return { ok: true, creativeDraft: data?.creative_draft ?? null };
 }
 
+export async function deleteCreativeTemplate(templateId) {
+  const data = await apiDelete(`/api/creative-templates/${encodeURIComponent(String(templateId))}`);
+  return { ok: true, creativeTemplate: data?.creative_template ?? null };
+}
