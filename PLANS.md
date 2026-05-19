@@ -448,7 +448,7 @@ Regras:
 - [x] Criar estados operacionais (`generated_campaigns.ops_state`: draft/validated/published + API + UI) (commit: 234a771)
 - [x] Draft → Validado → Publicado (via `ops_state`) (commit: 234a771)
 - [x] Histórico de publicação (eventos em `generated_campaign_events` + endpoint + UI no `/meta-test`) (commit: 1c3bfd5)
-- [x] Melhorar fluxo progressivo (sidebar: exibir `ops_state` + último checkpoint) (commit: TBD)
+- [x] Melhorar fluxo progressivo (sidebar: exibir `ops_state` + último checkpoint) (commit: 29d012e)
 - [x] Criar checkpoints operacionais (API + UI; event: `checkpoint.created`) (commit: cbeda6e)
 - [x] Melhorar recovery operacional (bundle agora inclui `generated_campaign_events`) (commit: 664d149)
 
