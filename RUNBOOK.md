@@ -103,6 +103,13 @@ Exemplos (`curl`, sempre `PAUSED` e sem token no frontend):
 - Listar logs persistidos (padrão `source=meta-test`): `GET /api/ops-logs?limit=200`
 - Inserir logs (best-effort, usado pelo `/meta-test`): `POST /api/ops-logs` com body `{ "source": "meta-test", "entries": [...] }`
 
+### Workflow — Ops state (dev)
+
+Última atualização: [2026-05-19 09:49]
+
+- Atualizar `ops_state` (workflow local) de uma `generated_campaign`:
+  - `POST /api/generated-campaigns/<generated_campaign_uuid>/ops-state` (body: `{ "opsState": "draft" | "validated" | "published" }`)
+
 ### DB — Run Mode (REAL/STUB)
 
 Última atualização: [2026-05-12 18:40]

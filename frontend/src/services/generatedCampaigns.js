@@ -21,6 +21,11 @@ export async function updateGeneratedStatus(id, { status }) {
   return { ok: true, generatedCampaign: data?.generated_campaign ?? null };
 }
 
+export async function updateGeneratedOpsState(id, { opsState }) {
+  const data = await apiPost(`/api/generated-campaigns/${encodeURIComponent(String(id))}/ops-state`, { opsState });
+  return { ok: true, generatedCampaign: data?.generated_campaign ?? null };
+}
+
 export async function getGeneratedCampaignStructure(id) {
   const data = await apiGet(`/api/generated-campaigns/${encodeURIComponent(String(id))}/structure`);
   return {

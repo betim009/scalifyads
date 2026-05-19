@@ -13,6 +13,7 @@ export default function GeneratedCampaignsSection({
   selectDisabled,
   onSelect,
   onCopyIds,
+  onUpdateOpsState,
   safeJson,
   countryCodeToFlag,
 }) {
@@ -174,6 +175,7 @@ export default function GeneratedCampaignsSection({
               <th>País</th>
               <th>Nome</th>
               <th>Modo</th>
+              <th>Workflow</th>
               <th>Última ação</th>
               <th>OK</th>
               <th>Meta Campaign ID</th>
@@ -237,6 +239,27 @@ export default function GeneratedCampaignsSection({
                     >
                       {mode}
                     </span>
+                  </td>
+                  <td className="muted" style={{ fontWeight: 900 }}>
+                    <select
+                      value={gc?.ops_state || "draft"}
+                      onChange={(e) => onUpdateOpsState?.(gc, e.target.value)}
+                      disabled={selectDisabled || !onUpdateOpsState}
+                      style={{
+                        height: 32,
+                        borderRadius: 10,
+                        border: "1px solid #e5e7eb",
+                        padding: "0 10px",
+                        fontSize: 12,
+                        fontWeight: 900,
+                        outline: "none",
+                        background: "#ffffff",
+                      }}
+                    >
+                      <option value="draft">draft</option>
+                      <option value="validated">validated</option>
+                      <option value="published">published</option>
+                    </select>
                   </td>
                   <td className="muted" style={{ fontWeight: 800 }}>
                     {gc.ops_last_action || "—"}

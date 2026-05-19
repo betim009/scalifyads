@@ -28,7 +28,7 @@ import CreativeRealAcceptanceCard from "./metaTest/CreativeRealAcceptanceCard.js
 import GraphRefreshSection from "./metaTest/GraphRefreshSection.jsx";
 import { getCountries } from "../services/reference.js";
 import { countryCodeToFlag } from "../services/fallbacks.js";
-import { getGeneratedCampaignStructure, listGeneratedCampaigns } from "../services/generatedCampaigns.js";
+import { getGeneratedCampaignStructure, listGeneratedCampaigns, updateGeneratedOpsState } from "../services/generatedCampaigns.js";
 import { listOpsLogs } from "../services/opsLogs.js";
 import { listCreativeAssets, uploadCreativeAsset } from "../services/creativeAssets.js";
 import { createCreativeDraft, duplicateCreativeDraft, listCreativeDrafts } from "../services/creativeDrafts.js";
@@ -629,6 +629,29 @@ export default function MetaPausedTest() {
         action: "db.generated_campaigns.copy_ids",
         ok: false,
         error: err?.message ? String(err.message) : "error",
+      });
+    }
+  }
+
+  async function handleUpdateGeneratedOpsState(gc, opsState) {
+    const id = normalizeNonEmptyString(gc?.id);
+    if (!id) return;
+    setError("");
+    setErrorDetails(null);
+    setSuccess("");
+    try {
+      await updateGeneratedOpsState(id, { opsState });
+      pushLog({ action: "db.generated_campaigns.ops_state", ok: true, details: { generatedCampaignId: id, opsState } });
+      await refreshLocalGenerated();
+      setSuccess("Estado operacional atualizado.");
+    } catch (err) {
+      setError(err?.message ? String(err.message) : "Falha ao atualizar estado operacional.");
+      setErrorDetails(extractErrorDetails(err));
+      pushLog({
+        action: "db.generated_campaigns.ops_state",
+        ok: false,
+        error: err?.message ? String(err.message) : "error",
+        details: { generatedCampaignId: id, opsState, errorDetails: extractErrorDetails(err) },
       });
     }
   }
@@ -1614,6 +1637,7 @@ export default function MetaPausedTest() {
         selectDisabled={localLoading || isCreatingAny}
         onSelect={handleSelectGeneratedCampaignRow}
         onCopyIds={handleCopyGeneratedCampaignIds}
+        onUpdateOpsState={handleUpdateGeneratedOpsState}
         safeJson={safeJson}
         countryCodeToFlag={countryCodeToFlag}
       />

@@ -400,7 +400,7 @@ Regras:
 
 ## Backlog Ativo — Próxima Fase Operacional
 
-Última atualização: [2026-05-19 09:46]
+Última atualização: [2026-05-19 09:49]
 ### P8 — Console operacional
 
 - [ ] Consolidar layout operacional definitivo
@@ -445,8 +445,8 @@ Regras:
 
 ### P12 — Workflow operacional
 
-- [ ] Criar estados operacionais
-- [ ] Draft → Validado → Publicado
+- [x] Criar estados operacionais (`generated_campaigns.ops_state`: draft/validated/published + API + UI) (commit: TBD)
+- [x] Draft → Validado → Publicado (via `ops_state`) (commit: TBD)
 - [ ] Histórico de publicação
 - [ ] Melhorar fluxo progressivo
 - [ ] Criar checkpoints operacionais
