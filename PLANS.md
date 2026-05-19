@@ -438,7 +438,7 @@ Regras:
 
 - [ ] Salvar estrutura base de campanhas
 - [x] Duplicar campanhas rapidamente
-- [x] Templates de países (persistência DB + fallback local; UI no `/meta-test` batch) (commit: TBD)
+- [x] Templates de países (persistência DB + fallback local; UI no `/meta-test` batch) (commit: 42f7da7)
 - [x] Templates de creatives
 - [x] Templates de copy
 - [ ] Templates operacionais completos
