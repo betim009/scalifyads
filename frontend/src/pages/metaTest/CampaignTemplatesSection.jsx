@@ -10,8 +10,11 @@ export default function CampaignTemplatesSection({
   refreshDisabled,
   createFromGeneratedDisabled,
   createFromGeneratedLoading,
+  deleteDisabled,
+  deleteLoadingId,
   onRefresh,
   onCreateFromGenerated,
+  onDelete,
   onDismissError,
   safeJson,
 }) {
@@ -100,6 +103,16 @@ export default function CampaignTemplatesSection({
                     {t.created_at ? String(t.created_at).slice(0, 19).replace("T", " ") : "—"}
                   </div>
                 </div>
+                <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    className="pillOutline"
+                    disabled={deleteDisabled || !t?.id || deleteLoadingId === t.id}
+                    onClick={() => onDelete?.(t)}
+                  >
+                    {deleteLoadingId === t.id ? "Removendo..." : "Remover"}
+                  </button>
+                </div>
                 <JsonAccordion title="Payload" value={t.payload} safeJson={safeJson} />
               </div>
             ))}
@@ -113,4 +126,3 @@ export default function CampaignTemplatesSection({
     </div>
   );
 }
-

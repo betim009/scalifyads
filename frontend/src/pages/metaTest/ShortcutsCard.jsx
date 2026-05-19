@@ -41,6 +41,13 @@ export default function ShortcutsCard({ stepCampaignOk, stepAdSetOk, stepAdOk })
         </a>
         <a
           className="pillOutline"
+          href="#meta-test-campaign-templates"
+          onClick={() => ensureCollapsibleOpen("meta-test-campaign-templates")}
+        >
+          Templates (Campaign)
+        </a>
+        <a
+          className="pillOutline"
           href="#meta-test-creative-assets"
           onClick={() => ensureCollapsibleOpen("meta-test-creative-assets")}
         >

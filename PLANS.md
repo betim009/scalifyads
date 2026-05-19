@@ -400,10 +400,11 @@ Regras:
 
 ## Backlog Ativo — Próxima Fase Operacional
 
-Última atualização: [2026-05-19 10:17]
+Última atualização: [2026-05-19 11:20]
 ### P8 — Console operacional
 
 - [ ] Consolidar layout operacional definitivo
+  - [x] Atalho para Campaign Templates (commit: TBD)
 - [x] Criar sidebar operacional contextual
 - [x] Melhorar leitura de status Meta
 - [x] Criar visão resumida da estrutura Campaign → AdSet → Ad
@@ -442,6 +443,7 @@ Regras:
 - [x] Templates de creatives
 - [x] Templates de copy
 - [ ] Templates operacionais completos
+  - [x] Campaign Templates: deletar/remover via API + UI (commit: TBD)
 
 ### P12 — Workflow operacional
 

@@ -40,7 +40,7 @@ import {
 import { listOpsLogs } from "../services/opsLogs.js";
 import { listCreativeAssets, uploadCreativeAsset } from "../services/creativeAssets.js";
 import { createCreativeDraft, duplicateCreativeDraft, listCreativeDrafts } from "../services/creativeDrafts.js";
-import { createCampaignTemplateFromGenerated, listCampaignTemplates } from "../services/campaignTemplates.js";
+import { createCampaignTemplateFromGenerated, deleteCampaignTemplate, listCampaignTemplates } from "../services/campaignTemplates.js";
 import {
   applyCreativeTemplate,
   createCreativeTemplateFromDraft,
@@ -205,6 +205,7 @@ export default function MetaPausedTest() {
   const [campaignTemplatesErrorDetails, setCampaignTemplatesErrorDetails] = useState(null);
   const [campaignTemplates, setCampaignTemplates] = useState([]);
   const [campaignTemplateCreating, setCampaignTemplateCreating] = useState(false);
+  const [campaignTemplateDeletingId, setCampaignTemplateDeletingId] = useState("");
   const [templateActionLoading, setTemplateActionLoading] = useState(false);
 
   const selectedCreativeDraft = useMemo(
@@ -733,6 +734,41 @@ export default function MetaPausedTest() {
       setCampaignTemplatesErrorDetails(details);
     } finally {
       setCampaignTemplateCreating(false);
+    }
+  }
+
+  async function handleDeleteCampaignTemplate(t) {
+    const id = normalizeNonEmptyString(t?.id);
+    if (!id) return;
+
+    setError("");
+    setErrorDetails(null);
+    setSuccess("");
+    setCampaignTemplatesError("");
+    setCampaignTemplatesErrorDetails(null);
+
+    setCampaignTemplateDeletingId(id);
+    try {
+      await deleteCampaignTemplate(id);
+      pushLog({
+        action: "campaign_templates.delete",
+        ok: true,
+        details: { templateId: id },
+      });
+      setSuccess("Campaign template removido.");
+      await refreshCampaignTemplates();
+    } catch (err) {
+      const details = extractErrorDetails(err);
+      pushLog({
+        action: "campaign_templates.delete",
+        ok: false,
+        error: err?.message ? String(err.message) : "error",
+        details,
+      });
+      setCampaignTemplatesError(err?.message ? String(err.message) : "Falha ao remover campaign template (DB/API indisponível).");
+      setCampaignTemplatesErrorDetails(details);
+    } finally {
+      setCampaignTemplateDeletingId("");
     }
   }
 
@@ -1829,8 +1865,11 @@ export default function MetaPausedTest() {
         refreshDisabled={campaignTemplatesLoading || loading || isCreatingAny}
         createFromGeneratedDisabled={loading || isCreatingAny || !createdGeneratedCampaignId}
         createFromGeneratedLoading={campaignTemplateCreating}
+        deleteDisabled={loading || isCreatingAny}
+        deleteLoadingId={campaignTemplateDeletingId}
         onRefresh={refreshCampaignTemplates}
         onCreateFromGenerated={handleCreateCampaignTemplateFromSelected}
+        onDelete={handleDeleteCampaignTemplate}
         onDismissError={() => {
           setCampaignTemplatesError("");
           setCampaignTemplatesErrorDetails(null);

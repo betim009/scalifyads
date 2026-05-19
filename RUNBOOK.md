@@ -153,6 +153,7 @@ Exemplos (`curl`, sempre `PAUSED` e sem token no frontend):
 
 - Listar templates: `GET /api/campaign-templates?limit=50`
 - Criar template a partir de uma `generated_campaign` selecionada: `POST /api/campaign-templates/from-generated/<generated_campaign_uuid>` (body opcional: `{ "name": "..." }`)
+- Remover template: `DELETE /api/campaign-templates/<template_uuid>`
 
 ### Country Templates — Templates de países (dev)
 

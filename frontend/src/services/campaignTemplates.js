@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from "./http.js";
+import { apiDelete, apiGet, apiPost } from "./http.js";
 
 export async function listCampaignTemplates({ limit = 50 } = {}) {
   const query = new URLSearchParams();
@@ -17,3 +17,7 @@ export async function createCampaignTemplateFromGenerated(generatedCampaignId, {
   return { ok: true, campaignTemplate: data?.campaign_template ?? null };
 }
 
+export async function deleteCampaignTemplate(templateId) {
+  const data = await apiDelete(`/api/campaign-templates/${encodeURIComponent(String(templateId))}`);
+  return { ok: true, campaignTemplate: data?.campaign_template ?? null };
+}
