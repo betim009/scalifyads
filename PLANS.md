@@ -445,8 +445,8 @@ Regras:
 
 ### P12 — Workflow operacional
 
-- [x] Criar estados operacionais (`generated_campaigns.ops_state`: draft/validated/published + API + UI) (commit: TBD)
-- [x] Draft → Validado → Publicado (via `ops_state`) (commit: TBD)
+- [x] Criar estados operacionais (`generated_campaigns.ops_state`: draft/validated/published + API + UI) (commit: 234a771)
+- [x] Draft → Validado → Publicado (via `ops_state`) (commit: 234a771)
 - [ ] Histórico de publicação
 - [ ] Melhorar fluxo progressivo
 - [ ] Criar checkpoints operacionais
