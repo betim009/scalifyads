@@ -13,6 +13,59 @@
 
 Última atualização: [2026-05-08 08:48]
 
+### Deploy — Hostinger (Frontend SPA + páginas legais)
+
+Última atualização: [2026-05-20 19:33]
+
+Objetivo:
+publicar o frontend React/Vite com rotas SPA funcionando via URL direta (sem `404`) e expor páginas legais públicas exigidas para publicação do App Meta.
+
+Pré-requisitos:
+
+- Domínio com HTTPS ativo (ex.: `https://seudominio.com`)
+- Acesso ao `public_html/` (Hostinger File Manager ou FTP)
+
+Build (local):
+
+```bash
+cd frontend
+npm run build
+```
+
+O build deve gerar `frontend/dist/` com:
+
+- `index.html`
+- `assets/`
+- `.htaccess` (SPA rewrite)
+
+Deploy (Hostinger):
+
+1) Enviar **todo o conteúdo** de `frontend/dist/` para `public_html/`.
+2) Confirmar que o arquivo `public_html/.htaccess` existe no servidor.
+3) Abrir as rotas diretamente no navegador (aba anônima) e dar refresh:
+   - `https://seudominio.com/politica-de-privacidade`
+   - `https://seudominio.com/termos-de-uso`
+   - `https://seudominio.com/exclusao-de-dados`
+4) Verificar headers via `curl` (esperado: `200`):
+
+```bash
+curl -I https://seudominio.com/politica-de-privacidade
+curl -I https://seudominio.com/termos-de-uso
+curl -I https://seudominio.com/exclusao-de-dados
+```
+
+Notas:
+
+- Se o site estiver em subpasta (ex.: `https://dominio.com/app/`), ajuste o `RewriteBase` no `.htaccess`.
+- As páginas legais são estáticas e não dependem de backend/login.
+
+Preenchimento no painel Meta (App):
+
+- Domínio do aplicativo: `seudominio.com`
+- URL da Política de Privacidade: `https://seudominio.com/politica-de-privacidade`
+- URL dos Termos de Serviço: `https://seudominio.com/termos-de-uso`
+- URL de Exclusão de Dados do Usuário: `https://seudominio.com/exclusao-de-dados`
+
 ### Guardrails Meta (OBRIGATÓRIO)
 
 Última atualização: [2026-05-08 08:48]

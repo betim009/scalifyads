@@ -140,7 +140,7 @@ Fontes únicas (para reduzir drift):
 
 ## Operational Priorities
 
-Última atualização: [2026-05-18 19:33]
+Última atualização: [2026-05-20 19:33]
 
 - Manter `/meta-test` como fluxo prioritário e estável (não quebrar o lab).
 - Segurança Meta: toda criação REAL permanece obrigatoriamente `PAUSED` e token nunca vai ao frontend.
@@ -148,11 +148,11 @@ Fontes únicas (para reduzir drift):
 - Mudanças pequenas e verificáveis (evidência via curl/DB quando aplicável) com commit incremental + timestamps.
 
 FOCO ATUAL:
-- P8 Console operacional
-- P9 Scheduler e automação leve
-- P10 Analytics operacional
-- P11 Templates operacionais
-- P12 Workflow operacional
+- P13 Páginas legais para publicação do App Meta
+- Preparar deploy React/Vite na Hostinger com `.htaccess`
+- Publicar app Meta fora do Development Mode
+- Gerar novo token após publicação
+- Retomar validação P4/P5 REAL
 
 P4/P5:
 - Continuar apenas no que for possível sem depender do App Meta em Live Mode.
@@ -461,6 +461,198 @@ Regras:
 
 Histórico/itens concluídos:
 - Ver `ARCHIVE.md` em `## Backlog (concluído) — snapshots de execução` e `## Integração Meta — histórico consolidado`.
+
+
+### P13 — Páginas legais para publicação do App Meta
+
+Última atualização: [2026-05-20 19:33]
+
+Objetivo:
+Criar páginas legais públicas no frontend React/Vite para preencher os dados obrigatórios do App Meta e permitir a tentativa de publicação do app fora do Development Mode.
+
+Contexto:
+O App Meta ainda está como “Não publicado” / Development Mode. Para tentar publicar o app, a Meta exige URLs públicas de Política de Privacidade, Termos de Serviço e Exclusão de Dados do Usuário.
+
+Como o projeto será hospedado na Hostinger, também é necessário garantir que as rotas do React funcionem ao serem acessadas diretamente pela URL pública. Para isso, o deploy deve incluir um arquivo `.htaccess` configurado para SPA, redirecionando rotas internas para `index.html`.
+
+Regras:
+
+- Criar as páginas dentro do frontend React atual.
+- Não criar estrutura paralela em HTML puro, a menos que React/Vite não seja viável.
+- Não expor token da Meta, App Secret, credenciais, IDs sensíveis ou dados privados.
+- As páginas devem ser simples, institucionais e acessíveis publicamente.
+- As páginas devem funcionar com acesso direto pela URL após deploy.
+- O deploy na Hostinger deve incluir configuração `.htaccess` para SPA.
+- As URLs não podem usar `localhost`.
+- O conteúdo não deve prometer funcionalidades que ainda não existem no produto.
+- As páginas não devem depender de login.
+- As páginas não devem depender do backend.
+
+Backlog:
+
+- [x] Criar página React `/politica-de-privacidade` (arquivo: `frontend/src/pages/PoliticaPrivacidade.jsx`)
+  - Arquivo sugerido: `frontend/src/pages/PoliticaPrivacidade.jsx`
+  - Explicar quais dados podem ser coletados/armazenados.
+  - Explicar que dados da Meta são usados apenas para operação autorizada de campanhas.
+  - Informar que tokens e credenciais não são expostos no frontend.
+  - Informar canal de contato para dúvidas e solicitações.
+
+- [x] Criar página React `/termos-de-uso` (arquivo: `frontend/src/pages/TermosDeUso.jsx`)
+  - Arquivo sugerido: `frontend/src/pages/TermosDeUso.jsx`
+  - Explicar regras gerais de uso da plataforma.
+  - Informar que o sistema é uma ferramenta operacional de apoio à criação, gestão e acompanhamento de campanhas.
+  - Informar que o usuário é responsável pelas contas, permissões, campanhas, dados e acessos fornecidos.
+  - Informar que integrações externas dependem das regras, permissões e disponibilidade da Meta.
+
+- [x] Criar página React `/exclusao-de-dados` (arquivo: `frontend/src/pages/ExclusaoDados.jsx`)
+  - Arquivo sugerido: `frontend/src/pages/ExclusaoDados.jsx`
+  - Explicar como o usuário pode solicitar exclusão de dados.
+  - Informar email de contato.
+  - Informar prazo estimado de atendimento.
+  - Explicar quais dados podem ser removidos.
+  - Explicar que alguns registros técnicos podem ser mantidos quando necessários para segurança, auditoria ou obrigações legais.
+
+- [x] Adicionar rotas no frontend (arquivo: `frontend/src/App.jsx`)
+  - Atualizar `frontend/src/App.jsx`.
+  - Criar rotas:
+    - `/politica-de-privacidade`
+    - `/termos-de-uso`
+    - `/exclusao-de-dados`
+  - Garantir que as páginas abrem sem autenticação.
+  - Garantir que as páginas não fazem chamadas obrigatórias para o backend.
+
+- [x] Criar layout simples para páginas legais
+  - Usar visual limpo e institucional.
+  - Incluir título, última atualização, seções e texto claro.
+  - Adicionar link de retorno para a página inicial, se fizer sentido.
+  - Manter responsividade básica.
+  - Evitar excesso visual, gráficos, dados mockados ou elementos operacionais do `/meta-test`.
+
+- [x] Preparar `.htaccess` para Hostinger (arquivo: `frontend/public/.htaccess`)
+  - Criar arquivo `frontend/public/.htaccess`.
+  - Garantir que o `.htaccess` seja copiado para `frontend/dist/` no build do Vite.
+  - O `.htaccess` deve redirecionar rotas React para `index.html`.
+  - Isso evita erro `404` quando uma URL React for acessada diretamente no navegador.
+
+  Conteúdo sugerido para `frontend/public/.htaccess`:
+
+  ```apache
+  <IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    RewriteRule ^index\.html$ - [L]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+
+    RewriteRule . /index.html [L]
+  </IfModule>
+  ```
+
+- [x] Validar build do frontend
+  - Rodar:
+
+  ```bash
+  cd frontend
+  npm run build
+  ```
+
+  - Confirmar que o build gera a pasta `frontend/dist/`.
+  - Confirmar que o `.htaccess` está presente dentro de `frontend/dist/`.
+  - Confirmar que o build não quebra rotas existentes.
+
+- [x] Preparar instrução de deploy na Hostinger (documentado no `RUNBOOK.md`)
+  - Gerar build com `npm run build`.
+  - Subir o conteúdo de `frontend/dist/` para a pasta pública da Hostinger.
+  - Confirmar que `index.html`, assets e `.htaccess` foram enviados.
+  - Confirmar que o domínio usa HTTPS.
+  - Confirmar que as páginas legais abrem sem login.
+
+- [ ] Validar acesso público das páginas
+  - Abrir em aba anônima:
+    - `https://seudominio.com/politica-de-privacidade`
+    - `https://seudominio.com/termos-de-uso`
+    - `https://seudominio.com/exclusao-de-dados`
+  - Confirmar que não exige login.
+  - Confirmar que não retorna `404`.
+  - Confirmar que as rotas funcionam ao atualizar a página.
+  - Confirmar que as rotas funcionam quando copiadas e abertas diretamente.
+
+- [ ] Validar via `curl`
+  - Rodar:
+
+  ```bash
+  curl -I https://seudominio.com/politica-de-privacidade
+  curl -I https://seudominio.com/termos-de-uso
+  curl -I https://seudominio.com/exclusao-de-dados
+  ```
+
+  - Resultado esperado:
+
+  ```txt
+  HTTP/2 200
+  ```
+
+- [ ] Preencher dados no painel da Meta
+  - Domínio do aplicativo: `seudominio.com`
+  - URL da Política de Privacidade: `https://seudominio.com/politica-de-privacidade`
+  - URL dos Termos de Serviço: `https://seudominio.com/termos-de-uso`
+  - URL de Exclusão de Dados do Usuário: `https://seudominio.com/exclusao-de-dados`
+  - Categoria do app.
+  - Ícone do app, se exigido.
+
+- [ ] Tentar publicar o App Meta
+  - Acessar menu `Publicar`.
+  - Verificar pendências.
+  - Tentar publicar o app.
+  - Registrar resultado no `PLANS.md`.
+  - Se houver bloqueio, registrar em `## Blockers`.
+
+Critérios de aceite:
+
+- `/politica-de-privacidade` existe no React.
+- `/termos-de-uso` existe no React.
+- `/exclusao-de-dados` existe no React.
+- As três páginas funcionam no ambiente local.
+- O build do frontend funciona.
+- O `.htaccess` está preparado para Hostinger.
+- O `.htaccess` é copiado para `frontend/dist/`.
+- As três URLs funcionam publicamente com HTTPS.
+- As três URLs podem ser abertas diretamente sem retornar `404`.
+- As três URLs funcionam ao atualizar a página no navegador.
+- Os links estão prontos para preenchimento no painel da Meta.
+- O resultado da tentativa de publicação do App Meta foi registrado no `PLANS.md`.
+
+Validação mínima local:
+
+```bash
+cd frontend
+npm run build
+```
+
+Validação mínima após deploy:
+
+```bash
+curl -I https://seudominio.com/politica-de-privacidade
+curl -I https://seudominio.com/termos-de-uso
+curl -I https://seudominio.com/exclusao-de-dados
+```
+
+Resultado esperado:
+
+```txt
+HTTP/2 200
+```
+
+Observação:
+Se o App Meta ainda não puder ser publicado mesmo com as páginas legais prontas, registrar o novo motivo em `## Blockers` e continuar sem marcar P4/P5 REAL como concluídos.
+
+Validação executada (local):
+
+- [2026-05-20 19:32] `cd frontend && npm run build` (OK) e `.htaccess` presente em `frontend/dist/`.
+
+---
 
 
 ## Decision Log (Ativo)
