@@ -355,14 +355,21 @@ Regras:
 - [x] Publicar Creative REAL a partir de `creative_drafts` (endpoint + UI) (commit: cac550e)
 - [x] `/meta-test`: consultar Creative REAL (Graph) para evidência operacional (commit: f3e7472)
 - [x] `/meta-test`: checklist P4 (Creative REAL) com evidência copiável em JSON (commit: b9154c7)
-- [ ] Validar creative REAL (PENDENTE: revalidar após publicação bem-sucedida do App Meta; antes falhava com `error_subcode=1885183`) (prep: `force republish` no UI + evidência imediata do publish; validação REAL ainda pendente) (commits: 98cc5c0, 8bed865)
+- [x] Validar creative REAL (revalidado após publicação bem-sucedida do App Meta) (evidência: publish OK + leitura Graph OK) [2026-05-24 11:12]
+  - `generatedCampaignId`: `59ac9e05-59a3-41ee-aee7-b7c4e93f33ed`
+  - `creativeDraftId`: `1a989682-9326-4010-940e-875945a0c8de`
+  - `meta_creative_id`: `1322965599841590`
+  - Publish: `POST /api/meta/creative-drafts/:id/publish` → `ok=true`
+  - Graph read: `GET /api/meta/creatives/:meta_creative_id` → `ok=true`
 - [x] `/meta-test`: quando publish falhar com `error_subcode=1885183`, exibir callout de mitigação (App Live + roles) (commit: 1253b69)
 - [x] Exibir preview operacional (preview texto + mídia) (commit: f8689c5)
 - [x] Preparar variações futuras (duplicar creative drafts) (commits: ba2322f, 41c1d13)
 
 ### P5 — Ad REAL mínimo
 
-- [ ] Validar criação REAL de Ad (PENDENTE: revalidar após publicação bem-sucedida do App Meta; antes falhava com `error_subcode=1885183`)
+- [ ] Validar criação REAL de Ad (BLOCKED: cobrança/forma de pagamento ausente no Ad Account; erro Meta `error_subcode=1359188`) [2026-05-24 11:12]
+  - `error_user_title`: `Nenhuma forma de pagamento`
+  - `error_user_msg`: “Atualize a forma de pagamento…”
 - [ ] Validar creative vinculado (BLOCKED: depende de criação REAL do Ad)
 - [ ] Validar CTA (BLOCKED: depende de criação REAL do Ad)
 - [ ] Validar mídia (BLOCKED: depende de criação REAL do Ad)
@@ -724,6 +731,8 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
   - Antes da publicação do App Meta, a criação/publicação de Creative REAL falhava com `error_subcode=1885183`.
   - Após a publicação do app, esse erro não deve ser assumido como ativo sem nova tentativa real.
   - Próxima ação: testar novamente a publicação de Creative REAL pelo `/meta-test`.
+  - Evidência nesta execução:
+    - [2026-05-24 11:12] `POST /api/meta/creative-drafts/:id/publish` → OK (Creative REAL publicado; sem `1885183`).
 
 - P4/P5 REAL ainda não podem ser marcados como concluídos sem nova evidência.
   - Creative REAL precisa ser validado novamente.
@@ -746,6 +755,13 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
     - token não entra no Git;
     - token não aparece em logs;
     - token não entra em prints ou documentação.
+
+- Bloqueio novo (P5 — Ad REAL):
+  - [2026-05-24 11:12] `POST /api/meta/ads` (REAL) falha com `error_subcode=1359188`
+    - `error_user_title`: `Nenhuma forma de pagamento`
+    - `error_user_msg`: “Atualize a forma de pagamento…”
+  - Impacto: não foi possível criar Ad REAL nesta Ad Account nesta execução.
+  - Próxima ação: regularizar forma de pagamento / billing no Ads Manager e revalidar P5.
 
 ### Meta App publicado / Revalidação P4/P5 REAL
 

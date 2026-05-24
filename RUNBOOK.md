@@ -327,7 +327,16 @@ Esta seção deve ser atualizada sempre que:
     - `GET /api/meta/status` → `ok=true`, `has_access_token=true`, `has_page_id=true`, `db_enabled=false`
     - `POST /api/meta/validate {}` → `ok=true` (Graph `/me`)
     - `GET /api/meta/diagnostics` → permissões evidenciadas (ex.: `ads_management`, `pages_show_list`)
-  - Bloqueio atual nesta máquina: Docker daemon indisponível → `db_enabled=false` impede P4/P5 REAL via `creative_drafts`/persistência.
+- Bloqueio atual nesta máquina: Docker daemon indisponível → `db_enabled=false` impede P4/P5 REAL via `creative_drafts`/persistência.
+
+[2026-05-24 11:12]
+
+- Ambiente: Docker voltou a operar; DB habilitado no backend (`db_enabled=true`).
+- P4 (Creative REAL) revalidado com sucesso após publicação do App Meta:
+  - `POST /api/meta/creative-drafts/:id/publish` → `ok=true` (sem `error_subcode=1885183`)
+  - `GET /api/meta/creatives/:id` → `ok=true`
+- P5 (Ad REAL) ainda bloqueado por cobrança no Ad Account:
+  - `POST /api/meta/ads` (REAL) → erro `error_subcode=1359188` / `error_user_title="Nenhuma forma de pagamento"`
 
 [2026-05-14 20:06]
 
