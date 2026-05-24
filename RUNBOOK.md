@@ -288,7 +288,8 @@ Troubleshooting comum:
   - token sem acesso a uma Page; informe `pageId` manualmente ou ajuste permissões/associação de Page.
   - ver `GET /api/meta/diagnostics` e `GET /api/meta/pages`.
 - “Publicar Creative REAL” falha com `error_subcode=1885183` (“app em modo de desenvolvimento”):
-  - o App Meta usado pelo token está em modo Dev; coloque em modo público (Live) e/ou use roles adequados no app (admin/developer/tester).
+  - revalidar o cenário após a publicação do App Meta (não assumir que o subcode ainda é válido sem nova tentativa real);
+  - se persistir, conferir modo do app + roles/permissões (admin/developer/tester) e dependências de Page/Ad Account.
 - Erros grandes ficam em accordions no UI (evita poluição visual); use “Copiar” no card de erro global quando necessário.
   - `instagramActorId` é opcional (body ou env `META_INSTAGRAM_ACTOR_ID`).
   - Se houver `creative_asset_id`, o backend faz upload da imagem na Meta (`adimages`) e usa `image_hash`.
@@ -316,6 +317,17 @@ Esta seção deve ser atualizada sempre que:
 - Progresso (P4/P5 — Creative/Ad REAL): token valida e Pages retornam via Graph, mas publish do Creative REAL falha com `error_subcode=1885183` (“app em modo de desenvolvimento”).
   - Evidência: `POST /api/meta/validate` OK; `GET /api/meta/pages?metaAdAccountId=act_*` retorna Page(s); `POST /api/meta/creative-drafts/:id/publish` retorna subcode 1885183.
   - Ação: colocar o App Meta em modo público (Live) e/ou ajustar roles do app para permitir criação de AdCreative/Ad.
+
+[2026-05-24 11:04]
+
+- App Meta publicado com sucesso (páginas legais + deploy) e painel da Meta aceitou a publicação do app.
+- Decisão operacional atual: usar o token atual no backend para teste controlado (sem trocar agora; token não vai ao frontend e não entra no Git/logs).
+- Próxima ação: revalidar Creative REAL e Ad REAL via `/meta-test` e registrar evidências (PAUSED, persistência no DB, leitura via Graph).
+  - Evidências (backend sem expor token):
+    - `GET /api/meta/status` → `ok=true`, `has_access_token=true`, `has_page_id=true`, `db_enabled=false`
+    - `POST /api/meta/validate {}` → `ok=true` (Graph `/me`)
+    - `GET /api/meta/diagnostics` → permissões evidenciadas (ex.: `ads_management`, `pages_show_list`)
+  - Bloqueio atual nesta máquina: Docker daemon indisponível → `db_enabled=false` impede P4/P5 REAL via `creative_drafts`/persistência.
 
 [2026-05-14 20:06]
 
@@ -525,6 +537,16 @@ Esta seção deve ser atualizada sempre que:
   - DB: lista de `generated_campaigns` agora permite “Selecionar” um registro para retomar o fluxo incremental (Campaign → AdSet → Ad) sem recriar a Campaign.
   - Logs: filtro por entidade (campaign/adset/ad/meta/db) e cópia do JSON respeita o filtro atual.
   - Navegação: atalhos exibem `OK/—` por etapa e botões “Ir para Etapa 2/3” fazem scroll.
+
+
+[2026-05-24 HH:mm]
+
+- App Meta publicado com sucesso após criação/deploy das páginas legais:
+  - `/politica-de-privacidade`
+  - `/termos-de-uso`
+  - `/exclusao-de-dados`
+- Decisão operacional: não trocar token agora; usar o token atual no backend para validar P4/P5 REAL.
+- Próxima ação: revalidar Creative REAL e Ad REAL pelo `/meta-test`.
 
 ## LEGADO / NÃO EXECUTAR
 

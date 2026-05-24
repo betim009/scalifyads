@@ -140,36 +140,59 @@ Fontes únicas (para reduzir drift):
 
 ## Operational Priorities
 
-Última atualização: [2026-05-20 19:33]
+Última atualização: [2026-05-24 11:04]
 
-- Manter `/meta-test` como fluxo prioritário e estável (não quebrar o lab).
-- Segurança Meta: toda criação REAL permanece obrigatoriamente `PAUSED` e token nunca vai ao frontend.
+- Manter `/meta-test` como fluxo prioritário e estável.
+- Segurança Meta mínima durante os testes:
+  - toda criação REAL deve permanecer obrigatoriamente `PAUSED`;
+  - token nunca deve ir para o frontend;
+  - token nunca deve ser commitado;
+  - token nunca deve aparecer em logs, prints públicos ou documentação.
 - Preservar fallback `STUB` e sinalização explícita de `REAL/STUB/FALLBACK` na UI para evitar “dado falso”.
-- Mudanças pequenas e verificáveis (evidência via curl/DB quando aplicável) com commit incremental + timestamps.
+- Mudanças pequenas e verificáveis, com evidência via build, curl, Graph, DB ou teste manual documentado.
+- Atualizar `PLANS.md` e `RUNBOOK.md` sempre que houver validação real, erro novo, bloqueio novo ou decisão operacional relevante.
+- `ARCHIVE.md` é apenas histórico e não deve ser usado como backlog ativo.
 
 FOCO ATUAL:
-- P13 Páginas legais para publicação do App Meta
-- Preparar deploy React/Vite na Hostinger com `.htaccess`
-- Publicar app Meta fora do Development Mode
-- Gerar novo token após publicação
-- Retomar validação P4/P5 REAL
+- Retomar validação P4/P5 REAL após publicação bem-sucedida do App Meta.
+- Usar o token atual no backend para teste controlado, sem trocar agora.
+- Validar Creative REAL.
+- Validar Ad REAL.
+- Confirmar status `PAUSED`.
+- Confirmar persistência no banco.
+- Confirmar leitura REAL via Graph.
+- Registrar evidências no `PLANS.md` e no `RUNBOOK.md`.
 
 P4/P5:
-- Continuar apenas no que for possível sem depender do App Meta em Live Mode.
-- Não marcar validações REAL finais como concluídas enquanto existir o bloqueio `error_subcode=1885183`.
+- O bloqueio anterior por App Meta em Development Mode deve ser revalidado.
+- Não assumir que `error_subcode=1885183` ainda permanece sem nova tentativa real.
+- Não marcar validações REAL como concluídas sem evidência real.
+- Se a Meta retornar novo erro, registrar o erro exato em `## Blockers`.
+- Se a Creative REAL funcionar, continuar imediatamente para validação do Ad REAL.
+- Se o Ad REAL funcionar, validar:
+  - creative vinculado;
+  - CTA;
+  - mídia;
+  - preview;
+  - status `PAUSED`;
+  - persistência;
+  - leitura via Graph.
+
+NÃO FAZER AGORA:
+- Trocar token antes de validar o fluxo REAL.
+- Implementar autenticação completa.
+- Fazer hardening de produção.
+- Refatorar segurança avançada.
+- Redesign completo.
+- Trocar design system.
+- Criar microsserviços.
+- Fazer refactor massivo sem necessidade operacional clara.
+- Bloquear execução apenas por recomendação preventiva de credenciais.
 
 GOVERNANÇA CONTÍNUA:
 - P6 governança deve continuar sendo aplicada durante todos os progress.
-
-NÃO FAZER AGORA:
-- redesign completo
-- troca de design system
-- microsserviços
-- evitar refactor massivo sem necessidade operacional clara
-- evitar mover arquitetura estável apenas por estética
-
-GOVERNANÇA CONTÍNUA:
-- P6 governança deve continuar sendo aplicada continuamente durante todos os progress
+- Toda alteração deve ser incremental, validável e registrada.
+- O Codex deve continuar trabalhando no próximo item executável e não parar por pendências externas já contornadas ou pendentes de nova validação.
 
 ## Execution Rules
 
@@ -332,14 +355,14 @@ Regras:
 - [x] Publicar Creative REAL a partir de `creative_drafts` (endpoint + UI) (commit: cac550e)
 - [x] `/meta-test`: consultar Creative REAL (Graph) para evidência operacional (commit: f3e7472)
 - [x] `/meta-test`: checklist P4 (Creative REAL) com evidência copiável em JSON (commit: b9154c7)
-- [ ] Validar creative REAL (BLOCKED: `error_subcode=1885183` / App Meta em Dev Mode; requer Live Mode + roles) (prep: `force republish` no UI + evidência imediata do publish; validação REAL ainda pendente) (commits: 98cc5c0, 8bed865)
+- [ ] Validar creative REAL (PENDENTE: revalidar após publicação bem-sucedida do App Meta; antes falhava com `error_subcode=1885183`) (prep: `force republish` no UI + evidência imediata do publish; validação REAL ainda pendente) (commits: 98cc5c0, 8bed865)
 - [x] `/meta-test`: quando publish falhar com `error_subcode=1885183`, exibir callout de mitigação (App Live + roles) (commit: 1253b69)
 - [x] Exibir preview operacional (preview texto + mídia) (commit: f8689c5)
 - [x] Preparar variações futuras (duplicar creative drafts) (commits: ba2322f, 41c1d13)
 
 ### P5 — Ad REAL mínimo
 
-- [ ] Validar criação REAL de Ad (BLOCKED: `error_subcode=1885183` / App Meta em Dev Mode; requer Live Mode + roles)
+- [ ] Validar criação REAL de Ad (PENDENTE: revalidar após publicação bem-sucedida do App Meta; antes falhava com `error_subcode=1885183`)
 - [ ] Validar creative vinculado (BLOCKED: depende de criação REAL do Ad)
 - [ ] Validar CTA (BLOCKED: depende de criação REAL do Ad)
 - [ ] Validar mídia (BLOCKED: depende de criação REAL do Ad)
@@ -471,7 +494,10 @@ Objetivo:
 Criar páginas legais públicas no frontend React/Vite para preencher os dados obrigatórios do App Meta e permitir a tentativa de publicação do app fora do Development Mode.
 
 Contexto:
-O App Meta ainda está como “Não publicado” / Development Mode. Para tentar publicar o app, a Meta exige URLs públicas de Política de Privacidade, Termos de Serviço e Exclusão de Dados do Usuário.
+O App Meta foi publicado com sucesso após a conclusão do P13 (páginas legais + deploy). O painel da Meta aceitou a publicação do app. A partir de agora, o foco desta execução é **revalidar P4/P5 REAL** (Creative REAL + Ad REAL) e confirmar se o erro antigo `error_subcode=1885183` ainda ocorre.
+
+Status atual:
+- Concluído (App Meta publicado/aceito pela Meta). Próximo passo: retomar validações P4/P5 REAL pelo `/meta-test`.
 
 Como o projeto será hospedado na Hostinger, também é necessário garantir que as rotas do React funcionem ao serem acessadas diretamente pela URL pública. Para isso, o deploy deve incluir um arquivo `.htaccess` configurado para SPA, redirecionando rotas internas para `index.html`.
 
@@ -666,48 +692,142 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 - Toda criação REAL deve permanecer `PAUSED`.
 - Token Meta nunca deve ir para o frontend.
 - Fallback `STUB` deve ser preservado.
-- P4/P5 REAL dependem do desbloqueio do App Meta em Live Mode.
+- P4/P5 REAL devem ser revalidados após publicação do App Meta (não assumir bloqueio antigo sem nova tentativa REAL).
 - Próxima evolução operacional: P8 → P9 → P10 → P11 → P12.
+
+- [2026-05-24 11:04] Decisão: durante a fase atual, a prioridade é destravar o fluxo REAL funcional da Meta antes de endurecer credenciais e segurança final.
+  Motivo: o objetivo imediato é validar tecnicamente o fluxo Campaign → AdSet → Creative → Ad funcionando ponta a ponta. O token atual pode continuar sendo usado no backend para testes controlados, pois será substituído futuramente antes de produção.
+  Regras mínimas:
+  - Não enviar token para o frontend.
+  - Não commitar token no Git.
+  - Não expor token em prints, logs públicos ou documentação.
+  - Não bloquear P4/P5 apenas por recomendação de trocar token agora.
+  - Após o fluxo REAL estar funcional, abrir fase específica de hardening/rotação de credenciais.
 
 ## Blockers
 
-Última atualização: [2026-05-18 14:46]
+Última atualização: [2026-05-24 11:04]
 
-- Execução com DB/stack depende do daemon do Docker estar rodando (`docker compose up -d`). Ver `RUNBOOK.md`.
-- P4/P5 (Creative/Ad REAL) bloqueados ao publicar Creative REAL: Meta retorna `error_subcode=1885183` (“app em modo de desenvolvimento”) no `POST /api/meta/creative-drafts/:id/publish`.
-  - Evidência (ambiente atual): `POST /api/meta/validate` OK; `GET /api/meta/status` indica `has_page_id=true`; `GET /api/meta/pages?metaAdAccountId=act_*` retorna Page(s) e `GET /api/meta/pages/:id` valida leitura.
-  - Mitigação (fora do código): colocar o App Meta em modo público (Live) e/ou garantir que o usuário/token esteja em roles adequados do app (admin/developer/tester) para permitir criação de AdCreative/Ad.
+- Execução com DB/stack depende do Docker daemon estar rodando.
+  - Ação: rodar `docker compose up -d`.
+  - Referência: ver `RUNBOOK.md` em `### Setup rápido (Docker + DB)`.
+  - Evidência nesta execução:
+    - [2026-05-24 11:04] `docker compose ps` → falha: `Cannot connect to the Docker daemon ... Is the docker daemon running?`
 
+- O App Meta foi publicado com sucesso após a conclusão do P13.
+  - As páginas legais foram criadas no frontend React/Vite.
+  - O deploy na Hostinger foi realizado.
+  - O painel da Meta aceitou a publicação do app.
+  - Portanto, o bloqueio anterior “App Meta ainda em Development Mode” deve ser considerado **removido** (até que nova evidência real indique o contrário).
 
-### Meta Dev Mode / Creative REAL / Ad REAL
+- O erro anterior `error_subcode=1885183` deve ser revalidado.
+  - Antes da publicação do App Meta, a criação/publicação de Creative REAL falhava com `error_subcode=1885183`.
+  - Após a publicação do app, esse erro não deve ser assumido como ativo sem nova tentativa real.
+  - Próxima ação: testar novamente a publicação de Creative REAL pelo `/meta-test`.
+
+- P4/P5 REAL ainda não podem ser marcados como concluídos sem nova evidência.
+  - Creative REAL precisa ser validado novamente.
+  - Ad REAL precisa ser validado novamente.
+  - A validação deve registrar:
+    - payload/resposta segura;
+    - `meta_creative_id`, quando existir;
+    - `meta_ad_id`, quando existir;
+    - status/effective_status;
+    - persistência no banco;
+    - leitura via Graph;
+    - evidência copiável no `/meta-test`, quando disponível.
+
+- Decisão operacional atual:
+  - Não trocar token agora.
+  - Usar o token atual no backend para teste controlado.
+  - O token será trocado futuramente, após o fluxo REAL estar funcional.
+  - Essa decisão não remove as regras mínimas:
+    - token não vai ao frontend;
+    - token não entra no Git;
+    - token não aparece em logs;
+    - token não entra em prints ou documentação.
+
+### Meta App publicado / Revalidação P4/P5 REAL
 
 Status atual:
-- Campaign REAL validado
-- AdSet REAL validado
-- META_ACCESS_TOKEN configurado
-- META_PAGE_ID configurado
-- META_AD_ACCOUNT_ID configurado
-- `/api/meta/status` validado
-- Fluxo progressivo operacional funcionando
 
-Bloqueio atual:
+- App Meta publicado com sucesso.
+- P13 implementado:
+  - `/politica-de-privacidade`
+  - `/termos-de-uso`
+  - `/exclusao-de-dados`
+  - `.htaccess` para Hostinger
+- Campaign REAL já validada anteriormente.
+- AdSet REAL já validado anteriormente.
+- META_ACCESS_TOKEN configurado no backend.
+- META_PAGE_ID configurado.
+- META_AD_ACCOUNT_ID configurado.
+- `/api/meta/status` já possui playbook de validação no `RUNBOOK.md`.
+- `/api/meta/validate` já possui playbook de validação no `RUNBOOK.md`.
+- Fluxo progressivo `/meta-test` é o caminho principal para revalidação.
+- Evidência nesta execução:
+  - [2026-05-24 11:04] `GET /api/meta/status` OK (`has_access_token=true`, `has_page_id=true`, `db_enabled=false`)
+  - [2026-05-24 11:04] `POST /api/meta/validate {}` OK (Graph `/me`)
+
+Bloqueio anterior:
+
 - `error_subcode=1885183`
-- App Meta ainda em `Development Mode`
+- Causa provável anterior: App Meta em Development Mode.
+
+Novo estado:
+
+- App Meta publicado.
+- Bloqueio anterior precisa ser testado novamente.
+- Não considerar P4/P5 desbloqueados até obter evidência real.
+- Não considerar P4/P5 bloqueados pelo erro antigo sem nova tentativa.
 
 Impacto:
-- Creative REAL parcialmente bloqueado
-- Ad REAL parcialmente bloqueado
-- P4/P5 REAL não podem ser concluídos com evidência final ainda
+
+- Creative REAL pode estar desbloqueado agora.
+- Ad REAL pode estar desbloqueado agora.
+- P4/P5 devem ser retomados imediatamente pelo `/meta-test`.
+
+Próxima ação:
+
+1. Subir stack, se necessário:
+   - `docker compose up -d`
+
+2. Validar backend:
+   - `curl http://localhost:3001/healthz`
+
+3. Validar status Meta:
+   - `curl http://localhost:3001/api/meta/status`
+
+4. Validar token atual:
+   - `curl -X POST http://localhost:3001/api/meta/validate -H "Content-Type: application/json" -d '{}'`
+
+5. Abrir `/meta-test`.
+
+6. Revalidar Creative REAL:
+   - selecionar `generatedCampaignId`;
+   - selecionar/criar `creative_draft`;
+   - garantir `destinationUrl`;
+   - garantir `pageId`;
+   - publicar Creative REAL;
+   - consultar Creative no Graph.
+
+7. Revalidar Ad REAL:
+   - usar `creativeDraftId` com `meta_creative_id`;
+   - criar Ad REAL;
+   - confirmar `PAUSED`;
+   - consultar Ad no Graph;
+   - confirmar persistência no DB.
 
 Regras:
-- Não marcar P4/P5 REAL como concluídos sem evidência REAL
-- Não inventar validações
-- Continuar evolução operacional normalmente
 
-Próxima ação futura:
-- mover App Meta para `Live Mode`
-- revisar permissões/roles
-- retomar validações REAL finais
+- Não marcar P4/P5 REAL como concluídos sem evidência real.
+- Não inventar validações.
+- Se surgir novo erro da Meta, registrar o erro exato nesta seção.
+- Se o erro `1885183` desaparecer, atualizar esta seção removendo o bloqueio antigo.
+- Se Creative REAL funcionar, atualizar P4.
+- Se Ad REAL funcionar, atualizar P5.
+- Se tudo funcionar, criar próxima fase para hardening/rotação de credenciais antes de produção.
+
 
 ## Risks
 
