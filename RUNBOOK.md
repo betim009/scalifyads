@@ -329,6 +329,17 @@ Esta seção deve ser atualizada sempre que:
     - `GET /api/meta/diagnostics` → permissões evidenciadas (ex.: `ads_management`, `pages_show_list`)
 - Bloqueio atual nesta máquina: Docker daemon indisponível → `db_enabled=false` impede P4/P5 REAL via `creative_drafts`/persistência.
 
+[2026-05-24 13:00]
+
+- Contexto: forma de pagamento configurada no Ad Account `act_259174718403969` (bloqueio `error_subcode=1359188` removido).
+- Token/segurança: sem troca de token; token permanece apenas no backend; nenhuma credencial em logs/docs.
+- P5 (Ad REAL mínimo) revalidado com sucesso (tudo `PAUSED`):
+  - `POST /api/meta/ads` (REAL) com `generatedCampaignId=59ac9e05-59a3-41ee-aee7-b7c4e93f33ed` + `creativeDraftId=1a989682-9326-4010-940e-875945a0c8de` (fallback `creative_id_source=draft`)
+  - Resultado: `meta_ad_id=120247685122480596`, `status=PAUSED` (`effective_status=IN_PROCESS`)
+  - Persistência DB: update em `generated_campaigns.meta_ad_id` + insert em `generated_ads` (`run_mode=REAL`, `status=PAUSED`)
+  - Leitura Graph (via backend): `GET /api/meta/ads/120247685122480596` → `ok=true`
+  - Preview (se disponível): `GET /api/meta/ads/120247685122480596/previews?adFormat=DESKTOP_FEED_STANDARD` → `ok=true` (iframe retornado)
+
 [2026-05-24 11:12]
 
 - Ambiente: Docker voltou a operar; DB habilitado no backend (`db_enabled=true`).

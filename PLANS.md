@@ -367,16 +367,24 @@ Regras:
 
 ### P5 — Ad REAL mínimo
 
-- [ ] Validar criação REAL de Ad (BLOCKED: cobrança/forma de pagamento ausente no Ad Account; erro Meta `error_subcode=1359188`) [2026-05-24 11:12]
-  - `error_user_title`: `Nenhuma forma de pagamento`
-  - `error_user_msg`: “Atualize a forma de pagamento…”
-- [ ] Validar creative vinculado (BLOCKED: depende de criação REAL do Ad)
-- [ ] Validar CTA (BLOCKED: depende de criação REAL do Ad)
-- [ ] Validar mídia (BLOCKED: depende de criação REAL do Ad)
-- [ ] Validar preview (BLOCKED: depende de criação REAL do Ad)
-- [ ] Validar status PAUSED (BLOCKED: depende de criação REAL do Ad)
-- [ ] Validar persistência do Ad (BLOCKED: depende de criação REAL do Ad)
-- [ ] Validar leitura REAL do Graph (BLOCKED: depende de criação REAL do Ad)
+- [x] Validar criação REAL de Ad (revalidado após configurar forma de pagamento no Ad Account) [2026-05-24 13:00]
+  - `meta_ad_account_id`: `act_259174718403969`
+  - `generatedCampaignId`: `59ac9e05-59a3-41ee-aee7-b7c4e93f33ed`
+  - `creativeDraftId`: `1a989682-9326-4010-940e-875945a0c8de`
+  - `meta_creative_id`: `1322965599841590` (`creative_id_source=draft`)
+  - Create: `POST /api/meta/ads` (mode `REAL`) → `ok=true` / `meta_ad_id=120247685122480596`
+  - Status: `status=PAUSED` (no create e no Graph)
+- [x] Validar creative vinculado (Ad → `creative.id=1322965599841590`) [2026-05-24 13:00]
+- [ ] Validar CTA (pendente: validar via inspeção manual no preview / campos do creative)
+- [ ] Validar mídia (pendente: validar via inspeção manual no preview / campos do creative)
+- [x] Validar preview (Ad) [2026-05-24 13:00]
+  - Preview: `GET /api/meta/ads/120247685122480596/previews?adFormat=DESKTOP_FEED_STANDARD` → `ok=true` (iframe retornado)
+- [x] Validar status PAUSED [2026-05-24 13:00]
+  - Graph read: `GET /api/meta/ads/120247685122480596` → `status=PAUSED` (`effective_status=IN_PROCESS`)
+- [x] Validar persistência do Ad [2026-05-24 13:00]
+  - DB: `generated_campaigns.meta_ad_id=120247685122480596` e insert em `generated_ads` (`run_mode=REAL`, `status=PAUSED`)
+- [x] Validar leitura REAL do Graph [2026-05-24 13:00]
+  - Graph read: `GET /api/meta/ads/120247685122480596` → `ok=true`
 - [x] `/meta-test`: checklist operacional P5 (evidência copiável em JSON) (commit: 9c0eea5)
 - [x] `/meta-test`: checklist P5 evidencia dependências (Campaign/AdSet) + próximos passos (anchors) (commit: 3736f9a)
 - [x] `/meta-test`: previews (Graph) para Creative/Ad (`/api/meta/*/:id/previews`, HTML/iframe) (commit: 893321b)
