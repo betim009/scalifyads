@@ -140,75 +140,70 @@ Fontes únicas (para reduzir drift):
 
 ## Operational Priorities
 
-Última atualização: [2026-05-24 11:04]
+Última atualização: [2026-05-25 18:57]
 
-- Manter `/meta-test` como fluxo prioritário e estável.
-- Segurança Meta mínima durante os testes:
-  - toda criação REAL deve permanecer obrigatoriamente `PAUSED`;
-  - token nunca deve ir para o frontend;
-  - token nunca deve ser commitado;
-  - token nunca deve aparecer em logs, prints públicos ou documentação.
-- Preservar fallback `STUB` e sinalização explícita de `REAL/STUB/FALLBACK` na UI para evitar “dado falso”.
-- Mudanças pequenas e verificáveis, com evidência via build, curl, Graph, DB ou teste manual documentado.
-- Atualizar `PLANS.md` e `RUNBOOK.md` sempre que houver validação real, erro novo, bloqueio novo ou decisão operacional relevante.
+Prioridade operacional (estado real atual):
+
+- O fluxo REAL completo já foi validado ponta a ponta (Campaign REAL → AdSet REAL → Creative REAL → Ad REAL).
+- Toda criação REAL deve continuar obrigatoriamente `PAUSED` (guardrail ativo e obrigatório).
+- Token Meta nunca deve ir para o frontend, nunca deve ser commitado e nunca deve aparecer em logs/documentos.
+- Preservar fallback `STUB` e sinalização explícita de `REAL/STUB/FALLBACK` na UI.
+- Mudanças devem ser pequenas, incrementais, verificáveis e sempre registradas com evidência.
 - `ARCHIVE.md` é apenas histórico e não deve ser usado como backlog ativo.
 
-FOCO ATUAL:
-- Retomar validação P4/P5 REAL após publicação bem-sucedida do App Meta.
-- Usar o token atual no backend para teste controlado, sem trocar agora.
-- Validar Creative REAL.
-- Validar Ad REAL.
-- Confirmar status `PAUSED`.
-- Confirmar persistência no banco.
-- Confirmar leitura REAL via Graph.
-- Registrar evidências no `PLANS.md` e no `RUNBOOK.md`.
+Fases atuais (ordem obrigatória):
 
-P4/P5:
-- O bloqueio anterior por App Meta em Development Mode deve ser revalidado.
-- Não assumir que `error_subcode=1885183` ainda permanece sem nova tentativa real.
-- Não marcar validações REAL como concluídas sem evidência real.
-- Se a Meta retornar novo erro, registrar o erro exato em `## Blockers`.
-- Se a Creative REAL funcionar, continuar imediatamente para validação do Ad REAL.
-- Se o Ad REAL funcionar, validar:
-  - creative vinculado;
-  - CTA;
-  - mídia;
-  - preview;
-  - status `PAUSED`;
-  - persistência;
-  - leitura via Graph.
-
-NÃO FAZER AGORA:
-- Trocar token antes de validar o fluxo REAL.
-- Implementar autenticação completa.
-- Fazer hardening de produção.
-- Refatorar segurança avançada.
-- Redesign completo.
-- Trocar design system.
-- Criar microsserviços.
-- Fazer refactor massivo sem necessidade operacional clara.
-- Bloquear execução apenas por recomendação preventiva de credenciais.
-
-GOVERNANÇA CONTÍNUA:
-- P6 governança deve continuar sendo aplicada durante todos os progress.
-- Toda alteração deve ser incremental, validável e registrada.
-- O Codex deve continuar trabalhando no próximo item executável e não parar por pendências externas já contornadas ou pendentes de nova validação.
+- P14 — Auditoria e estabilização pós-fluxo REAL.
+- P15 — Demo operacional controlada.
+- P16 — Hardening mínimo e rotação futura.
+- P17 — Preparação do fluxo operacional limpo.
 
 ## Execution Rules
 
-Última atualização: [2026-05-18 19:33]
+Última atualização: [2026-05-25 18:57]
 
-- Sempre ler primeiro: Snapshot, Operational Priorities, Backlog Ativo, Decision Log, Architecture Rules, Blockers e Risks.
-- Nunca executar backlog legado do `ARCHIVE.md` (histórico apenas).
-- Prioridade de execução:
-  - Primeiro: concluir qualquer item aberto de P4/P5 que não dependa do bloqueio externo da Meta.
-  - Depois: executar P8 → P9 → P10 → P11 → P12.
-  - P6 deve ser aplicado continuamente.
-- Se um item depender do App Meta em Live Mode, registrar blocker e seguir para o próximo item executável.
-- Não parar a execução apenas porque P4/P5 possuem validações REAL bloqueadas externamente.
-- Sempre priorizar `/meta-test`; “Nova Campanha” é legado e deve apenas ser mantido compatível.
-- Guardrails Meta: criação REAL sempre `PAUSED`; token nunca no frontend; nunca remover fallback `STUB`.
-- Por item: implementar incrementalmente → validar → atualizar docs/timestamps → marcar progresso no `PLANS.md` → registrar decisão relevante → commit incremental claro.
+- Sempre ler primeiro:
+  - Snapshot;
+  - Operational Priorities;
+  - Backlog Ativo;
+  - Decision Log;
+  - Architecture Rules;
+  - Blockers;
+  - Risks.
+
+- Nunca executar backlog legado do `ARCHIVE.md`.
+- `PLANS.md` é a única fonte oficial de backlog ativo.
+- `RUNBOOK.md` é a fonte de procedimentos, comandos e validações.
+- `ARCHIVE.md` é apenas histórico.
+
+Prioridade de execução atual:
+
+1. Executar P14 — Auditoria e estabilização pós-fluxo REAL.
+2. Depois executar P15 — Demo operacional controlada.
+3. Depois executar P16 — Hardening mínimo e rotação futura de credenciais.
+4. Depois executar P17 — Preparação do fluxo operacional limpo.
+
+Regras obrigatórias:
+
+- Toda criação REAL deve permanecer `PAUSED`.
+- Nunca criar Campaign, AdSet ou Ad como `ACTIVE`.
+- Nunca enviar token ao frontend.
+- Nunca commitar credenciais.
+- Nunca imprimir token em logs.
+- Nunca remover fallback `STUB`.
+- Nunca executar checklists antigos do `ARCHIVE.md`.
+- Não fazer refactor massivo sem necessidade operacional clara.
+- Não criar feature nova antes de concluir auditoria/estabilização.
+
+Por item executado:
+
+1. Implementar mudança pequena.
+2. Validar com build, curl, Graph, DB ou teste manual documentado.
+3. Atualizar `PLANS.md` com timestamp.
+4. Atualizar `RUNBOOK.md` apenas se houver novo procedimento, comando ou evidência operacional.
+5. Registrar decisão relevante no `Decision Log`.
+6. Criar commit incremental claro.
+7. Continuar para o próximo item executável.
 
 ## Backlog Ativo (ÚNICO)
 
@@ -695,6 +690,216 @@ Validação executada (local):
 
 ---
 
+### P14 — Auditoria e estabilização pós-fluxo REAL
+
+Última atualização: [2026-05-25 18:57]
+
+Objetivo:
+Consolidar o fluxo REAL completo validado com a Meta Marketing API, garantindo que Campaign, AdSet, Creative e Ad possam ser auditados, repetidos, exibidos e mantidos sempre `PAUSED` antes de avançar para demo, hardening ou produção.
+
+Contexto:
+O projeto já validou o fluxo REAL completo:
+
+Campaign REAL → AdSet REAL → Creative REAL → Ad REAL
+
+Evidências já registradas:
+
+- Campaign REAL criada.
+- AdSet REAL criado.
+- Creative REAL publicado.
+- Ad REAL criado.
+- Ad criado como `PAUSED`.
+- Persistência no banco confirmada.
+- Graph read confirmado.
+- Preview retornado.
+- Ads Manager exibindo objetos criados e sem gasto registrado.
+
+Regras:
+
+- Não criar novas features grandes nesta fase.
+- Não fazer redesign.
+- Não trocar token agora.
+- Não implementar autenticação completa agora.
+- Não ativar campanhas, conjuntos ou anúncios.
+- Não criar objetos REAL como `ACTIVE`.
+- Não remover fallback `STUB`.
+- Não alterar arquitetura sem necessidade operacional clara.
+- Toda validação deve gerar evidência objetiva.
+
+Backlog:
+
+- [ ] Atualizar Snapshot do `PLANS.md` para refletir o fluxo REAL completo validado.
+- [ ] Atualizar `Operational Priorities` para remover foco antigo em P4/P5.
+- [ ] Atualizar `Execution Rules` para priorizar P14/P15/P16/P17.
+- [ ] Limpar `Blockers` antigos já resolvidos:
+  - App Meta em Development Mode;
+  - erro `1885183`;
+  - ausência de forma de pagamento;
+  - erro `1359188`;
+  - P4/P5 bloqueados.
+- [ ] Manter os erros antigos apenas como histórico resolvido.
+- [ ] Confirmar que P4 está concluído com evidência suficiente.
+- [ ] Confirmar que P5 está concluído com evidência suficiente.
+- [ ] Validar novamente que o backend força `PAUSED` na criação REAL de Campaign.
+- [ ] Validar novamente que o backend força `PAUSED` na criação REAL de AdSet.
+- [ ] Validar novamente que o backend força `PAUSED` na criação REAL de Ad.
+- [ ] Verificar se o frontend não oferece ação clara para criar `ACTIVE`.
+- [ ] Verificar se o frontend não envia token em nenhuma chamada.
+- [ ] Conferir se logs não expõem token, App Secret ou credenciais.
+- [ ] Conferir persistência mínima no banco:
+  - `generated_campaigns`;
+  - `generated_adsets`;
+  - `generated_ads`;
+  - `creative_drafts`;
+  - `ops_logs`.
+- [ ] Conferir se `/meta-test` mostra evidência suficiente de:
+  - Campaign;
+  - AdSet;
+  - Creative;
+  - Ad;
+  - Graph;
+  - Preview;
+  - persistência.
+- [ ] Criar ou atualizar `PROJECT_STATUS.md` com o estado atual pós-P5.
+- [ ] Criar ou atualizar `OPERATING_FLOW.md` com exemplos práticos de preenchimento.
+- [ ] Criar checklist de segurança mínima antes de qualquer demo.
+- [ ] Criar commit incremental.
+
+Critérios de aceite:
+
+- Documentação não trata mais P4/P5 como bloqueados.
+- Blockers antigos estão movidos para histórico/resolvidos.
+- Guardrail `PAUSED` foi auditado.
+- O fluxo REAL completo está descrito como validado.
+- Existe checklist claro para repetir o fluxo.
+- Existe base documental para demo controlada.
+
+### P15 — Demo operacional controlada
+
+Última atualização: [2026-05-25 18:57]
+
+Objetivo:
+Preparar um roteiro seguro e repetível para demonstrar o fluxo REAL completo sem improviso e sem risco de ativação acidental.
+
+Backlog:
+
+- [ ] Criar `DEMO_SCRIPT.md`.
+- [ ] Documentar roteiro da demo:
+  - abrir `/meta-test`;
+  - validar backend;
+  - validar Meta Ready;
+  - criar Campaign REAL `PAUSED`;
+  - criar AdSet REAL `PAUSED`;
+  - criar Creative Draft;
+  - publicar Creative REAL;
+  - criar Ad REAL `PAUSED`;
+  - consultar Graph;
+  - abrir preview;
+  - conferir Ads Manager;
+  - mostrar persistência/logs.
+- [ ] Criar exemplos de nomes para demo:
+  - Campaign;
+  - AdSet;
+  - Creative;
+  - Ad.
+- [ ] Criar exemplos de textos para creative.
+- [ ] Criar exemplos de URL de destino.
+- [ ] Criar checklist “antes de iniciar demo”.
+- [ ] Criar checklist “após terminar demo”.
+- [ ] Garantir que o roteiro reforça:
+  - não ativar toggles;
+  - não criar `ACTIVE`;
+  - não expor token;
+  - validar `Valor usado = R$ 0,00` quando conferir no Ads Manager.
+- [ ] Atualizar `RUNBOOK.md` com link/referência ao roteiro de demo.
+- [ ] Criar commit incremental.
+
+Critérios de aceite:
+
+- Uma pessoa consegue repetir a demo seguindo o documento.
+- O roteiro não depende de memória da conversa.
+- O roteiro deixa claro que tudo deve permanecer `PAUSED`.
+
+### P16 — Hardening mínimo e rotação futura de credenciais
+
+Última atualização: [2026-05-25 18:57]
+
+Objetivo:
+Preparar a transição do ambiente de teste controlado para uma base mais segura antes de qualquer uso real por cliente.
+
+Regras:
+
+- Não executar rotação de token sem decisão explícita do operador.
+- Não quebrar o fluxo REAL já validado.
+- Não remover o token atual sem garantir substituição funcional.
+- Esta fase pode preparar documentação e checks, mas mudanças sensíveis exigem validação cuidadosa.
+
+Backlog:
+
+- [ ] Criar checklist de rotação futura do token Meta.
+- [ ] Verificar se `.env` real está fora do Git.
+- [ ] Verificar `.gitignore` para arquivos sensíveis.
+- [ ] Auditar logs para garantir que token/App Secret não aparecem.
+- [ ] Auditar responses do backend para garantir que token não volta ao frontend.
+- [ ] Criar orientação para separar ambientes:
+  - local;
+  - teste;
+  - produção futura.
+- [ ] Criar checklist de permissões mínimas Meta.
+- [ ] Criar plano de rotação:
+  - gerar novo token;
+  - atualizar backend/env;
+  - reiniciar backend;
+  - validar `/api/meta/status`;
+  - validar `/api/meta/validate`;
+  - validar criação STUB;
+  - validar criação REAL `PAUSED`.
+- [ ] Documentar que a rotação só deve ser executada após autorização explícita.
+- [ ] Criar commit incremental.
+
+Critérios de aceite:
+
+- Existe plano claro de hardening.
+- Existe checklist de rotação.
+- Nenhum segredo é exposto.
+- O fluxo atual não é quebrado.
+
+
+### P17 — Preparação do fluxo operacional limpo
+
+Última atualização: [2026-05-25 18:57]
+
+Objetivo:
+Começar a separar o laboratório técnico `/meta-test` de um futuro fluxo operacional mais simples para uso humano/cliente, sem remover o lab atual.
+
+Contexto:
+O `/meta-test` é poderoso, mas técnico. Ele deve continuar existindo como console de diagnóstico. O próximo passo é planejar uma experiência mais limpa, guiada e segura.
+
+Backlog:
+
+- [ ] Mapear quais partes do `/meta-test` são operação normal.
+- [ ] Mapear quais partes do `/meta-test` são troubleshooting/debug.
+- [ ] Propor uma estrutura futura de fluxo limpo:
+  - Etapa 1: Dados da campanha;
+  - Etapa 2: País/público/orçamento;
+  - Etapa 3: Creative;
+  - Etapa 4: Revisão;
+  - Etapa 5: Criar tudo `PAUSED`.
+- [ ] Criar proposta de rota futura:
+  - `/console`;
+  - ou `/campaign-builder`;
+  - ou `/nova-campanha-real`.
+- [ ] Não implementar ainda o wizard completo.
+- [ ] Criar documentação de proposta antes de codar.
+- [ ] Garantir que `/meta-test` continue como laboratório técnico.
+- [ ] Criar commit incremental.
+
+Critérios de aceite:
+
+- Existe proposta clara de separação entre operação e debug.
+- Nenhuma funcionalidade existente é removida.
+- O projeto fica pronto para evoluir para uma UI mais amigável sem perder o laboratório técnico.
+
 
 ## Decision Log (Ativo)
 
@@ -721,100 +926,46 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 
 ## Blockers
 
-Última atualização: [2026-05-24 11:04]
+Última atualização: [2026-05-25 18:57]
 
-- Execução com DB/stack depende do Docker daemon estar rodando.
-  - Ação: rodar `docker compose up -d`.
-  - Referência: ver `RUNBOOK.md` em `### Setup rápido (Docker + DB)`.
-  - Evidência nesta execução:
-    - [2026-05-24 11:04] `docker compose ps` → falha: `Cannot connect to the Docker daemon ... Is the docker daemon running?`
+### Blockers ativos
 
-- O App Meta foi publicado com sucesso após a conclusão do P13.
-  - As páginas legais foram criadas no frontend React/Vite.
-  - O deploy na Hostinger foi realizado.
-  - O painel da Meta aceitou a publicação do app.
-  - Portanto, o bloqueio anterior “App Meta ainda em Development Mode” deve ser considerado **removido** (até que nova evidência real indique o contrário).
+- Nenhum blocker crítico ativo no fluxo REAL principal neste momento.
 
-- O erro anterior `error_subcode=1885183` deve ser revalidado.
-  - Antes da publicação do App Meta, a criação/publicação de Creative REAL falhava com `error_subcode=1885183`.
-  - Após a publicação do app, esse erro não deve ser assumido como ativo sem nova tentativa real.
-  - Próxima ação: testar novamente a publicação de Creative REAL pelo `/meta-test`.
-  - Evidência nesta execução:
-    - [2026-05-24 11:12] `POST /api/meta/creative-drafts/:id/publish` → OK (Creative REAL publicado; sem `1885183`).
+### Blockers resolvidos recentemente
 
-- P4/P5 REAL ainda não podem ser marcados como concluídos sem nova evidência.
-  - Creative REAL precisa ser validado novamente.
-  - Ad REAL precisa ser validado novamente.
-  - A validação deve registrar:
-    - payload/resposta segura;
-    - `meta_creative_id`, quando existir;
-    - `meta_ad_id`, quando existir;
-    - status/effective_status;
-    - persistência no banco;
-    - leitura via Graph;
-    - evidência copiável no `/meta-test`, quando disponível.
+- App Meta em Development Mode:
+  - Resolvido após criação das páginas legais e publicação do App Meta.
+  - Erro antigo relacionado: `error_subcode=1885183`.
+  - Resultado: Creative REAL foi publicado com sucesso após publicação do app.
 
-- Decisão operacional atual:
-  - Não trocar token agora.
-  - Usar o token atual no backend para teste controlado.
-  - O token será trocado futuramente, após o fluxo REAL estar funcional.
-  - Essa decisão não remove as regras mínimas:
-    - token não vai ao frontend;
-    - token não entra no Git;
-    - token não aparece em logs;
-    - token não entra em prints ou documentação.
+- Forma de pagamento ausente na Ad Account:
+  - Resolvido após configuração de forma de pagamento na conta `act_259174718403969`.
+  - Erro antigo relacionado: `error_subcode=1359188`.
+  - Resultado: Ad REAL foi criado com sucesso como `PAUSED`.
 
-- Bloqueio novo (P5 — Ad REAL):
-  - [2026-05-24 11:12] `POST /api/meta/ads` (REAL) falha com `error_subcode=1359188`
-    - `error_user_title`: `Nenhuma forma de pagamento`
-    - `error_user_msg`: “Atualize a forma de pagamento…”
-  - Impacto: não foi possível criar Ad REAL nesta Ad Account nesta execução.
-  - Próxima ação: regularizar forma de pagamento / billing no Ads Manager e revalidar P5.
+- P4 Creative REAL:
+  - Resolvido.
+  - Creative REAL publicado e consultado via Graph.
 
-### Meta App publicado / Revalidação P4/P5 REAL
+- P5 Ad REAL:
+  - Resolvido.
+  - Ad REAL criado como `PAUSED`.
+  - Persistência no banco confirmada.
+  - Graph read confirmado.
+  - Preview retornado.
 
-Status atual:
+### Regras de segurança que continuam ativas
 
-- App Meta publicado com sucesso.
-- P13 implementado:
-  - `/politica-de-privacidade`
-  - `/termos-de-uso`
-  - `/exclusao-de-dados`
-  - `.htaccess` para Hostinger
-- Campaign REAL já validada anteriormente.
-- AdSet REAL já validado anteriormente.
-- META_ACCESS_TOKEN configurado no backend.
-- META_PAGE_ID configurado.
-- META_AD_ACCOUNT_ID configurado.
-- `/api/meta/status` já possui playbook de validação no `RUNBOOK.md`.
-- `/api/meta/validate` já possui playbook de validação no `RUNBOOK.md`.
-- Fluxo progressivo `/meta-test` é o caminho principal para revalidação.
-- Evidência nesta execução:
-  - [2026-05-24 11:04] `GET /api/meta/status` OK (`has_access_token=true`, `has_page_id=true`, `db_enabled=false`)
-  - [2026-05-24 11:04] `POST /api/meta/validate {}` OK (Graph `/me`)
+- Mesmo sem blocker ativo, toda criação REAL deve continuar `PAUSED`.
+- Não ativar manualmente objetos no Ads Manager durante testes.
+- Não criar fluxos que permitam `ACTIVE`.
+- Não remover validações de segurança.
+- Não expor token no frontend, logs, commits ou documentação.
 
-Bloqueio anterior:
+### Próxima ação
 
-- `error_subcode=1885183`
-- Causa provável anterior: App Meta em Development Mode.
-
-Novo estado:
-
-- App Meta publicado.
-- Bloqueio anterior precisa ser testado novamente.
-- Não considerar P4/P5 desbloqueados até obter evidência real.
-- Não considerar P4/P5 bloqueados pelo erro antigo sem nova tentativa.
-
-Impacto:
-
-- Creative REAL pode estar desbloqueado agora.
-- Ad REAL pode estar desbloqueado agora.
-- P4/P5 devem ser retomados imediatamente pelo `/meta-test`.
-
-Próxima ação:
-
-1. Subir stack, se necessário:
-   - `docker compose up -d`
+Executar P14 — Auditoria e estabilização pós-fluxo REAL para consolidar evidências, limpar documentação e garantir repetibilidade segura.
 
 2. Validar backend:
    - `curl http://localhost:3001/healthz`
