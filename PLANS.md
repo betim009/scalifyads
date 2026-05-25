@@ -504,10 +504,11 @@ Objetivo:
 Criar páginas legais públicas no frontend React/Vite para preencher os dados obrigatórios do App Meta e permitir a tentativa de publicação do app fora do Development Mode.
 
 Contexto:
-O App Meta foi publicado com sucesso após a conclusão do P13 (páginas legais + deploy). O painel da Meta aceitou a publicação do app. A partir de agora, o foco desta execução é **revalidar P4/P5 REAL** (Creative REAL + Ad REAL) e confirmar se o erro antigo `error_subcode=1885183` ainda ocorre.
+O App Meta foi publicado com sucesso após a conclusão do P13 (páginas legais + deploy). O painel da Meta aceitou a publicação do app. Com isso, **P4/P5 REAL (Creative + Ad) foram revalidados e concluídos com evidências** e o projeto avançou para a fase P14 (auditoria/estabilização), preparando uma demo controlada.
 
 Status atual:
-- Concluído (App Meta publicado/aceito pela Meta). Próximo passo: retomar validações P4/P5 REAL pelo `/meta-test`.
+- Concluído (App Meta publicado/aceito pela Meta).
+- Evidências pós-publicação: ver `PROJECT_STATUS.md` em “## 5. Evidências principais” e `RUNBOOK.md` em “### Playbook — Validação REAL via /meta-test (Creative + Ad)”.
 
 Como o projeto será hospedado na Hostinger, também é necessário garantir que as rotas do React funcionem ao serem acessadas diretamente pela URL pública. Para isso, o deploy deve incluir um arquivo `.htaccess` configurado para SPA, redirecionando rotas internas para `index.html`.
 
@@ -728,31 +729,31 @@ Regras:
 
 Backlog:
 
-- [ ] Atualizar Snapshot do `PLANS.md` para refletir o fluxo REAL completo validado.
-- [ ] Atualizar `Operational Priorities` para remover foco antigo em P4/P5.
-- [ ] Atualizar `Execution Rules` para priorizar P14/P15/P16/P17.
-- [ ] Limpar `Blockers` antigos já resolvidos:
+- [x] Atualizar Snapshot do `PLANS.md` para refletir o fluxo REAL completo validado. (já refletido no `## Snapshot (Estado Atual)`)
+- [x] Atualizar `Operational Priorities` para focar P14/P15/P16/P17.
+- [x] Atualizar `Execution Rules` para priorizar P14 → P15 → P16 → P17.
+- [x] Limpar `Blockers` antigos já resolvidos (mover apenas para histórico):
   - App Meta em Development Mode;
   - erro `1885183`;
   - ausência de forma de pagamento;
   - erro `1359188`;
   - P4/P5 bloqueados.
-- [ ] Manter os erros antigos apenas como histórico resolvido.
-- [ ] Confirmar que P4 está concluído com evidência suficiente.
-- [ ] Confirmar que P5 está concluído com evidência suficiente.
-- [ ] Validar novamente que o backend força `PAUSED` na criação REAL de Campaign.
-- [ ] Validar novamente que o backend força `PAUSED` na criação REAL de AdSet.
-- [ ] Validar novamente que o backend força `PAUSED` na criação REAL de Ad.
-- [ ] Verificar se o frontend não oferece ação clara para criar `ACTIVE`.
-- [ ] Verificar se o frontend não envia token em nenhuma chamada.
-- [ ] Conferir se logs não expõem token, App Secret ou credenciais.
-- [ ] Conferir persistência mínima no banco:
+- [x] Manter os erros antigos apenas como histórico resolvido (sem “blocker ativo” no fluxo principal).
+- [x] Confirmar que P4 está concluído com evidência suficiente (ver `PROJECT_STATUS.md`).
+- [x] Confirmar que P5 está concluído com evidência suficiente (ver `PROJECT_STATUS.md`).
+- [x] Auditar que o backend força `PAUSED` na criação REAL de Campaign (implementação: `backend/src/meta/campaigns.js` com `forcedStatus='PAUSED'`).
+- [x] Auditar que o backend força `PAUSED` na criação REAL de AdSet (implementação: `backend/src/meta/adsets.js` com `forcedStatus='PAUSED'`).
+- [x] Auditar que o backend força `PAUSED` na criação REAL de Ad (implementação: `backend/src/meta/ads.js` com `forcedStatus='PAUSED'`).
+- [x] Verificar se o frontend não oferece ação clara para criar `ACTIVE` (sem input de status; backend força `PAUSED`).
+- [x] Verificar se o frontend não envia token em nenhuma chamada (não há `accessToken` no frontend; token fica no backend).
+- [x] Conferir se logs/ops logs redigem segredos (`token/access_token/authorization/cookie`) antes de persistir/exibir.
+- [x] Conferir persistência mínima no banco (migrations confirmadas):
   - `generated_campaigns`;
   - `generated_adsets`;
   - `generated_ads`;
   - `creative_drafts`;
   - `ops_logs`.
-- [ ] Conferir se `/meta-test` mostra evidência suficiente de:
+- [x] Conferir se `/meta-test` mostra evidência suficiente de:
   - Campaign;
   - AdSet;
   - Creative;
@@ -760,9 +761,9 @@ Backlog:
   - Graph;
   - Preview;
   - persistência.
-- [ ] Criar ou atualizar `PROJECT_STATUS.md` com o estado atual pós-P5.
-- [ ] Criar ou atualizar `OPERATING_FLOW.md` com exemplos práticos de preenchimento.
-- [ ] Criar checklist de segurança mínima antes de qualquer demo.
+- [x] Atualizar `PROJECT_STATUS.md` com o estado atual pós-P5.
+- [x] Atualizar `OPERATING_FLOW.md` com exemplos práticos de preenchimento.
+- [x] Criar checklist de segurança mínima antes de qualquer demo (`SAFETY_CHECKLIST.md`).
 - [ ] Criar commit incremental.
 
 Critérios de aceite:
@@ -903,7 +904,7 @@ Critérios de aceite:
 
 ## Decision Log (Ativo)
 
-Última atualização: [2026-05-18 17:26]
+Última atualização: [2026-05-25 18:57]
 
 Mantém apenas decisões ainda válidas para execução atual. Histórico completo: ver `ARCHIVE.md` em `## Decision Log (histórico completo)`.
 
@@ -912,8 +913,8 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 - Toda criação REAL deve permanecer `PAUSED`.
 - Token Meta nunca deve ir para o frontend.
 - Fallback `STUB` deve ser preservado.
-- P4/P5 REAL devem ser revalidados após publicação do App Meta (não assumir bloqueio antigo sem nova tentativa REAL).
-- Próxima evolução operacional: P8 → P9 → P10 → P11 → P12.
+- P4/P5 REAL foram revalidados e estão concluídos (Creative REAL + Ad REAL); manter apenas guardrails e evidências.
+- Próxima evolução operacional: P14 → P15 → P16 → P17.
 
 - [2026-05-24 11:04] Decisão: durante a fase atual, a prioridade é destravar o fluxo REAL funcional da Meta antes de endurecer credenciais e segurança final.
   Motivo: o objetivo imediato é validar tecnicamente o fluxo Campaign → AdSet → Creative → Ad funcionando ponta a ponta. O token atual pode continuar sendo usado no backend para testes controlados, pois será substituído futuramente antes de produção.

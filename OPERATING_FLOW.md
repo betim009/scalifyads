@@ -1,5 +1,7 @@
 # OPERATING_FLOW — Criar anúncio REAL via frontend
 
+Última atualização: [2026-05-25 18:57]
+
 ## 1. Objetivo
 
 Este documento ensina como operar o fluxo **REAL** no navegador usando o console `/meta-test`, criando uma estrutura completa na Meta (Campaign → AdSet → Creative → Ad) com **status obrigatório `PAUSED`** e com evidências via DB e Graph.
@@ -52,6 +54,13 @@ Campos típicos no `/meta-test`:
 - País (quando aplicável no fluxo do console)
 - Modo: `REAL`
 
+Exemplo prático (preenchimento):
+
+- Ad Account: `act_259174718403969`
+- Nome: `DEMO • Campaign Builder • BR • 2026-05-25`
+- Objetivo: `OUTCOME_SALES`
+- Modo: `REAL`
+
 Ação:
 
 - Clicar para criar **Campaign REAL (PAUSED)**.
@@ -73,6 +82,14 @@ Campos típicos:
 - `optimization_goal`.
 - Modo: `REAL`.
 
+Exemplo prático (preenchimento):
+
+- Nome: `DEMO • AdSet • BR • ABO`
+- daily budget: `R$ 20,00` (no console, informar em centavos quando aplicável: `2000`)
+- `billing_event`: `IMPRESSIONS`
+- `optimization_goal`: `OFFSITE_CONVERSIONS`
+- Modo: `REAL`
+
 Ação:
 
 - Clicar para criar **AdSet REAL (PAUSED)**.
@@ -93,6 +110,13 @@ No console, criar ou selecionar um `creativeDraft`:
 - `destinationUrl` (obrigatório para publish REAL do AdCreative)
 - Selecionar/upload de mídia, se houver no fluxo disponível (assets locais do projeto)
 
+Exemplo prático (conteúdo):
+
+- `primaryText`: `Teste controlado do Campaign Builder. Não ativar.`
+- `headline`: `Demo — Anúncio PAUSED`
+- `description`: `Fluxo REAL validado via backend.`
+- `destinationUrl`: `https://example.com/?utm_source=demo&utm_medium=meta&utm_campaign=campaign-builder`
+
 Ação:
 
 - Clicar para criar o **Creative Draft**.
@@ -106,6 +130,10 @@ Resultado esperado:
 Pré-check:
 
 - Garantir que existe `pageId` (via env `META_PAGE_ID` no backend ou informado no publish pelo console).
+
+Exemplo prático (pageId):
+
+- `pageId`: `123456789012345` (exemplo; obter pelo botão “Listar Pages (Graph)” no `/meta-test` ou por configuração no backend)
 
 Ação:
 
@@ -197,4 +225,3 @@ Ao final do fluxo, o operador terá:
 - Tudo `PAUSED`.
 - Evidências persistidas no DB e confirmadas via Graph read.
 - Preview disponível quando a Meta retornar (iframe/HTML).
-

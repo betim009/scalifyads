@@ -1,5 +1,7 @@
 # PROJECT_STATUS — Campaign Builder
 
+Última atualização: [2026-05-25 18:57]
+
 ## 1. Resumo executivo
 
 O Campaign Builder deixou de ser apenas um protótipo: hoje existe um **MVP operacional** com **integração REAL validada ponta a ponta** com a Meta Marketing API. O sistema já consegue criar e registrar evidências de uma estrutura completa (Campaign → AdSet → Creative → Ad), com guardrail obrigatório de segurança (**tudo nasce PAUSED**), além de leitura via Graph e preview quando disponível.
@@ -70,7 +72,7 @@ Apesar do fluxo REAL estar validado, isto **ainda não é produção**. Ainda fa
 - P14 — Auditoria e estabilização pós-fluxo REAL
 - P15 — Demo operacional controlada
 - P16 — Hardening e rotação de credenciais
-- P17 — Preparação para produção
+- P17 — Preparação do fluxo operacional limpo
 
 ## 8. Riscos atuais
 
@@ -87,4 +89,3 @@ Apesar do fluxo REAL estar validado, isto **ainda não é produção**. Ainda fa
 - Trocar credenciais futuramente antes de produção (rotação planejada).
 - Nunca enviar token ao frontend.
 - Nunca commitar token.
-
