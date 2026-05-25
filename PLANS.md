@@ -764,7 +764,7 @@ Backlog:
 - [x] Atualizar `PROJECT_STATUS.md` com o estado atual pós-P5.
 - [x] Atualizar `OPERATING_FLOW.md` com exemplos práticos de preenchimento.
 - [x] Criar checklist de segurança mínima antes de qualquer demo (`SAFETY_CHECKLIST.md`).
-- [ ] Criar commit incremental.
+- [x] Criar commit incremental (commit: 82c2f98).
 
 Critérios de aceite:
 
@@ -813,7 +813,7 @@ Backlog:
   - não expor token;
   - validar `Valor usado = R$ 0,00` quando conferir no Ads Manager.
 - [x] Atualizar `RUNBOOK.md` com link/referência ao roteiro de demo.
-- [ ] Criar commit incremental.
+- [x] Criar commit incremental (commit: 7b47d02).
 
 Critérios de aceite:
 
@@ -846,7 +846,7 @@ Backlog:
 - [x] Criar orientação para separar ambientes (`ENVIRONMENTS.md`).
 - [x] Criar checklist de permissões mínimas Meta (verificação) (`META_PERMISSIONS_CHECKLIST.md`).
 - [x] Documentar que a rotação só deve ser executada após autorização explícita.
-- [ ] Criar commit incremental.
+- [x] Criar commit incremental (commit: d1107dc).
 
 Critérios de aceite:
 
@@ -883,7 +883,7 @@ Backlog:
 - [ ] Não implementar ainda o wizard completo.
 - [x] Criar documentação de proposta antes de codar.
 - [x] Garantir que `/meta-test` continue como laboratório técnico (nenhuma mudança de código nesta fase; apenas documentação).
-- [ ] Criar commit incremental.
+- [x] Criar commit incremental (commit: d1107dc).
 
 Critérios de aceite:
 
