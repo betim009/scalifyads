@@ -74,6 +74,18 @@ Preenchimento no painel Meta (App):
 - **Token nunca no frontend:** token fica apenas no backend (env `META_ACCESS_TOKEN` ou via `POST /api/meta/tokens`).
 - **Fluxo atual:** `/meta-test` é o laboratório operacional para evoluir Campaign → AdSet → Ad (o fluxo “Nova Campanha” é legado/compatibilidade).
 
+### Demo operacional controlada
+
+Última atualização: [2026-05-25 18:57]
+
+Roteiro completo (passo-a-passo + exemplos + checklists):
+
+- `DEMO_SCRIPT.md`
+
+Checklist de segurança (pré-demo / pós-demo):
+
+- `SAFETY_CHECKLIST.md`
+
 ### Setup rápido (Docker + DB)
 
 Última atualização: [2026-05-14 20:06]

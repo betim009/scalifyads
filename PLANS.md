@@ -784,8 +784,8 @@ Preparar um roteiro seguro e repetível para demonstrar o fluxo REAL completo se
 
 Backlog:
 
-- [ ] Criar `DEMO_SCRIPT.md`.
-- [ ] Documentar roteiro da demo:
+- [x] Criar `DEMO_SCRIPT.md`.
+- [x] Documentar roteiro da demo:
   - abrir `/meta-test`;
   - validar backend;
   - validar Meta Ready;
@@ -798,21 +798,21 @@ Backlog:
   - abrir preview;
   - conferir Ads Manager;
   - mostrar persistência/logs.
-- [ ] Criar exemplos de nomes para demo:
+- [x] Criar exemplos de nomes para demo:
   - Campaign;
   - AdSet;
   - Creative;
   - Ad.
-- [ ] Criar exemplos de textos para creative.
-- [ ] Criar exemplos de URL de destino.
-- [ ] Criar checklist “antes de iniciar demo”.
-- [ ] Criar checklist “após terminar demo”.
+- [x] Criar exemplos de textos para creative.
+- [x] Criar exemplos de URL de destino.
+- [x] Criar checklist “antes de iniciar demo”.
+- [x] Criar checklist “após terminar demo”.
 - [ ] Garantir que o roteiro reforça:
   - não ativar toggles;
   - não criar `ACTIVE`;
   - não expor token;
   - validar `Valor usado = R$ 0,00` quando conferir no Ads Manager.
-- [ ] Atualizar `RUNBOOK.md` com link/referência ao roteiro de demo.
+- [x] Atualizar `RUNBOOK.md` com link/referência ao roteiro de demo.
 - [ ] Criar commit incremental.
 
 Critérios de aceite:
