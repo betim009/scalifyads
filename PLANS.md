@@ -837,25 +837,15 @@ Regras:
 
 Backlog:
 
-- [ ] Criar checklist de rotação futura do token Meta.
-- [ ] Verificar se `.env` real está fora do Git.
-- [ ] Verificar `.gitignore` para arquivos sensíveis.
-- [ ] Auditar logs para garantir que token/App Secret não aparecem.
-- [ ] Auditar responses do backend para garantir que token não volta ao frontend.
-- [ ] Criar orientação para separar ambientes:
-  - local;
-  - teste;
-  - produção futura.
-- [ ] Criar checklist de permissões mínimas Meta.
-- [ ] Criar plano de rotação:
-  - gerar novo token;
-  - atualizar backend/env;
-  - reiniciar backend;
-  - validar `/api/meta/status`;
-  - validar `/api/meta/validate`;
-  - validar criação STUB;
-  - validar criação REAL `PAUSED`.
-- [ ] Documentar que a rotação só deve ser executada após autorização explícita.
+- [x] Criar checklist de hardening mínimo (`HARDENING_CHECKLIST.md`).
+- [x] Criar checklist/plano de rotação futura do token Meta (`CREDENTIAL_ROTATION_PLAN.md`).
+- [x] Verificar se `.env` está fora do Git e ignorado (`git check-ignore -v .env`).
+- [x] Verificar `.gitignore` para arquivos sensíveis (`.env` e variações ignoradas).
+- [x] Auditar logs para garantir que token/App Secret não aparecem (redaction em `ops_logs`).
+- [x] Auditar responses do backend para garantir que token não volta ao frontend (`/api/meta/status` retorna apenas flags).
+- [x] Criar orientação para separar ambientes (`ENVIRONMENTS.md`).
+- [x] Criar checklist de permissões mínimas Meta (verificação) (`META_PERMISSIONS_CHECKLIST.md`).
+- [x] Documentar que a rotação só deve ser executada após autorização explícita.
 - [ ] Criar commit incremental.
 
 Critérios de aceite:
@@ -878,21 +868,21 @@ O `/meta-test` é poderoso, mas técnico. Ele deve continuar existindo como cons
 
 Backlog:
 
-- [ ] Mapear quais partes do `/meta-test` são operação normal.
-- [ ] Mapear quais partes do `/meta-test` são troubleshooting/debug.
-- [ ] Propor uma estrutura futura de fluxo limpo:
+- [x] Mapear quais partes do `/meta-test` são operação normal. (`META_TEST_MAP.md`)
+- [x] Mapear quais partes do `/meta-test` são troubleshooting/debug. (`META_TEST_MAP.md`)
+- [x] Propor uma estrutura futura de fluxo limpo: (`CLEAN_FLOW_PROPOSAL.md`)
   - Etapa 1: Dados da campanha;
   - Etapa 2: País/público/orçamento;
   - Etapa 3: Creative;
   - Etapa 4: Revisão;
   - Etapa 5: Criar tudo `PAUSED`.
-- [ ] Criar proposta de rota futura:
+- [x] Criar proposta de rota futura: (`CLEAN_FLOW_PROPOSAL.md`)
   - `/console`;
   - ou `/campaign-builder`;
   - ou `/nova-campanha-real`.
 - [ ] Não implementar ainda o wizard completo.
-- [ ] Criar documentação de proposta antes de codar.
-- [ ] Garantir que `/meta-test` continue como laboratório técnico.
+- [x] Criar documentação de proposta antes de codar.
+- [x] Garantir que `/meta-test` continue como laboratório técnico (nenhuma mudança de código nesta fase; apenas documentação).
 - [ ] Criar commit incremental.
 
 Critérios de aceite:
