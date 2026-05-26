@@ -1,6 +1,6 @@
 import PageShell from "../components/PageShell.jsx";
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { getCountries } from "../services/reference.js";
 import { createMetaCampaignSimple } from "../services/metaCampaigns.js";
 import { createMetaAdSet } from "../services/metaAdSets.js";
@@ -176,6 +176,7 @@ function SummaryRow({ label, value }) {
 
 export default function CampaignFlow() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [step, setStep] = useState(0);
   const [countries, setCountries] = useState([]);
   const [submitting, setSubmitting] = useState(false);
@@ -203,6 +204,7 @@ export default function CampaignFlow() {
   const [lastExecution, setLastExecution] = useState(null);
   const [quickPresets, setQuickPresets] = useState([]);
   const [selectedQuickPresetId, setSelectedQuickPresetId] = useState("");
+  const [autoApplied, setAutoApplied] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -226,6 +228,18 @@ export default function CampaignFlow() {
     const presets = safeJsonParse(localStorage.getItem(STORAGE_PRESETS_KEY));
     if (Array.isArray(presets)) setQuickPresets(presets);
   }, []);
+
+  useEffect(() => {
+    if (autoApplied) return;
+    const search = location?.search ? String(location.search) : "";
+    const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+    const applyLast = params.get("applyLast");
+    if (applyLast !== "1") return;
+    if (!lastExecution) return;
+    applyExecutionSnapshot(lastExecution);
+    setAutoApplied(true);
+    navigate("/campaign-flow", { replace: true });
+  }, [autoApplied, lastExecution, location?.search, navigate]);
 
   useEffect(() => {
     let alive = true;

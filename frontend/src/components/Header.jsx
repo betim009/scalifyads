@@ -2,6 +2,7 @@ import { NavLink } from "react-router-dom";
 import {
   AttachMoneyIcon,
   CalendarMonthIcon,
+  DescriptionIcon,
   PersonOutlineIcon,
   PublicIcon,
   SettingsIcon,
@@ -62,6 +63,9 @@ export default function Header() {
             <TopPillLink to="/financeiro" icon={<AttachMoneyIcon fontSize="small" />}>
               Financeiro
             </TopPillLink>
+            <TopPillLink to="/templates" icon={<DescriptionIcon fontSize="small" />}>
+              Templates
+            </TopPillLink>
             <TopPillLink to="/configuracoes" icon={<SettingsIcon fontSize="small" />}>
               Configurações
             </TopPillLink>
@@ -71,4 +75,3 @@ export default function Header() {
     </header>
   );
 }
-

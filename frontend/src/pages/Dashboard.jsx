@@ -12,6 +12,7 @@ import {
   AddIcon,
   BarChartIcon,
   BoltIcon,
+  DescriptionIcon,
   FilterListIcon,
   LanguageIcon,
   PercentIcon,
@@ -168,6 +169,18 @@ export default function Dashboard() {
               buttonIcon={<PercentIcon fontSize="small" />}
               buttonText="Abrir ROI operacional"
               onButtonClick={() => navigate("/roi-operacional")}
+            />
+            <ActionCard
+              title="Templates"
+              description="Gerencie templates operacionais para aplicar no /campaign-flow"
+              items={[
+                { icon: <DescriptionIcon fontSize="small" />, text: "Campos mínimos (objective, países, budget, copy, CTA)" },
+                { icon: <RocketLaunchIcon fontSize="small" />, text: "Aplicar no fluxo guiado" },
+              ]}
+              buttonVariant="secondary"
+              buttonIcon={<DescriptionIcon fontSize="small" />}
+              buttonText="Abrir Templates"
+              onButtonClick={() => navigate("/templates")}
             />
           </section>
 
