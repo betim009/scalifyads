@@ -1019,34 +1019,34 @@ Backlog:
   - O texto da UI deve reforçar que a campanha nasce pausada.
   - Em caso de erro, mostrar mensagem simples e botão para abrir `/meta-test`.
 
-- [ ] Reaproveitar services existentes.
+- [x] Reaproveitar services existentes.
   - Não criar chamadas duplicadas se já existirem services para Meta Campaign, AdSet, Creative e Ad.
   - Evitar fetch direto em componente.
   - Respeitar arquitetura atual do frontend.
 
-- [ ] Criar fallback para troubleshooting.
+- [x] Criar fallback para troubleshooting.
   - Quando algo falhar, exibir:
     - mensagem simples;
     - etapa em que falhou;
     - botão “Abrir no /meta-test para diagnóstico”.
   - Não exibir payload técnico gigante por padrão.
 
-- [ ] Adicionar link de entrada para o novo fluxo.
+- [x] Adicionar link de entrada para o novo fluxo.
   - Adicionar atalho no Dashboard ou Configurações.
   - Rotular como fluxo guiado/experimental/controlado.
   - Manter “Nova Campanha” como legado.
 
-- [ ] Validar build do frontend.
+- [x] Validar build do frontend.
   - Rodar:
     - `cd frontend && npm run build`
 
-- [ ] Atualizar documentação.
+- [x] Atualizar documentação.
   - Atualizar `PLANS.md`.
   - Atualizar `RUNBOOK.md` somente se houver novo procedimento.
   - Atualizar `CLEAN_FLOW_PROPOSAL.md`, se necessário.
   - Registrar decisão no `Decision Log`.
 
-- [ ] Criar commit incremental.
+- [x] Criar commit incremental (commit: 265062c).
 
 Critérios de aceite:
 
