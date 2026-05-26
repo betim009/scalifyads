@@ -1,4 +1,4 @@
-import { apiGet, HttpError } from "./http.js";
+import { apiGet, apiPost, HttpError } from "./http.js";
 import { mockFinancial } from "../data/mockFinancial.js";
 
 function todayUtcYyyyMmDd() {
@@ -82,6 +82,17 @@ export async function getFinanceRoiD1({ date } = {}) {
   const query = new URLSearchParams();
   if (date) query.set("date", date);
   return apiGet(`/api/finance/roi-d1?${query.toString()}`);
+}
+
+export async function getFinanceRoiOperational({ date, limit = 200 } = {}) {
+  const query = new URLSearchParams();
+  if (date) query.set("date", date);
+  if (limit) query.set("limit", String(limit));
+  return apiGet(`/api/finance/roi-operational?${query.toString()}`);
+}
+
+export async function setFinanceRevenue({ generatedCampaignId, date, revenueCents } = {}) {
+  return apiPost(`/api/finance/revenue`, { generatedCampaignId, date, revenueCents });
 }
 
 export function toFinanceRoiD1ViewModel(roiD1) {

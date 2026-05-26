@@ -5,6 +5,7 @@ import Financeiro from "./pages/Financeiro.jsx";
 import Mensal from "./pages/Mensal.jsx";
 import NovaCampanha from "./pages/NovaCampanha.jsx";
 import RoiOntem from "./pages/RoiOntem.jsx";
+import RoiOperacional from "./pages/RoiOperacional.jsx";
 import CampanhaDetalhes from "./pages/CampanhaDetalhes.jsx";
 import CampanhaDuplicar from "./pages/CampanhaDuplicar.jsx";
 import MetaPausedTest from "./pages/MetaPausedTest.jsx";
@@ -26,6 +27,14 @@ export default function App() {
         <Route path="/dashboard" element={<Navigate to="/" replace />} />
         <Route path="/nova-campanha" element={<NovaCampanha />} />
         <Route path="/roi-ontem" element={<RoiOntem />} />
+        <Route
+          path="/roi-operacional"
+          element={
+            <RequireAuth>
+              <RoiOperacional />
+            </RequireAuth>
+          }
+        />
         <Route path="/campanhas/:id" element={<CampanhaDetalhes />} />
         <Route path="/campanhas/:id/duplicar" element={<CampanhaDuplicar />} />
         <Route path="/financeiro" element={<Financeiro />} />

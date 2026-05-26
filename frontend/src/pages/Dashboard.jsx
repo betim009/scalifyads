@@ -157,6 +157,18 @@ export default function Dashboard() {
               buttonText="Ver ROI (Ontem)"
               onButtonClick={() => navigate("/roi-ontem")}
             />
+            <ActionCard
+              title="ROI operacional (mínimo)"
+              description="Gasto (Meta) + receita manual → lucro/prejuízo e ações seguras"
+              items={[
+                { icon: <PercentIcon fontSize="small" />, text: "Receita manual por campanha" },
+                { icon: <BoltIcon fontSize="small" />, text: "Pausar negativos com confirmação" },
+              ]}
+              buttonVariant="secondary"
+              buttonIcon={<PercentIcon fontSize="small" />}
+              buttonText="Abrir ROI operacional"
+              onButtonClick={() => navigate("/roi-operacional")}
+            />
           </section>
 
           <div className="sectionTitleRow">

@@ -69,3 +69,8 @@ export async function getMetaCampaign(metaCampaignId) {
   return { ok: true, metaCampaign: data?.meta_campaign ?? null };
 }
 
+export async function pauseMetaCampaign(metaCampaignId) {
+  const id = String(metaCampaignId || "").trim();
+  const data = await apiPost(`/api/meta/campaigns/${encodeURIComponent(id)}/pause`, {});
+  return { ok: true, metaCampaign: data?.meta_campaign ?? null };
+}

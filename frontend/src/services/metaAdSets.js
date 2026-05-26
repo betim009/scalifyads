@@ -15,3 +15,11 @@ export async function getMetaAdSet(metaAdSetId) {
   const data = await apiGet(`/api/meta/adsets/${encodeURIComponent(id)}`);
   return { ok: true, metaAdSet: data?.meta_adset ?? null };
 }
+
+export async function updateMetaAdSetBudget(metaAdSetId, { dailyBudgetCents } = {}) {
+  const id = String(metaAdSetId || "").trim();
+  const data = await apiPost(`/api/meta/adsets/${encodeURIComponent(id)}/budget`, {
+    dailyBudgetCents,
+  });
+  return { ok: true, metaAdSet: data?.meta_adset ?? null };
+}
