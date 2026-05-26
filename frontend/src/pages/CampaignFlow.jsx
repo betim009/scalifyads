@@ -21,7 +21,7 @@ const DEFAULTS = {
     metaAdAccountId: "",
     objective: "OUTCOME_TRAFFIC",
     countryCode: "BR",
-    mode: "STUB",
+    mode: "REAL",
   },
   adSet: {
     name: "AdSet • BR",
@@ -871,6 +871,31 @@ export default function CampaignFlow() {
   const modeIsReal = campaign.mode === "REAL";
   const pausedWarning = "Tudo será criado como PAUSED (guardrail obrigatório).";
 
+  function resolveCopyForCountry(countryCode) {
+    const cc = String(countryCode || "").trim().toUpperCase();
+    const base = {
+      primaryText: creative.primaryText,
+      headline: creative.headline || "",
+      description: creative.description || "",
+    };
+    const lang = countryLanguageByCode?.[cc] ?? null;
+    const translationsRequired = creative?.translationsRequired === true;
+    const translationsByCountry =
+      creative?.translationsByCountry && typeof creative.translationsByCountry === "object" ? creative.translationsByCountry : null;
+    const entry = translationsByCountry?.[cc] && typeof translationsByCountry[cc] === "object" ? translationsByCountry[cc] : null;
+    const ok = Boolean(translationsRequired && lang && entry && (!entry.language || String(entry.language) === String(lang)));
+    if (!ok) {
+      return { source: "base", language: lang, ...base };
+    }
+    return {
+      source: "translation",
+      language: lang,
+      primaryText: entry?.primaryText ?? base.primaryText,
+      headline: entry?.headline ?? base.headline,
+      description: entry?.description ?? base.description,
+    };
+  }
+
   return (
     <PageShell
       title="Fluxo guiado Meta"
@@ -1381,6 +1406,7 @@ export default function CampaignFlow() {
                   <SummaryRow label="description" value={creative.description || "—"} />
                   <SummaryRow label="destinationUrl" value={creative.destinationUrl || "—"} />
                   <SummaryRow label="ctaType" value={creative.ctaType || "—"} />
+                  <SummaryRow label="translations" value={creative?.translationsRequired ? "ativas (revisar antes)" : "—"} />
                 </div>
               </div>
 
@@ -1389,6 +1415,52 @@ export default function CampaignFlow() {
                 <div style={{ display: "grid", gap: 10 }}>
                   <SummaryRow label="name" value={ad.name || "—"} />
                   <SummaryRow label="creativeDraftId" value="será criado automaticamente" />
+                </div>
+              </div>
+
+              <div className="card" style={{ padding: 18 }}>
+                <div style={{ fontWeight: 950, marginBottom: 10 }}>Copy por país</div>
+                <div style={{ color: "#6b7280", fontWeight: 750, fontSize: 12 }}>
+                  Mostra o que será enviado no Creative Draft por país (tradução quando existir; caso contrário, texto base).
+                </div>
+                <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+                  {(batchEnabled ? selectedCountryCodes : [campaign.countryCode || "BR"]).map((code) => {
+                    const cc = String(code || "").trim().toUpperCase();
+                    const info = resolveCopyForCountry(cc);
+                    const primaryPreview = String(info.primaryText || "").slice(0, 90);
+                    const headlinePreview = String(info.headline || "").slice(0, 90);
+                    const descriptionPreview = String(info.description || "").slice(0, 90);
+                    return (
+                      <div key={cc} className="card" style={{ padding: 12 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                          <div style={{ fontWeight: 950 }}>{cc}</div>
+                          <div style={{ color: "#6b7280", fontWeight: 850, fontSize: 12 }}>
+                            idioma: {info.language || "—"} • fonte: {info.source === "translation" ? "tradução" : "base"}
+                          </div>
+                        </div>
+                        <div style={{ marginTop: 8, display: "grid", gap: 6 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                            <div style={{ color: "#6b7280", fontWeight: 800, fontSize: 12 }}>primaryText</div>
+                            <div style={{ fontWeight: 850, fontSize: 12, color: "#111827", textAlign: "right" }}>
+                              {primaryPreview ? `${primaryPreview}${String(info.primaryText || "").length > 90 ? "…" : ""}` : "—"}
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                            <div style={{ color: "#6b7280", fontWeight: 800, fontSize: 12 }}>headline</div>
+                            <div style={{ fontWeight: 850, fontSize: 12, color: "#111827", textAlign: "right" }}>
+                              {headlinePreview ? `${headlinePreview}${String(info.headline || "").length > 90 ? "…" : ""}` : "—"}
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                            <div style={{ color: "#6b7280", fontWeight: 800, fontSize: 12 }}>description</div>
+                            <div style={{ fontWeight: 850, fontSize: 12, color: "#111827", textAlign: "right" }}>
+                              {descriptionPreview ? `${descriptionPreview}${String(info.description || "").length > 90 ? "…" : ""}` : "—"}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>

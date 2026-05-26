@@ -360,7 +360,7 @@ export default function Templates() {
         metaAdAccountId: "",
         objective: payload.objective ?? "OUTCOME_TRAFFIC",
         countryCode: countryCodes[0] ?? "BR",
-        mode: "STUB",
+        mode: "REAL",
       },
       adSet: {
         name: `AdSet • ${countryCodes[0] ?? "BR"}`,
@@ -399,10 +399,36 @@ export default function Templates() {
     navigate("/campaign-flow?applyLast=1");
   }
 
+  async function onSaveTranslations() {
+    setNotice("");
+    setError("");
+    if (!selectedId) {
+      setError("Selecione um template para salvar traduções.");
+      return;
+    }
+    const name = normalizeNonEmptyString(form.name);
+    if (!name) {
+      setError("Nome é obrigatório.");
+      return;
+    }
+    const payload = buildPayloadFromForm(form);
+    payload.translationsByCountry = translationsByCountry && typeof translationsByCountry === "object" ? translationsByCountry : {};
+    setBusy(true);
+    try {
+      await updateFlowTemplate(selectedId, { name, payload });
+      setNotice("Traduções salvas no template.");
+      await refresh();
+    } catch (err) {
+      setError(err?.message ? String(err.message) : "Falha ao salvar traduções.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <PageShell
       title="Templates"
-      subtitle="Gerencie templates operacionais e aplique no /campaign-flow (sem mexer no /meta-test)."
+      subtitle="Crie um template, gere traduções, revise e aplique no /campaign-flow (REAL sempre PAUSED)."
       align="center"
       backFallbackTo="/"
     >
@@ -430,10 +456,22 @@ export default function Templates() {
           </div>
         ) : null}
 
+        <section className="card" style={{ marginTop: 16, padding: 18, borderColor: "#fde68a", background: "#fffbeb" }}>
+          <div style={{ display: "grid", gap: 6 }}>
+            <div style={{ fontWeight: 950, color: "#92400e" }}>Fluxo recomendado</div>
+            <div style={{ fontWeight: 800, color: "#92400e", fontSize: 13 }}>
+              1) Criar/selecionar template → 2) Gerar traduções → 3) Revisar e salvar → 4) Aplicar no /campaign-flow → 5) Criar REAL (PAUSED)
+            </div>
+            <div style={{ fontWeight: 800, color: "#92400e", fontSize: 13 }}>
+              As traduções serão geradas para os países e idiomas configurados no Perfil. Revise as traduções antes de usar no /campaign-flow.
+            </div>
+          </div>
+        </section>
+
         <section className="card" style={{ marginTop: 16, padding: 20 }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
             <div>
-              <div style={{ fontWeight: 950, fontSize: 18 }}>Lista de templates</div>
+              <div style={{ fontWeight: 950, fontSize: 18 }}>Meus templates</div>
               <div className="muted" style={{ fontWeight: 750, marginTop: 6 }}>
                 {loading ? "Carregando..." : `${templates.length} template(s)`}
               </div>
@@ -441,11 +479,11 @@ export default function Templates() {
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               <button
                 type="button"
-                className="pillOutline"
+                className="pillPrimary"
                 disabled={busy || loading || !selectedId}
                 onClick={useInCampaignFlow}
               >
-                Usar no /campaign-flow
+                Aplicar no /campaign-flow
               </button>
               <button
                 type="button"
@@ -464,7 +502,7 @@ export default function Templates() {
 
           <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "1fr 1.35fr", gap: 16 }}>
             <div className="card" style={{ padding: 16 }}>
-              <div style={{ fontWeight: 900, marginBottom: 10 }}>Selecionar</div>
+              <div style={{ fontWeight: 900, marginBottom: 10 }}>Selecionar template</div>
               <SelectLike
                 value={selectedId}
                 onChange={(e) => {
@@ -479,12 +517,12 @@ export default function Templates() {
                 ]}
               />
               <div style={{ marginTop: 12, color: "#6b7280", fontWeight: 750, fontSize: 12 }}>
-                Dica: crie templates aqui e aplique no `/campaign-flow` (Etapa 1/3).
+                Dica: selecione um template, gere traduções e aplique no `/campaign-flow`.
               </div>
             </div>
 
             <div className="card" style={{ padding: 16 }}>
-              <div style={{ fontWeight: 900, marginBottom: 10 }}>Editar / criar</div>
+              <div style={{ fontWeight: 900, marginBottom: 10 }}>Criar/editar template</div>
                 <div style={{ display: "grid", gap: 12 }}>
                   <Field label="Name" hint="Nome do template (ex: Padrão LATAM • Tráfego)">
                     <InputLike value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
@@ -502,7 +540,7 @@ export default function Templates() {
                       ]}
                     />
                   </Field>
-                  <Field label="Country codes" hint="Separados por vírgula (ex: BR,AR,CL)">
+                  <Field label="Países do template" hint="Use os países configurados no Perfil ou informe códigos separados por vírgula (ex: BR,AR,CL).">
                     <InputLike
                       value={form.countryCodes}
                       onChange={(e) => setForm((p) => ({ ...p, countryCodes: e.target.value }))}
@@ -512,7 +550,7 @@ export default function Templates() {
                       <div style={{ marginTop: 8, display: "flex", gap: 10, flexWrap: "wrap" }}>
                         <button
                           type="button"
-                          className="pillOutline"
+                          className="pillPrimary"
                           disabled={busy}
                           onClick={() => setForm((p) => ({ ...p, countryCodes: profileCountryCodes.join(",") }))}
                         >
@@ -677,10 +715,10 @@ export default function Templates() {
 
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                   <button type="button" className="pillPrimary" disabled={busy} onClick={onCreate}>
-                    Criar
+                    Criar template
                   </button>
                   <button type="button" className="pillOutline" disabled={busy || !selectedId} onClick={onUpdate}>
-                    Salvar alterações
+                    Salvar template
                   </button>
                   <button
                     type="button"
@@ -705,6 +743,27 @@ export default function Templates() {
                   >
                     Limpar
                   </button>
+                </div>
+
+                <div className="card" style={{ marginTop: 14, padding: 14 }}>
+                  <div style={{ fontWeight: 950 }}>Traduções do template selecionado</div>
+                  <div className="muted" style={{ marginTop: 6, fontWeight: 750 }}>
+                    Gere traduções e revise por país/idioma. Tradução não cria anúncio; apenas prepara variações do template.
+                  </div>
+                  <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      className="pillOutline"
+                      disabled={busy || loading || !selectedId}
+                      onClick={onGenerateTranslations}
+                      title="Gera variações por país/idioma via backend (LibreTranslate)"
+                    >
+                      Gerar traduções
+                    </button>
+                    <button type="button" className="pillPrimary" disabled={busy || loading || !selectedId} onClick={onSaveTranslations}>
+                      Salvar traduções
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
