@@ -1307,16 +1307,21 @@ Critérios de aceite:
 
 ### P23 — Revisão de design e UX operacional
 
-Última atualização: [2026-05-26 12:10]
+Última atualização: [2026-05-26 13:25]
 
 Objetivo:
 reduzir atrito visual e melhorar clareza das telas principais para uso do cliente (texto, botões, hierarquia, microcopy), **sem redesign geral**.
 
 Backlog (alto nível):
 
-- [ ] Revisar UX do `/campaign-flow` (menos cliques, textos mais claros, estados de erro/sucesso).
-- [ ] Revisar UX do `/meta-test` como laboratório (manter poderoso, mas com sinais claros de debug).
-- [ ] Revisar dashboard/telas operacionais principais para consistência visual e operacional.
+- [x] Revisar UX do `/campaign-flow` (menos cliques, textos mais claros, estados de erro/sucesso).
+- [x] Revisar UX do `/roi-operacional` (destaque de negativos, ações, atalho /meta-test).
+- [x] Revisar dashboard/telas operacionais principais para consistência visual e operacional.
+- [x] Revisar `/profile` (atalhos e microcopy operacional).
+
+Validação executada (local):
+
+- [2026-05-26 13:25] `cd frontend && npm run build` (OK) após ajustes UX (P23).
 
 ### P24 — Plano de entrega controlada ao cliente
 
