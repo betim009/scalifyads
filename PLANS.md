@@ -1204,7 +1204,7 @@ Backlog:
 - [x] Adicionar botão para abrir item no `/meta-test`.
 - [ ] Atualizar `RUNBOOK.md`.
 - [ ] Atualizar `PROJECT_STATUS.md`.
-- [ ] Criar commit incremental.
+- [x] Criar commit incremental (commit: bd45ff1).
 
 Critérios de aceite:
 - Usuário consegue selecionar mais de um país.
