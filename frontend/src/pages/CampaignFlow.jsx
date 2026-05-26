@@ -341,11 +341,14 @@ export default function CampaignFlow() {
     return [{ value: "", label: "Nenhum (opcional)", disabled: false }, ...opts];
   }, [creativeTemplates]);
 
-  function openMetaTest({ generatedCampaignId } = {}) {
+  function openMetaTest({ generatedCampaignId, countryCode, mode } = {}) {
     const params = new URLSearchParams();
     if (normalizeNonEmptyString(campaign.name)) params.set("name", campaign.name);
     if (normalizeNonEmptyString(creative.destinationUrl)) params.set("destinationUrl", creative.destinationUrl);
     if (normalizeNonEmptyString(generatedCampaignId)) params.set("generatedCampaignId", generatedCampaignId);
+    if (normalizeNonEmptyString(countryCode)) params.set("countryCode", String(countryCode).toUpperCase());
+    const resolvedMode = normalizeNonEmptyString(mode) || campaign.mode;
+    if (normalizeNonEmptyString(resolvedMode)) params.set("mode", resolvedMode);
     navigate(`/meta-test?${params.toString()}`);
   }
 
@@ -1322,7 +1325,13 @@ export default function CampaignFlow() {
                       <button
                         type="button"
                         className="pillOutline"
-                        onClick={() => openMetaTest({ generatedCampaignId: result.generatedCampaignId })}
+                        onClick={() =>
+                          openMetaTest({
+                            generatedCampaignId: result.generatedCampaignId,
+                            countryCode: result.countryCode,
+                            mode: result.mode,
+                          })
+                        }
                       >
                         Abrir /meta-test (debug)
                       </button>
@@ -1438,7 +1447,13 @@ export default function CampaignFlow() {
                                 <button
                                   type="button"
                                   className="pillOutline"
-                                  onClick={() => openMetaTest({ generatedCampaignId: r.generatedCampaignId })}
+                                  onClick={() =>
+                                    openMetaTest({
+                                      generatedCampaignId: r.generatedCampaignId,
+                                      countryCode: r.countryCode,
+                                      mode: result.mode,
+                                    })
+                                  }
                                 >
                                   Abrir /meta-test
                                 </button>
