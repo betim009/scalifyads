@@ -1,6 +1,6 @@
 # PROJECT_STATUS — Campaign Builder
 
-Última atualização: [2026-05-26 10:45]
+Última atualização: [2026-05-26 12:10]
 
 ## 1. Resumo executivo
 
@@ -71,10 +71,12 @@ Apesar do fluxo REAL estar validado, isto **ainda não é produção**. Ainda fa
 
 ## 7. Próxima fase recomendada
 
-- Finalizar e consolidar P20 (automatização em lote no `/campaign-flow`) com documentação e rotina repetível.
-- Reativar P11 (Templates operacionais) para uso direto no `/campaign-flow` (sem duplicar backlog).
-- Criar P21 (Operação ultra rápida) para reduzir cliques e permitir repetição/duplicação rápida além de templates.
-- Preparar entrega controlada ao cliente (foco: operação rápida; guardrails preservados).
+- Consolidar operação rápida (P11/P20/P21) como base operacional estável.
+- Próxima evolução: **P22 — ROI operacional mínimo** (sem dashboard avançado):
+  - gasto (Meta) + receita manual (primeira versão);
+  - lucro/prejuízo + ROI;
+  - ações operacionais seguras (pausar/editar orçamento com confirmação).
+- Depois: P23 (revisão UX operacional) → P24 (plano de entrega controlada ao cliente).
 
 ## 8. Riscos atuais
 

@@ -140,7 +140,7 @@ Fontes únicas (para reduzir drift):
 
 ## Operational Priorities
 
-Última atualização: [2026-05-26 10:40]
+Última atualização: [2026-05-26 12:10]
 
 Prioridade operacional (estado real atual):
 
@@ -153,11 +153,8 @@ Prioridade operacional (estado real atual):
 
 Foco atual:
 
-- Finalizar e documentar P20 — Automatização operacional mínima (lote no `/campaign-flow`).
-- Reativar / consolidar P11 — Templates operacionais como prioridade atual:
-  - templates devem ser aplicáveis no `/campaign-flow` para acelerar lote;
-  - não duplicar backlog de templates (P11 é a fonte).
-- Criar/Executar P21 — Operação ultra rápida (somente itens além de P11).
+- Consolidar e manter P11/P20/P21 (templates + lote + operação rápida) no `/campaign-flow`.
+- Próxima evolução: P22 — ROI operacional mínimo (sem dashboard avançado).
 - Preparar caminho para entrega controlada ao cliente (foco: produtividade operacional).
 - Manter `/campaign-flow` como fluxo principal operacional.
 - Manter `/meta-test` como laboratório técnico/debug.
@@ -167,7 +164,7 @@ Foco atual:
 
 ## Execution Rules
 
-Última atualização: [2026-05-26 10:40]
+Última atualização: [2026-05-26 12:10]
 
 - Sempre ler primeiro:
   - Snapshot;
@@ -185,11 +182,12 @@ Foco atual:
 
 Prioridade de execução atual:
 
-1. Finalizar P20 — Automatização operacional mínima (lote no `/campaign-flow`) e registrar evidências.
-2. Reativar P11 — Templates operacionais no `/campaign-flow` (acelerar lote).
-3. Criar P21 — Operação ultra rápida (somente itens além de templates).
-4. Manter `/campaign-flow` como fluxo operacional principal.
-5. Manter `/meta-test` intacto como diagnóstico.
+1. Consolidar P11 → P20 → P21 (sem regressões) e registrar evidências quando houver mudança.
+2. Executar P22 — ROI operacional mínimo (entrada manual de receita como primeira versão).
+3. Executar P23 — Revisão de design e UX operacional (reduzir atrito).
+4. Executar P24 — Plano de entrega controlada ao cliente (orientação + roteiro + segurança).
+5. Manter `/campaign-flow` como fluxo operacional principal.
+6. Manter `/meta-test` intacto como diagnóstico.
 
 Regras obrigatórias:
 
@@ -1239,7 +1237,7 @@ Critérios de aceite:
 
 ### P21 — Operação ultra rápida
 
-Última atualização: [2026-05-26 10:40]
+Última atualização: [2026-05-26 11:55]
 
 Objetivo:
 reduzir cliques e preenchimento manual para operação do cliente, acelerando repetição/duplicação de execuções **além** do que já existe em P11 (templates).
@@ -1253,15 +1251,91 @@ Regras:
 
 Backlog:
 
-- [ ] `/campaign-flow`: “Repetir última execução” (reusar base + países + modo; confirmação obrigatória no REAL).
-- [ ] `/campaign-flow`: duplicar lote inteiro com 1 clique (gera novo lote com novo nome/sufixo).
-- [ ] `/campaign-flow`: salvar execução como “preset rápido” (não necessariamente um template completo P11; pode ser um atalho operacional de UI).
-- [ ] `/campaign-flow`: atalho “abrir no /meta-test” já pré-selecionado por país/registro (melhorar deep-link).
-- [ ] `/campaign-flow`: melhorar resumo operacional copiável (curto por padrão; opção de JSON completo).
+- [x] `/campaign-flow`: “Repetir última execução” (reusar base + países + modo; confirmação obrigatória no REAL).
+- [x] `/campaign-flow`: duplicar lote inteiro com 1 clique (gera novo lote com novo nome/sufixo).
+- [x] `/campaign-flow`: salvar execução como “preset rápido” (não necessariamente um template completo P11; pode ser um atalho operacional de UI).
+- [x] `/campaign-flow`: atalho “abrir no /meta-test” já pré-selecionado por país/registro (melhorar deep-link).
+- [x] `/campaign-flow`: melhorar resumo operacional copiável (curto por padrão; opção de JSON completo).
+
+Validação executada (local):
+
+- [2026-05-26 11:55] `cd frontend && npm run build` (OK) após mudanças P21 no `/campaign-flow`.
+- Commits: d382843, b5e072a
+
+### P22 — ROI operacional mínimo
+
+Última atualização: [2026-05-26 12:10]
+
+Objetivo:
+criar um **fluxo/tela simples** para o cliente identificar **lucro/prejuízo** por campanha e executar ações operacionais básicas, **sem** virar um dashboard avançado.
+
+Premissas:
+
+- ROI mínimo depende de 2 inputs:
+  - gasto (Meta);
+  - receita (primeira versão: entrada manual por campanha).
+- Guardrails continuam absolutos:
+  - nunca criar `ACTIVE`;
+  - nunca ativar automaticamente;
+  - toda ação REAL deve exigir confirmação;
+  - token Meta nunca vai para o frontend e nunca aparece em logs/documentos.
+
+Backlog:
+
+- [ ] Criar tela simples de ROI operacional (lista de campanhas + indicadores).
+- [ ] Listar campanhas (baseado nas entidades já persistidas; reaproveitar endpoints/services existentes).
+- [ ] Exibir gasto da Meta por campanha (sem analytics sofisticado; uso operacional).
+- [ ] Permitir informar/editar receita manual por campanha (persistência no DB; sem expor segredos).
+- [ ] Calcular lucro/prejuízo e ROI (exibir destaque para prejuízo).
+- [ ] Ação: pausar uma campanha específica (com confirmação explícita).
+- [ ] Ação: pausar todas campanhas com prejuízo (com confirmação explícita).
+- [ ] Ação: editar orçamento de uma campanha (com confirmação explícita).
+- [ ] Registrar ações operacionais em log (sem token; payload técnico oculto por padrão).
+- [ ] Nunca oferecer opção `ACTIVE` em qualquer UI/endpoint deste fluxo.
+
+Critérios de aceite:
+
+- Cliente consegue ver gasto + receita (manual) por campanha.
+- ROI/lucro/prejuízo calculados e campanhas com prejuízo destacadas.
+- Pausar e editar orçamento exigem confirmação e são registradas em log.
+- Nada permite `ACTIVE` e nada ativa automaticamente.
+
+### P23 — Revisão de design e UX operacional
+
+Última atualização: [2026-05-26 12:10]
+
+Objetivo:
+reduzir atrito visual e melhorar clareza das telas principais para uso do cliente (texto, botões, hierarquia, microcopy), **sem redesign geral**.
+
+Backlog (alto nível):
+
+- [ ] Revisar UX do `/campaign-flow` (menos cliques, textos mais claros, estados de erro/sucesso).
+- [ ] Revisar UX do `/meta-test` como laboratório (manter poderoso, mas com sinais claros de debug).
+- [ ] Revisar dashboard/telas operacionais principais para consistência visual e operacional.
+
+### P24 — Plano de entrega controlada ao cliente
+
+Última atualização: [2026-05-26 12:10]
+
+Objetivo:
+preparar documentação, roteiro e orientação para o cliente operar com segurança (execução controlada, validação por etapas e guardrails preservados).
+
+Orientação estratégica (obrigatória):
+
+- Começar com poucos testes (não criar muitas campanhas de uma vez no início).
+- Validar cada etapa, observar erros e confirmar que tudo permanece `PAUSED`.
+- Revisar resultados antes de escalar volume.
+- Melhorias/correções após entrega entram no fluxo de manutenção (sem “correria” em produção).
+
+Backlog (alto nível):
+
+- [ ] Roteiro de onboarding operacional (passo-a-passo).
+- [ ] Checklist de segurança (PAUSED/token/sessão) para operação diária.
+- [ ] Plano de suporte inicial (o que fazer quando falhar; quando abrir `/meta-test`).
 
 ## Decision Log (Ativo)
 
-Última atualização: [2026-05-26 10:40]
+Última atualização: [2026-05-26 12:10]
 
 Mantém apenas decisões ainda válidas para execução atual. Histórico completo: ver `ARCHIVE.md` em `## Decision Log (histórico completo)`.
 
@@ -1301,9 +1375,17 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
   - Toda criação REAL continua `PAUSED` (nunca `ACTIVE`).
   - Token nunca no frontend/logs/documentos.
 
+- [2026-05-26 12:10] Decisão: após consolidar operação rápida (P11/P20/P21), a próxima fase é **P22 — ROI operacional mínimo**.
+  Motivo: habilitar decisão operacional (lucro/prejuízo) sem cair em dashboard avançado.
+  Regras:
+  - Primeira versão aceita receita manual por campanha.
+  - Ações operacionais (pausar/editar orçamento) exigem confirmação humana.
+  - Nunca criar `ACTIVE` e nunca ativar automaticamente.
+  - Token Meta continua apenas no backend e nunca aparece em logs/documentos.
+
 ## Blockers
 
-Última atualização: [2026-05-26 10:40]
+Última atualização: [2026-05-26 12:10]
 
 ### Blockers ativos
 
@@ -1334,7 +1416,7 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 
 ### Próxima ação
 
-Executar P20 → P11 (templates no `/campaign-flow`) → P21 (operação ultra rápida).
+Executar P22 — ROI operacional mínimo (após consolidar P11/P20/P21).
 
 ### Regras de segurança que continuam ativas
 
