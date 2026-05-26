@@ -1,7 +1,16 @@
 import PageShell from "../components/PageShell.jsx";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getAuthMe, logout, saveMetaCredentials } from "../services/auth.js";
+import {
+  addAllOperationalCountries,
+  addOperationalCountry,
+  getAuthMe,
+  listOperationalCountries,
+  logout,
+  removeOperationalCountry,
+  saveMetaCredentials,
+} from "../services/auth.js";
+import { getCountries } from "../services/reference.js";
 
 function normalizeNonEmptyString(value) {
   if (typeof value !== "string") return "";
@@ -15,6 +24,9 @@ export default function Profile() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
+  const [countries, setCountries] = useState([]);
+  const [operationalCountryCodes, setOperationalCountryCodes] = useState([]);
+  const [countryToAdd, setCountryToAdd] = useState("BR");
 
   const [metaAdAccountId, setMetaAdAccountId] = useState("");
   const [metaPageId, setMetaPageId] = useState("");
@@ -33,6 +45,7 @@ export default function Profile() {
         setMe(res.user ?? null);
         setMetaAdAccountId(res?.user?.metaAdAccountId ?? "");
         setMetaPageId(res?.user?.metaPageId ?? "");
+        setOperationalCountryCodes(Array.isArray(res?.user?.operationalCountryCodes) ? res.user.operationalCountryCodes : []);
       })
       .catch((err) => {
         if (!alive) return;
@@ -46,6 +59,22 @@ export default function Profile() {
       alive = false;
     };
   }, [navigate]);
+
+  useEffect(() => {
+    let alive = true;
+    getCountries()
+      .then((res) => {
+        if (!alive) return;
+        setCountries(Array.isArray(res?.countries) ? res.countries : []);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setCountries([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   async function onSave() {
     if (saving) return;
@@ -62,6 +91,9 @@ export default function Profile() {
       setSuccess("Credenciais salvas (token não é exibido).");
       const refreshed = await getAuthMe();
       setMe(refreshed.user ?? null);
+      setOperationalCountryCodes(
+        Array.isArray(refreshed?.user?.operationalCountryCodes) ? refreshed.user.operationalCountryCodes : []
+      );
     } catch (err) {
       setError(err?.message ? String(err.message) : "Falha ao salvar credenciais.");
     } finally {
@@ -77,6 +109,59 @@ export default function Profile() {
       navigate("/login", { replace: true });
     } catch (err) {
       setError(err?.message ? String(err.message) : "Falha ao sair.");
+    }
+  }
+
+  async function refreshOperationalCountries() {
+    const res = await listOperationalCountries({ limit: 500 });
+    setOperationalCountryCodes(Array.isArray(res?.countryCodes) ? res.countryCodes : []);
+  }
+
+  async function onAddAllCountries() {
+    if (saving) return;
+    setSaving(true);
+    setError("");
+    setSuccess("");
+    try {
+      const res = await addAllOperationalCountries();
+      await refreshOperationalCountries();
+      setSuccess(`Países adicionados ao perfil. (${res?.count ?? "—"})`);
+    } catch (err) {
+      setError(err?.message ? String(err.message) : "Falha ao adicionar países.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function onAddOneCountry() {
+    if (saving) return;
+    setSaving(true);
+    setError("");
+    setSuccess("");
+    try {
+      await addOperationalCountry({ countryCode: countryToAdd });
+      await refreshOperationalCountries();
+      setSuccess("País adicionado.");
+    } catch (err) {
+      setError(err?.message ? String(err.message) : "Falha ao adicionar país.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function onRemoveCountry(code) {
+    if (saving) return;
+    setSaving(true);
+    setError("");
+    setSuccess("");
+    try {
+      await removeOperationalCountry({ countryCode: code });
+      await refreshOperationalCountries();
+      setSuccess("País removido.");
+    } catch (err) {
+      setError(err?.message ? String(err.message) : "Falha ao remover país.");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -98,6 +183,9 @@ export default function Profile() {
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                  <button type="button" className="pillOutline" onClick={() => navigate("/")}>
+                    Voltar para Home
+                  </button>
                   <button type="button" className="pillOutline" onClick={() => navigate("/campaign-flow")}>
                     Abrir /campaign-flow
                   </button>
@@ -110,6 +198,75 @@ export default function Profile() {
                   <button type="button" className="pillOutline" onClick={onLogout}>
                     Logout
                   </button>
+                </div>
+              </div>
+            </section>
+
+            <section className="card" style={{ marginTop: 16, padding: 20 }}>
+              <div style={{ fontWeight: 950, fontSize: 18 }}>Países da operação</div>
+              <p style={{ marginTop: 6, marginBottom: 0, color: "#6b7280", fontWeight: 750 }}>
+                O `/campaign-flow` prioriza estes países como base para seleção em lote.
+              </p>
+
+              <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                <button type="button" className="pillOutline" disabled={saving} onClick={onAddAllCountries}>
+                  Criar todos os países possíveis
+                </button>
+              </div>
+
+              <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                  <select
+                    value={countryToAdd}
+                    onChange={(e) => setCountryToAdd(e.target.value)}
+                    disabled={saving}
+                    style={{
+                      height: 46,
+                      borderRadius: 14,
+                      border: "1px solid #e5e7eb",
+                      padding: "0 14px",
+                      fontSize: 14,
+                      fontWeight: 900,
+                      background: "#ffffff",
+                      minWidth: 220,
+                    }}
+                  >
+                    {(countries || []).map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.code} — {c.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button type="button" className="pillPrimary" disabled={saving} onClick={onAddOneCountry}>
+                    Adicionar país
+                  </button>
+                </div>
+
+                <div className="card" style={{ padding: 14 }}>
+                  <div style={{ fontWeight: 900 }}>Lista do usuário</div>
+                  <div className="muted" style={{ marginTop: 6, fontWeight: 800 }}>
+                    {operationalCountryCodes.length ? `${operationalCountryCodes.length} país(es)` : "Nenhum país configurado"}
+                  </div>
+                  <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    {operationalCountryCodes.length ? (
+                      operationalCountryCodes.map((code) => (
+                        <button
+                          key={code}
+                          type="button"
+                          className="pillOutline"
+                          disabled={saving}
+                          onClick={() => onRemoveCountry(code)}
+                          title="Clique para remover"
+                        >
+                          {code} ×
+                        </button>
+                      ))
+                    ) : (
+                      <div className="muted" style={{ fontWeight: 800 }}>
+                        Dica: adicione pelo menos 1 país para operar lote com segurança.
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </section>

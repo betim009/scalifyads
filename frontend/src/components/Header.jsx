@@ -8,18 +8,6 @@ import {
   SettingsIcon,
 } from "../styles/icons.js";
 
-function TopPillButton({ active, icon, children }) {
-  return (
-    <button
-      type="button"
-      className={`pillButton${active ? " pillButtonActive" : ""}`}
-    >
-      <span className="pillButtonIcon">{icon}</span>
-      {children}
-    </button>
-  );
-}
-
 function TopPillLink({ to, icon, children }) {
   return (
     <NavLink
@@ -51,12 +39,9 @@ export default function Header() {
           </div>
 
           <nav className="topNav" aria-label="Navegação principal">
-            <TopPillButton
-              icon={<PersonOutlineIcon fontSize="small" />}
-              active={false}
-            >
-              Conta Global
-            </TopPillButton>
+            <TopPillLink to="/profile" icon={<PersonOutlineIcon fontSize="small" />}>
+              Perfil
+            </TopPillLink>
             <TopPillLink to="/mensal" icon={<CalendarMonthIcon fontSize="small" />}>
               Mensal
             </TopPillLink>

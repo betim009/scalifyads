@@ -33,3 +33,24 @@ export async function saveMetaCredentials({ metaAdAccountId, metaPageId, metaAcc
   return { ok: true, ...data };
 }
 
+export async function listOperationalCountries({ limit = 200 } = {}) {
+  const query = new URLSearchParams();
+  if (limit) query.set("limit", String(limit));
+  const data = await apiGet(`/api/auth/operational-countries?${query.toString()}`);
+  return { ok: true, countryCodes: Array.isArray(data?.country_codes) ? data.country_codes : [] };
+}
+
+export async function addOperationalCountry({ countryCode } = {}) {
+  const data = await apiPost(`/api/auth/operational-countries/add`, { countryCode });
+  return { ok: true, ...data };
+}
+
+export async function removeOperationalCountry({ countryCode } = {}) {
+  const data = await apiPost(`/api/auth/operational-countries/remove`, { countryCode });
+  return { ok: true, ...data };
+}
+
+export async function addAllOperationalCountries() {
+  const data = await apiPost(`/api/auth/operational-countries/add-all`, {});
+  return { ok: true, ...data };
+}

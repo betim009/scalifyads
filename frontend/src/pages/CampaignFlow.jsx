@@ -2,6 +2,7 @@ import PageShell from "../components/PageShell.jsx";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { getCountries } from "../services/reference.js";
+import { getAuthMe } from "../services/auth.js";
 import { createMetaCampaignSimple } from "../services/metaCampaigns.js";
 import { createMetaAdSet } from "../services/metaAdSets.js";
 import { createCreativeDraft } from "../services/creativeDrafts.js";
@@ -179,6 +180,7 @@ export default function CampaignFlow() {
   const location = useLocation();
   const [step, setStep] = useState(0);
   const [countries, setCountries] = useState([]);
+  const [operationalCountryCodes, setOperationalCountryCodes] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -221,6 +223,25 @@ export default function CampaignFlow() {
       alive = false;
     };
   }, []);
+
+  useEffect(() => {
+    let alive = true;
+    getAuthMe()
+      .then((res) => {
+        if (!alive) return;
+        const codes = Array.isArray(res?.user?.operationalCountryCodes) ? res.user.operationalCountryCodes : [];
+        setOperationalCountryCodes(codes.map((c) => String(c || "").trim().toUpperCase()).filter(Boolean));
+      })
+      .catch(() => {
+        if (!alive) return;
+        setOperationalCountryCodes([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const operationalCountriesMissing = batchEnabled && operationalCountryCodes.length === 0;
 
   useEffect(() => {
     const last = safeJsonParse(localStorage.getItem(STORAGE_LAST_EXECUTION_KEY));
@@ -282,10 +303,15 @@ export default function CampaignFlow() {
   }, []);
 
   const countryOptions = useMemo(() => {
-    const opts = (countries || []).map((c) => ({ value: c.code, label: `${c.code} — ${c.name}` }));
-    if (!opts.find((o) => o.value === "BR")) opts.unshift({ value: "BR", label: "BR — Brasil" });
+    const allowed = operationalCountryCodes.length ? new Set(operationalCountryCodes) : null;
+    const opts = (countries || [])
+      .filter((c) => (allowed ? allowed.has(c.code) : true))
+      .map((c) => ({ value: c.code, label: `${c.code} — ${c.name}` }));
+    if (!opts.find((o) => o.value === "BR") && (!allowed || allowed.has("BR"))) {
+      opts.unshift({ value: "BR", label: "BR — Brasil" });
+    }
     return [{ value: "", label: "Selecione...", disabled: true }, ...opts];
-  }, [countries]);
+  }, [countries, operationalCountryCodes]);
 
   const countryNameByCode = useMemo(() => {
     const pairs = (countries || []).map((c) => [c.code, c.name]);
@@ -794,6 +820,11 @@ export default function CampaignFlow() {
             {templatesInfo ? (
               <div style={{ fontWeight: 750, color: "#92400e", fontSize: 13 }}>{templatesInfo}</div>
             ) : null}
+            {operationalCountriesMissing ? (
+              <div style={{ fontWeight: 800, color: "#92400e", fontSize: 13 }}>
+                Aviso: nenhum “País da operação” configurado no Perfil. Configure em `/profile` para operar lote com base segura.
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -1000,7 +1031,11 @@ export default function CampaignFlow() {
                       type="button"
                       className="pillOutline"
                       disabled={submitting}
-                      onClick={() => setSelectedCountryCodes((countryOptions || []).filter((o) => o.value).map((o) => o.value))}
+                      onClick={() =>
+                        setSelectedCountryCodes(
+                          (countryOptions || []).filter((o) => o.value).map((o) => o.value)
+                        )
+                      }
                     >
                       Selecionar todos
                     </button>
