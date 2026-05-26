@@ -33,6 +33,7 @@ export async function apiRequest(path, { method = "GET", body, headers, signal }
   const hasBody = body !== undefined;
   const res = await fetch(url, {
     method,
+    credentials: "include",
     headers: {
       ...(hasBody ? { "Content-Type": "application/json" } : null),
       ...(headers ?? null),
@@ -57,6 +58,7 @@ export async function apiPostFormData(path, formData, { headers, signal } = {}) 
   const url = buildUrl(path);
   const res = await fetch(url, {
     method: "POST",
+    credentials: "include",
     headers: {
       ...(headers ?? null),
       // DO NOT set Content-Type for FormData (browser will set boundary).

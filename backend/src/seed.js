@@ -20,6 +20,18 @@ const objectives = [
 
 await pool.query('BEGIN')
 try {
+  // P19: Internal initial user (simple, no hash for now)
+  await pool.query(
+    `
+      INSERT INTO users (username, password_plain, name)
+      SELECT $1, $2, $3
+      WHERE NOT EXISTS (
+        SELECT 1 FROM users WHERE username = $1
+      )
+    `,
+    ['beto', 'beto123', 'Beto']
+  )
+
   for (const c of countries) {
     await pool.query(
       `

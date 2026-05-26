@@ -25,10 +25,16 @@ app.use('/uploads', express.static(path.resolve('uploads')))
 
 // Minimal dev CORS (avoid extra dependency)
 app.use((req, res, next) => {
-  const origin = process.env.CORS_ORIGIN ?? '*'
+  const configured = process.env.CORS_ORIGIN ?? '*'
+  const requestOrigin = typeof req.headers.origin === 'string' ? req.headers.origin : ''
+  const origin = configured === '*' ? (requestOrigin || '*') : configured
   res.setHeader('Access-Control-Allow-Origin', origin)
+  res.setHeader('Vary', 'Origin')
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  if (origin !== '*') {
+    res.setHeader('Access-Control-Allow-Credentials', 'true')
+  }
   if (req.method === 'OPTIONS') return res.sendStatus(204)
   next()
 })

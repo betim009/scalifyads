@@ -153,9 +153,12 @@ Prioridade operacional (estado real atual):
 
 Foco atual:
 
-- P18 — Primeira versão do fluxo operacional limpo.
-- Criar uma rota inicial mais simples para operação guiada.
-- Manter `/meta-test` como laboratório técnico.
+- P19 — Login interno e credenciais Meta por usuário.
+- Consolidar entrega operacional mínima controlada.
+- Permitir autenticação simples interna.
+- Permitir configuração de credenciais Meta por usuário.
+- Manter `/campaign-flow` como fluxo principal operacional.
+- Manter `/meta-test` como laboratório técnico/debug.
 - Não remover, quebrar ou refatorar o `/meta-test`.
 - Reaproveitar services/endpoints já validados.
 - Garantir que toda criação REAL continue `PAUSED`.
@@ -180,10 +183,11 @@ Foco atual:
 
 Prioridade de execução atual:
 
-1. Executar P18 — Primeira versão do fluxo operacional limpo.
-2. Manter `/meta-test` intacto como diagnóstico.
-3. Reaproveitar services existentes.
-4. Só depois evoluir para autenticação/perfil/credenciais por usuário.
+1. Executar P19 — Login interno e credenciais Meta por usuário.
+2. Manter `/campaign-flow` como fluxo operacional principal.
+3. Manter `/meta-test` intacto como diagnóstico.
+4. Reaproveitar services existentes.
+5. Só depois evoluir para hardening e autenticação avançada.
 
 Regras obrigatórias:
 
@@ -1068,6 +1072,101 @@ Critérios de aceite:
 - O build do frontend passa.
 - Há caminho claro para abrir `/meta-test` em caso de debug.
 
+### P19 — Login interno e credenciais Meta por usuário
+
+Última atualização: [2026-05-26 10:00]
+
+Objetivo:
+Criar autenticação simples interna e permitir que cada usuário configure suas próprias credenciais Meta, preparando o sistema para entrega operacional controlada.
+
+Contexto:
+O fluxo REAL completo já foi validado:
+
+Campaign REAL → AdSet REAL → Creative REAL → Ad REAL
+
+Tudo permanece sendo criado como `PAUSED`.
+
+Agora o objetivo é permitir:
+- login simples;
+- proteção básica das rotas;
+- perfil/configuração do usuário;
+- credenciais Meta vinculadas ao usuário logado.
+
+Regras:
+
+- Não remover `/meta-test`.
+- Não quebrar `/meta-test`.
+- Não quebrar `/campaign-flow`.
+- Não criar autenticação enterprise.
+- Não implementar RBAC agora.
+- Não implementar refresh token sofisticado.
+- Não implementar recuperação de senha agora.
+- Não implementar multiusuário complexo.
+- Não fazer refactor massivo.
+- Não permitir `ACTIVE`.
+- Toda criação REAL deve continuar `PAUSED`.
+- Token Meta nunca deve ir para o frontend.
+- Token Meta nunca deve aparecer em logs.
+- Token Meta nunca deve ser commitado.
+
+Decisão temporária:
+- Senhas podem permanecer sem hash nesta fase.
+- Débito técnico obrigatório futuro:
+  - aplicar bcrypt/hash;
+  - criptografar credenciais sensíveis.
+
+Usuário inicial:
+
+- username: beto
+- password: beto123
+
+Campos mínimos Meta por usuário:
+
+- meta_access_token
+- meta_ad_account_id
+- meta_page_id
+
+Backlog:
+
+- [x] Criar estrutura simples de usuários.
+- [x] Criar usuário inicial `beto`.
+- [x] Criar tela `/login`.
+- [x] Criar tela `/register`.
+- [x] Criar logout.
+- [x] Criar proteção básica de rotas privadas.
+- [x] Proteger `/campaign-flow`.
+- [x] Proteger `/meta-test`.
+- [x] Criar middleware simples de autenticação.
+- [x] Criar tela `/profile` ou `/settings`.
+- [x] Permitir salvar credenciais Meta por usuário.
+- [x] Vincular credenciais Meta ao usuário autenticado.
+- [x] Backend deve usar credenciais Meta do usuário logado.
+- [x] Não exibir token completo na UI.
+- [x] Mostrar apenas:
+  - Token salvo: Sim
+  - Final do token: `...XXXX`
+- [x] Garantir que logs não exponham token.
+- [x] Validar build do frontend.
+- [x] Atualizar `RUNBOOK.md`.
+- [x] Atualizar `PROJECT_STATUS.md`.
+- [ ] Criar commit incremental.
+
+Critérios de aceite:
+
+- Usuário consegue acessar `/login`.
+- Usuário consegue logar com:
+  - beto
+  - beto123
+- Usuário consegue fazer logout.
+- Usuário não autenticado é redirecionado.
+- `/campaign-flow` exige login.
+- `/meta-test` exige login.
+- Usuário consegue salvar credenciais Meta.
+- Backend usa credenciais do usuário logado.
+- Token Meta não aparece completo no frontend.
+- Criações REAL continuam `PAUSED`.
+- Não existe criação `ACTIVE`.
+
 ## Decision Log (Ativo)
 
 Última atualização: [2026-05-25 18:57]
@@ -1090,6 +1189,17 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
   - Não expor token em prints, logs públicos ou documentação.
   - Não bloquear P4/P5 apenas por recomendação de trocar token agora.
   - Após o fluxo REAL estar funcional, abrir fase específica de hardening/rotação de credenciais.
+
+- [2026-05-26 10:00] Decisão: autenticação inicial será simples e pragmática.
+  Motivo: foco atual é entrega operacional rápida para uso controlado por no máximo 1 ou 2 usuários.
+
+  Regras:
+  - Senhas podem permanecer sem hash temporariamente.
+  - Débito técnico futuro: aplicar bcrypt/hash.
+  - Credenciais Meta passam a ser vinculadas ao usuário.
+  - Token Meta continua exclusivamente no backend.
+  - Token Meta nunca deve aparecer no frontend, logs ou commits.
+  - Toda criação REAL continua obrigatoriamente `PAUSED`.
 
 ## Blockers
 
@@ -1124,7 +1234,7 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 
 ### Próxima ação
 
-Executar P18 — Primeira versão do fluxo operacional limpo.
+Executar P19 — Login interno e credenciais Meta por usuário.
 
 ### Regras de segurança que continuam ativas
 

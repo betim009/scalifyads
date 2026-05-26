@@ -49,6 +49,9 @@ export async function resolveAccessToken(pool, req) {
   const fromBody = coerceAccessToken(req.body?.accessToken)
   if (fromBody) return fromBody
 
+  const fromAuth = await lookupToken(pool, { userId: req.auth?.userId })
+  if (fromAuth) return fromAuth
+
   const fromEnv = coerceAccessToken(process.env.META_ACCESS_TOKEN)
   if (fromEnv) return fromEnv
 

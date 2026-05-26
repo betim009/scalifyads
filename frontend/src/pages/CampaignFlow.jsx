@@ -197,7 +197,6 @@ export default function CampaignFlow() {
     if (step === 0) {
       return (
         normalizeNonEmptyString(campaign.name) &&
-        normalizeNonEmptyString(campaign.metaAdAccountId) &&
         normalizeNonEmptyString(campaign.objective) &&
         normalizeNonEmptyString(campaign.countryCode) &&
         normalizeNonEmptyString(campaign.mode)
@@ -356,7 +355,10 @@ export default function CampaignFlow() {
                   disabled={submitting}
                 />
               </Field>
-              <Field label="Meta Ad Account ID" required hint="Formato: act_<id>">
+              <Field
+                label="Meta Ad Account ID"
+                hint="Opcional: se vazio, o backend tenta usar o valor salvo no Perfil."
+              >
                 <InputLike
                   placeholder="act_259174718403969"
                   value={campaign.metaAdAccountId}

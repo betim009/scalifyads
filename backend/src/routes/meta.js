@@ -27,6 +27,7 @@ import {
   metaListMyBusinesses,
   metaListMyPages
 } from '../meta/pages.js'
+import { resolveAuthUser } from '../lib/internalAuth.js'
 
 function parseDateOrNull(value) {
   if (typeof value !== 'string' || !value.trim()) return null
@@ -86,6 +87,25 @@ async function createUniqueSlug(pool, base) {
 export function metaRouter() {
   const router = Router()
 
+  // P19: attach auth context (if DB is enabled).
+  router.use(
+    asyncHandler(async (req, res, next) => {
+      if (!req.app.locals.dbEnabled) {
+        req.auth = null
+        return next()
+      }
+      const pool = getPool()
+      req.auth = await resolveAuthUser(pool, req)
+      return next()
+    })
+  )
+
+  function requireAuth(req, res) {
+    if (!req.app.locals.dbEnabled) return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
+    if (!req.auth?.userId) return jsonError(res, 401, 'Login required')
+    return null
+  }
+
   async function insertOpsLogBestEffort(pool, entry) {
     try {
       const source = normalizeNonEmptyString(entry?.source) ?? 'meta-test'
@@ -120,6 +140,9 @@ export function metaRouter() {
   router.get(
     '/tokens',
     asyncHandler(async (req, res) => {
+      const denied = requireAuth(req, res)
+      if (denied) return denied
+
       if (!req.app.locals.dbEnabled) {
         return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
       }
@@ -129,9 +152,11 @@ export function metaRouter() {
         `
           SELECT id, user_id, meta_user_id, expires_at, created_at
           FROM meta_tokens
+          WHERE user_id = $1
           ORDER BY created_at DESC
-          LIMIT 10
-        `
+          LIMIT 5
+        `,
+        [req.auth.userId]
       )
 
       return res.json({ ok: true, tokens: rows })
@@ -141,6 +166,9 @@ export function metaRouter() {
   router.post(
     '/creative-drafts/:id/publish',
     asyncHandler(async (req, res) => {
+      const denied = requireAuth(req, res)
+      if (denied) return denied
+
       if (!req.app.locals.dbEnabled) {
         return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
       }
@@ -201,7 +229,9 @@ export function metaRouter() {
       }
 
       const pageId =
-        normalizeNonEmptyString(req.body?.pageId) ?? normalizeNonEmptyString(process.env.META_PAGE_ID)
+        normalizeNonEmptyString(req.body?.pageId) ??
+        normalizeNonEmptyString(req.auth?.metaPageId) ??
+        normalizeNonEmptyString(process.env.META_PAGE_ID)
       if (!pageId) {
         return jsonError(res, 400, 'Missing pageId (provide body.pageId or META_PAGE_ID env)')
       }
@@ -412,6 +442,9 @@ export function metaRouter() {
   router.get(
     '/pages',
     asyncHandler(async (req, res) => {
+      const denied = requireAuth(req, res)
+      if (denied) return denied
+
       const dbEnabled = Boolean(req.app.locals.dbEnabled)
       const pool = dbEnabled ? getPool() : null
       const accessToken = dbEnabled
@@ -422,7 +455,8 @@ export function metaRouter() {
         return jsonError(res, 400, 'Missing accessToken (set META_ACCESS_TOKEN env or save via /tokens)')
       }
 
-      const metaAdAccountId = normalizeMetaAdAccountId(req.query?.metaAdAccountId)
+      const metaAdAccountId =
+        normalizeMetaAdAccountId(req.query?.metaAdAccountId) ?? normalizeMetaAdAccountId(req.auth?.metaAdAccountId)
       const limit = normalizeLimit(req.query?.limit, { fallback: 50, min: 1, max: 200 })
 
       try {
@@ -480,6 +514,9 @@ export function metaRouter() {
   router.get(
     '/pages/:id',
     asyncHandler(async (req, res) => {
+      const denied = requireAuth(req, res)
+      if (denied) return denied
+
       const dbEnabled = Boolean(req.app.locals.dbEnabled)
       const pool = dbEnabled ? getPool() : null
       const accessToken = dbEnabled
@@ -508,6 +545,9 @@ export function metaRouter() {
   router.get(
     '/diagnostics',
     asyncHandler(async (req, res) => {
+      const denied = requireAuth(req, res)
+      if (denied) return denied
+
       const dbEnabled = Boolean(req.app.locals.dbEnabled)
       const pool = dbEnabled ? getPool() : null
       const accessToken = dbEnabled
@@ -535,13 +575,11 @@ export function metaRouter() {
   router.post(
     '/tokens',
     asyncHandler(async (req, res) => {
+      const denied = requireAuth(req, res)
+      if (denied) return denied
+
       if (!req.app.locals.dbEnabled) {
         return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
-      }
-
-      const userId = req.body?.userId ?? null
-      if (userId !== null && userId !== undefined && !isUuid(userId)) {
-        return jsonError(res, 400, 'Invalid userId')
       }
 
       const metaUserId =
@@ -566,7 +604,7 @@ export function metaRouter() {
           VALUES ($1::uuid, $2, $3, $4::timestamptz)
           RETURNING id, user_id, meta_user_id, expires_at, created_at
         `,
-        [userId, metaUserId, accessToken, expiresAt]
+        [req.auth.userId, metaUserId, accessToken, expiresAt]
       )
 
       return res.status(201).json({ ok: true, token: rows[0] })
@@ -576,6 +614,9 @@ export function metaRouter() {
   router.post(
     '/validate',
     asyncHandler(async (req, res) => {
+      const denied = requireAuth(req, res)
+      if (denied) return denied
+
       const dbEnabled = Boolean(req.app.locals.dbEnabled)
       const pool = dbEnabled ? getPool() : null
       const accessToken = dbEnabled
@@ -605,6 +646,9 @@ export function metaRouter() {
   router.get(
     '/status',
     asyncHandler(async (req, res) => {
+      const denied = requireAuth(req, res)
+      if (denied) return denied
+
       const dbEnabled = Boolean(req.app.locals.dbEnabled)
       const pool = dbEnabled ? getPool() : null
       const accessToken = dbEnabled
@@ -617,7 +661,9 @@ export function metaRouter() {
         provider: process.env.META_SYNC_PROVIDER ?? null,
         graph_version: process.env.META_GRAPH_VERSION ?? null,
         has_access_token: Boolean(accessToken),
-        has_page_id: Boolean(normalizeNonEmptyString(process.env.META_PAGE_ID)),
+        has_page_id: Boolean(
+          normalizeNonEmptyString(req.auth?.metaPageId) ?? normalizeNonEmptyString(process.env.META_PAGE_ID)
+        ),
         has_instagram_actor_id: Boolean(normalizeNonEmptyString(process.env.META_INSTAGRAM_ACTOR_ID))
       })
     })
@@ -626,6 +672,9 @@ export function metaRouter() {
   router.post(
     '/sync/generated-campaigns/:id',
     asyncHandler(async (req, res) => {
+      const denied = requireAuth(req, res)
+      if (denied) return denied
+
       if (!req.app.locals.dbEnabled) {
         return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
       }
@@ -846,6 +895,9 @@ export function metaRouter() {
   router.post(
     '/campaigns/simple',
     asyncHandler(async (req, res) => {
+      const denied = requireAuth(req, res)
+      if (denied) return denied
+
       if (!req.app.locals.dbEnabled) {
         return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
       }
@@ -865,7 +917,8 @@ export function metaRouter() {
         return jsonError(res, 400, 'Invalid countryCode (expected ISO-2)')
       }
 
-      const metaAdAccountId = normalizeMetaAdAccountId(req.body?.metaAdAccountId)
+      const metaAdAccountId =
+        normalizeMetaAdAccountId(req.body?.metaAdAccountId) ?? normalizeMetaAdAccountId(req.auth?.metaAdAccountId)
       if (!metaAdAccountId) {
         return jsonError(res, 400, 'Invalid metaAdAccountId (expected act_<digits>)')
       }
@@ -908,10 +961,10 @@ export function metaRouter() {
         const insertedCampaign = await client.query(
           `
             INSERT INTO campaigns (slug, name, status, scope, objective_key, created_by_user_id, config)
-            VALUES ($1, $2, 'draft', 'global', NULL, NULL, '{}'::jsonb)
+            VALUES ($1, $2, 'draft', 'global', NULL, $3::uuid, '{}'::jsonb)
             RETURNING id, slug, name, status, scope, objective_key, created_by_user_id, config, created_at
           `,
-          [slug, name]
+          [slug, name, req.auth.userId]
         )
 
         const campaign = insertedCampaign.rows[0]
@@ -1030,6 +1083,9 @@ export function metaRouter() {
   router.post(
     '/adsets',
     asyncHandler(async (req, res) => {
+      const denied = requireAuth(req, res)
+      if (denied) return denied
+
       if (!req.app.locals.dbEnabled) {
         return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
       }
@@ -1093,7 +1149,10 @@ export function metaRouter() {
         return jsonError(res, 400, 'Generated campaign is not linked to Meta (missing meta_campaign_id)')
       }
 
-      const metaAdAccountId = normalizeNonEmptyString(gc.meta_ad_account_id) ?? normalizeMetaAdAccountId(req.body?.metaAdAccountId)
+      const metaAdAccountId =
+        normalizeNonEmptyString(gc.meta_ad_account_id) ??
+        normalizeMetaAdAccountId(req.body?.metaAdAccountId) ??
+        normalizeMetaAdAccountId(req.auth?.metaAdAccountId)
       if (!metaAdAccountId) {
         return jsonError(res, 400, 'Missing metaAdAccountId (expected act_<digits>)')
       }
@@ -1216,6 +1275,9 @@ export function metaRouter() {
   router.post(
     '/ads',
     asyncHandler(async (req, res) => {
+      const denied = requireAuth(req, res)
+      if (denied) return denied
+
       if (!req.app.locals.dbEnabled) {
         return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
       }
@@ -1258,7 +1320,10 @@ export function metaRouter() {
       }
 
       const gc = gcRows[0]
-      const metaAdAccountId = normalizeNonEmptyString(gc.meta_ad_account_id) ?? normalizeMetaAdAccountId(req.body?.metaAdAccountId)
+      const metaAdAccountId =
+        normalizeNonEmptyString(gc.meta_ad_account_id) ??
+        normalizeMetaAdAccountId(req.body?.metaAdAccountId) ??
+        normalizeMetaAdAccountId(req.auth?.metaAdAccountId)
       if (!metaAdAccountId) {
         return jsonError(res, 400, 'Missing metaAdAccountId (expected act_<digits>)')
       }

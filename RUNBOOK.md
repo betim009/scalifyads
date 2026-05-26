@@ -74,6 +74,38 @@ Preenchimento no painel Meta (App):
 - **Token nunca no frontend:** token fica apenas no backend (env `META_ACCESS_TOKEN` ou via `POST /api/meta/tokens`).
 - **Fluxo atual:** `/meta-test` é o laboratório operacional para evoluir Campaign → AdSet → Ad (o fluxo “Nova Campanha” é legado/compatibilidade).
 
+### P19 — Login interno + credenciais Meta por usuário
+
+Última atualização: [2026-05-26 10:00]
+
+Objetivo:
+habilitar autenticação interna simples e permitir que cada usuário configure suas credenciais Meta **sem expor token no frontend**.
+
+Credenciais iniciais (dev):
+
+- username: `beto`
+- password: `beto123`
+
+Fluxo (UI):
+
+1) Subir stack + migrations + seed:
+   - `docker compose up -d`
+   - `docker compose exec backend npm run migrate`
+   - `docker compose exec backend npm run seed`
+2) Abrir `http://localhost:5173/login` e logar.
+3) Abrir `http://localhost:5173/profile` e salvar:
+   - `meta_ad_account_id` (ex.: `act_<id>`)
+   - `meta_page_id` (para publish do Creative REAL)
+   - `meta_access_token` (token fica apenas no backend; UI mostra só `...XXXX`)
+4) Operar:
+   - `http://localhost:5173/campaign-flow`
+   - `http://localhost:5173/meta-test`
+
+Notas:
+
+- Sessão usa cookie `HttpOnly` (não acessível via JS).
+- Endpoints `/api/meta/*` exigem login (cookie) quando o DB está habilitado.
+
 ### Demo operacional controlada
 
 Última atualização: [2026-05-25 18:57]

@@ -9,6 +9,10 @@ import CampanhaDetalhes from "./pages/CampanhaDetalhes.jsx";
 import CampanhaDuplicar from "./pages/CampanhaDuplicar.jsx";
 import MetaPausedTest from "./pages/MetaPausedTest.jsx";
 import CampaignFlow from "./pages/CampaignFlow.jsx";
+import RequireAuth from "./components/RequireAuth.jsx";
+import Login from "./pages/Login.jsx";
+import Register from "./pages/Register.jsx";
+import Profile from "./pages/Profile.jsx";
 import PoliticaPrivacidade from "./pages/PoliticaPrivacidade.jsx";
 import TermosDeUso from "./pages/TermosDeUso.jsx";
 import ExclusaoDados from "./pages/ExclusaoDados.jsx";
@@ -26,8 +30,25 @@ export default function App() {
         <Route path="/campanhas/:id/duplicar" element={<CampanhaDuplicar />} />
         <Route path="/financeiro" element={<Financeiro />} />
         <Route path="/configuracoes" element={<Configuracoes />} />
-        <Route path="/meta-test" element={<MetaPausedTest />} />
-        <Route path="/campaign-flow" element={<CampaignFlow />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route
+          path="/meta-test"
+          element={
+            <RequireAuth>
+              <MetaPausedTest />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/campaign-flow"
+          element={
+            <RequireAuth>
+              <CampaignFlow />
+            </RequireAuth>
+          }
+        />
         <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
         <Route path="/termos-de-uso" element={<TermosDeUso />} />
         <Route path="/exclusao-de-dados" element={<ExclusaoDados />} />
