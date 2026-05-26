@@ -140,7 +140,7 @@ Fontes únicas (para reduzir drift):
 
 ## Operational Priorities
 
-Última atualização: [2026-05-25 18:57]
+Última atualização: [2026-05-26 10:40]
 
 Prioridade operacional (estado real atual):
 
@@ -153,10 +153,12 @@ Prioridade operacional (estado real atual):
 
 Foco atual:
 
-- P19 — Login interno e credenciais Meta por usuário.
-- Consolidar entrega operacional mínima controlada.
-- Permitir autenticação simples interna.
-- Permitir configuração de credenciais Meta por usuário.
+- Finalizar e documentar P20 — Automatização operacional mínima (lote no `/campaign-flow`).
+- Reativar / consolidar P11 — Templates operacionais como prioridade atual:
+  - templates devem ser aplicáveis no `/campaign-flow` para acelerar lote;
+  - não duplicar backlog de templates (P11 é a fonte).
+- Criar/Executar P21 — Operação ultra rápida (somente itens além de P11).
+- Preparar caminho para entrega controlada ao cliente (foco: produtividade operacional).
 - Manter `/campaign-flow` como fluxo principal operacional.
 - Manter `/meta-test` como laboratório técnico/debug.
 - Não remover, quebrar ou refatorar o `/meta-test`.
@@ -165,7 +167,7 @@ Foco atual:
 
 ## Execution Rules
 
-Última atualização: [2026-05-25 18:57]
+Última atualização: [2026-05-26 10:40]
 
 - Sempre ler primeiro:
   - Snapshot;
@@ -183,11 +185,11 @@ Foco atual:
 
 Prioridade de execução atual:
 
-1. Executar P19 — Login interno e credenciais Meta por usuário.
-2. Manter `/campaign-flow` como fluxo operacional principal.
-3. Manter `/meta-test` intacto como diagnóstico.
-4. Reaproveitar services existentes.
-5. Só depois evoluir para hardening e autenticação avançada.
+1. Finalizar P20 — Automatização operacional mínima (lote no `/campaign-flow`) e registrar evidências.
+2. Reativar P11 — Templates operacionais no `/campaign-flow` (acelerar lote).
+3. Criar P21 — Operação ultra rápida (somente itens além de templates).
+4. Manter `/campaign-flow` como fluxo operacional principal.
+5. Manter `/meta-test` intacto como diagnóstico.
 
 Regras obrigatórias:
 
@@ -487,6 +489,17 @@ Regras:
   - [x] Campaign Templates: deletar/remover via API + UI (commit: cf86657)
   - [x] Campaign Templates: aplicar template (cria `generated_campaigns` + estrutura) (commit: df2edb3)
   - [x] Creative Templates: deletar/remover via API + UI (commit: df2edb3)
+
+Reativação (operacional atual):
+
+- O backend e o `/meta-test` já suportam templates. O objetivo agora é **usar templates no `/campaign-flow`** para acelerar o lote (P20) sem duplicar lógica.
+
+Backlog (P11 — foco atual):
+
+- [ ] `/campaign-flow`: permitir escolher um Campaign Template como estrutura base do lote.
+- [ ] `/campaign-flow`: permitir escolher template(s) de Creative/Copy/CTA para preencher automaticamente a Etapa 3.
+- [ ] `/campaign-flow`: permitir escolher Country Template (lista de países) para lote.
+- [ ] `/campaign-flow`: permitir salvar “estrutura executada” como template (quando fizer sentido) sem expor payloads técnicos por padrão.
 
 ### P12 — Workflow operacional
 
@@ -1202,9 +1215,13 @@ Backlog:
 - [x] Em caso de erro em um país, continuar os próximos.
 - [x] Registrar falhas de forma clara.
 - [x] Adicionar botão para abrir item no `/meta-test`.
-- [ ] Atualizar `RUNBOOK.md`.
-- [ ] Atualizar `PROJECT_STATUS.md`.
+- [x] Atualizar `RUNBOOK.md`.
+- [x] Atualizar `PROJECT_STATUS.md`.
 - [x] Criar commit incremental (commit: bd45ff1).
+
+Validação executada (local):
+
+- [2026-05-26 10:25] `cd frontend && npm run build` (OK) após mudanças do P20.
 
 Critérios de aceite:
 - Usuário consegue selecionar mais de um país.
@@ -1215,9 +1232,31 @@ Critérios de aceite:
 - Resultado mostra sucesso/erro por país.
 - Token continua protegido.
 
+### P21 — Operação ultra rápida
+
+Última atualização: [2026-05-26 10:40]
+
+Objetivo:
+reduzir cliques e preenchimento manual para operação do cliente, acelerando repetição/duplicação de execuções **além** do que já existe em P11 (templates).
+
+Regras:
+
+- Não duplicar backlog de templates (P11 continua sendo a base para templates).
+- P21 cobre apenas o que é “operação ultra rápida” além de templates.
+- Manter guardrails: `REAL` sempre `PAUSED`; nunca `ACTIVE`; token nunca no frontend/logs.
+- Não quebrar `/campaign-flow` e `/meta-test`.
+
+Backlog:
+
+- [ ] `/campaign-flow`: “Repetir última execução” (reusar base + países + modo; confirmação obrigatória no REAL).
+- [ ] `/campaign-flow`: duplicar lote inteiro com 1 clique (gera novo lote com novo nome/sufixo).
+- [ ] `/campaign-flow`: salvar execução como “preset rápido” (não necessariamente um template completo P11; pode ser um atalho operacional de UI).
+- [ ] `/campaign-flow`: atalho “abrir no /meta-test” já pré-selecionado por país/registro (melhorar deep-link).
+- [ ] `/campaign-flow`: melhorar resumo operacional copiável (curto por padrão; opção de JSON completo).
+
 ## Decision Log (Ativo)
 
-Última atualização: [2026-05-25 18:57]
+Última atualização: [2026-05-26 10:40]
 
 Mantém apenas decisões ainda válidas para execução atual. Histórico completo: ver `ARCHIVE.md` em `## Decision Log (histórico completo)`.
 
@@ -1249,9 +1288,17 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
   - Token Meta nunca deve aparecer no frontend, logs ou commits.
   - Toda criação REAL continua obrigatoriamente `PAUSED`.
 
+- [2026-05-26 10:40] Decisão: foco atual deixa de ser “provar integração Meta” e passa a ser **produtividade operacional para entrega controlada ao cliente**.
+  Motivo: o fluxo REAL ponta a ponta já foi validado; agora a prioridade é reduzir atrito e acelerar operação.
+  Regras:
+  - Priorizar: P20 (lote) → P11 (templates no `/campaign-flow`) → P21 (operação ultra rápida).
+  - Manter `/meta-test` como laboratório técnico/debug.
+  - Toda criação REAL continua `PAUSED` (nunca `ACTIVE`).
+  - Token nunca no frontend/logs/documentos.
+
 ## Blockers
 
-Última atualização: [2026-05-26 09:15]
+Última atualização: [2026-05-26 10:40]
 
 ### Blockers ativos
 
@@ -1282,7 +1329,7 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 
 ### Próxima ação
 
-Executar P19 — Login interno e credenciais Meta por usuário.
+Executar P20 → P11 (templates no `/campaign-flow`) → P21 (operação ultra rápida).
 
 ### Regras de segurança que continuam ativas
 

@@ -287,6 +287,24 @@ Exemplos (`curl`, sempre `PAUSED` e sem token no frontend):
 - Criar template: `POST /api/country-templates` (body: `{ "name": "LATAM", "codes": ["BR","AR"] }`)
 - Remover template: `DELETE /api/country-templates/<template_uuid>`
 
+### Templates operacionais — uso atual (console `/meta-test`)
+
+Última atualização: [2026-05-26 10:45]
+
+Estado atual:
+
+- Templates já existem e são operados pelo console `/meta-test` (Campaign/Country/Creative Templates).
+- O objetivo operacional é usar esses templates para acelerar o `/campaign-flow` (ver P11 em `PLANS.md`), mas a integração direta no `/campaign-flow` pode estar parcialmente pendente dependendo da versão.
+
+Procedimento (hoje):
+
+1) Abrir `/meta-test` e criar/gerenciar templates:
+   - Campaign Templates
+   - Country Templates
+   - Creative Templates
+2) Aplicar template(s) via UI do `/meta-test` (ou via endpoints listados acima) para gerar drafts/estruturas.
+3) Usar os IDs/estrutura gerada como base para continuar troubleshooting/validação no próprio `/meta-test` quando necessário.
+
 ### Meta — Creative REAL (AdCreative)
 
 Última atualização: [2026-05-13 14:09]

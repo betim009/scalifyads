@@ -936,6 +936,9 @@ Tarefas:
 
 > Esta fase transforma o projeto de frontend mockado
 > para um sistema operacional real integrado com Meta Ads API.
+>
+> OBSOLETO (histórico): esta seção é um snapshot antigo e contém checklists com `[ ]`.
+> Não tratar como backlog ativo. A fonte única de backlog ativo é `PLANS.md`.
 
 #### [P1] Modelagem real do banco
 

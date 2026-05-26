@@ -1,14 +1,14 @@
 # PROJECT_STATUS — Campaign Builder
 
-Última atualização: [2026-05-26 10:25]
+Última atualização: [2026-05-26 10:45]
 
 ## 1. Resumo executivo
 
-O Campaign Builder deixou de ser apenas um protótipo: hoje existe um **MVP operacional** com **integração REAL validada ponta a ponta** com a Meta Marketing API. O sistema já consegue criar e registrar evidências de uma estrutura completa (Campaign → AdSet → Creative → Ad), com guardrail obrigatório de segurança (**tudo nasce PAUSED**), além de leitura via Graph e preview quando disponível.
+O Campaign Builder já passou da fase de prova técnica: existe um **fluxo operacional guiado** para criação REAL/STUB (com login interno e credenciais Meta por usuário) e um console técnico (`/meta-test`) para troubleshooting/auditoria. O foco agora é **produtividade operacional** (lote + templates + repetição rápida) para preparar uma entrega controlada ao cliente, mantendo guardrails (**tudo REAL nasce `PAUSED`**).
 
 ## 2. Estado atual em uma frase
 
-“O sistema já consegue criar, via backend, uma estrutura REAL completa na Meta: Campaign, AdSet, Creative e Ad, mantendo tudo PAUSED e persistindo evidências no banco.”
+“O sistema permite operar criação REAL em lote via `/campaign-flow`, com login interno e credenciais por usuário, mantendo tudo `PAUSED` e usando `/meta-test` como laboratório técnico.”
 
 ## 3. O que já está funcional
 
@@ -71,10 +71,10 @@ Apesar do fluxo REAL estar validado, isto **ainda não é produção**. Ainda fa
 
 ## 7. Próxima fase recomendada
 
-- P14 — Auditoria e estabilização pós-fluxo REAL
-- P15 — Demo operacional controlada
-- P16 — Hardening e rotação de credenciais
-- P17 — Preparação do fluxo operacional limpo
+- Finalizar e consolidar P20 (automatização em lote no `/campaign-flow`) com documentação e rotina repetível.
+- Reativar P11 (Templates operacionais) para uso direto no `/campaign-flow` (sem duplicar backlog).
+- Criar P21 (Operação ultra rápida) para reduzir cliques e permitir repetição/duplicação rápida além de templates.
+- Preparar entrega controlada ao cliente (foco: operação rápida; guardrails preservados).
 
 ## 8. Riscos atuais
 
