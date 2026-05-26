@@ -1149,7 +1149,7 @@ Backlog:
 - [x] Validar build do frontend.
 - [x] Atualizar `RUNBOOK.md`.
 - [x] Atualizar `PROJECT_STATUS.md`.
-- [ ] Criar commit incremental.
+- [x] Criar commit incremental (commit: 98db34b).
 
 Critérios de aceite:
 
