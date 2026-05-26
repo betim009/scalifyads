@@ -1264,7 +1264,7 @@ Validação executada (local):
 
 ### P22 — ROI operacional mínimo
 
-Última atualização: [2026-05-26 12:10]
+Última atualização: [2026-05-26 13:05]
 
 Objetivo:
 criar um **fluxo/tela simples** para o cliente identificar **lucro/prejuízo** por campanha e executar ações operacionais básicas, **sem** virar um dashboard avançado.
@@ -1282,16 +1282,21 @@ Premissas:
 
 Backlog:
 
-- [ ] Criar tela simples de ROI operacional (lista de campanhas + indicadores).
-- [ ] Listar campanhas (baseado nas entidades já persistidas; reaproveitar endpoints/services existentes).
-- [ ] Exibir gasto da Meta por campanha (sem analytics sofisticado; uso operacional).
-- [ ] Permitir informar/editar receita manual por campanha (persistência no DB; sem expor segredos).
-- [ ] Calcular lucro/prejuízo e ROI (exibir destaque para prejuízo).
-- [ ] Ação: pausar uma campanha específica (com confirmação explícita).
-- [ ] Ação: pausar todas campanhas com prejuízo (com confirmação explícita).
-- [ ] Ação: editar orçamento de uma campanha (com confirmação explícita).
-- [ ] Registrar ações operacionais em log (sem token; payload técnico oculto por padrão).
-- [ ] Nunca oferecer opção `ACTIVE` em qualquer UI/endpoint deste fluxo.
+- [x] Criar tela simples de ROI operacional (lista de campanhas + indicadores). (rota: `/roi-operacional`)
+- [x] Listar campanhas (por `generated_campaign` + métrica no dia). (endpoint: `GET /api/finance/roi-operational`)
+- [x] Exibir gasto da Meta por campanha (via `campaign_metrics.spend_cents`).
+- [x] Permitir informar/editar receita manual por campanha (persistência em `campaign_metrics.revenue_cents`). (endpoint: `POST /api/finance/revenue`)
+- [x] Calcular lucro/prejuízo e ROI (exibir destaque para prejuízo).
+- [x] Ação: pausar uma campanha específica (com confirmação explícita; nunca ACTIVE). (endpoint: `POST /api/meta/campaigns/:id/pause`)
+- [x] Ação: pausar todas campanhas com prejuízo (com confirmação explícita; continuar mesmo se 1 falhar).
+- [x] Ação: editar orçamento de uma campanha (com confirmação explícita; manter PAUSED). (endpoint: `POST /api/meta/adsets/:id/budget`)
+- [x] Registrar ações operacionais em log (sem token; detalhes reduzidos). (source: `roi-operational`)
+- [x] Nunca oferecer opção `ACTIVE` em qualquer UI/endpoint deste fluxo.
+
+Validação executada (local):
+
+- [2026-05-26 13:05] `cd frontend && npm run build` (OK) após adicionar `/roi-operacional`.
+- Commits: 06858c9, a8481f0
 
 Critérios de aceite:
 

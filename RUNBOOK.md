@@ -133,6 +133,34 @@ Resultado esperado:
 - Falha em um país **não interrompe** os próximos.
 - Botão “Abrir /meta-test” por país para troubleshooting.
 
+### P22 — ROI operacional mínimo (`/roi-operacional`)
+
+Última atualização: [2026-05-26 13:05]
+
+Objetivo:
+operar decisões simples por campanha usando **gasto (Meta)** + **receita manual** → lucro/prejuízo/ROI, com ações seguras (nunca `ACTIVE`).
+
+Pré-requisitos:
+
+- Login OK (`/login`).
+- DB habilitado e migrations aplicadas.
+- Métricas de gasto disponíveis em `campaign_metrics` (ex.: via sync/scheduler já existentes).
+
+Fluxo (UI):
+
+1) Abrir `http://localhost:5173/roi-operacional`.
+2) Selecionar data (default D-1).
+3) Informar **receita manual** por campanha → clicar **Salvar**.
+4) Revisar lucro/prejuízo e ROI.
+5) Ações:
+   - **Pausar** (campanha específica) → exige confirmação.
+   - **Pausar negativos** (massa) → exige confirmação e continua mesmo se 1 item falhar.
+   - **Orçamento** (AdSet) → exige confirmação e mantém `PAUSED`.
+
+Troubleshooting:
+
+- Se alguma ação REAL falhar, abrir `/meta-test` para diagnóstico (token nunca no frontend).
+
 ### Demo operacional controlada
 
 Última atualização: [2026-05-25 18:57]
