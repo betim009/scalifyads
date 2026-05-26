@@ -243,6 +243,8 @@ Pré-requisitos:
 Subir LibreTranslate (Docker Compose):
 
 - `docker compose up -d libretranslate`
+- Se a porta `5000` estiver em uso no host, sobrescreva no `.env`:
+  - `LIBRETRANSLATE_HOST_PORT` (ex.: `5005`)
 
 Configuração:
 
@@ -252,7 +254,7 @@ Configuração:
 
 Validar LibreTranslate (host):
 
-- `curl -s -X POST http://localhost:5000/translate -H 'Content-Type: application/json' -d '{"q":"Olá mundo","source":"auto","target":"en","format":"text"}'`
+- `curl -s -X POST http://localhost:${LIBRETRANSLATE_HOST_PORT:-5000}/translate -H 'Content-Type: application/json' -d '{"q":"Olá mundo","source":"auto","target":"en","format":"text"}'`
 
 Gerar traduções (UI):
 
