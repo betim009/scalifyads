@@ -368,12 +368,13 @@ Exemplos (`curl`, sempre `PAUSED` e sem token no frontend):
 
 ### Templates operacionais — uso atual (console `/meta-test`)
 
-Última atualização: [2026-05-26 11:40]
+Última atualização: [2026-05-26 14:10]
 
 Estado atual:
 
 - Templates já existem e são operados pelo console `/meta-test` (Campaign/Country/Creative Templates).
 - Templates também podem ser aplicados diretamente no `/campaign-flow` (fluxo guiado), para reduzir preenchimento manual e acelerar lote.
+- Templates operacionais do cliente agora têm uma página dedicada: `/templates` (gerenciamento) + aplicação no `/campaign-flow`.
 
 Procedimento (hoje):
 
@@ -388,6 +389,12 @@ Procedimento (hoje):
 3) Após executar e criar `generated_campaign`, salvar como template quando fizer sentido:
    - Em “Etapa 5 — Resultado”, clicar **Salvar como template** (gera Campaign Template via backend).
 4) Em caso de erro no `/campaign-flow`, abrir `/meta-test` pelo botão “Abrir /meta-test” e seguir o troubleshooting.
+
+Procedimento (cliente / operação):
+
+1) Abrir `http://localhost:5173/templates` para criar/editar/excluir templates operacionais.
+2) Selecionar um template e clicar **Usar no /campaign-flow** (abre o wizard com prefill).
+3) Executar no `/campaign-flow` com as confirmações (REAL exige confirmação explícita; tudo nasce `PAUSED`).
 
 ### Meta — Creative REAL (AdCreative)
 

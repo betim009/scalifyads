@@ -498,7 +498,7 @@ Backlog (P11 — foco atual):
 - [x] `/campaign-flow`: permitir escolher template(s) de Creative/Copy/CTA para preencher automaticamente a Etapa 3.
 - [x] `/campaign-flow`: permitir escolher Country Template (lista de países) para lote.
 - [x] `/campaign-flow`: permitir salvar “estrutura executada” como template (quando fizer sentido) sem expor payloads técnicos por padrão.
-- [ ] Criar página `/templates` e melhorar navegação de templates.
+- [x] Criar página `/templates` e melhorar navegação de templates.
   - criar rota `/templates`;
   - criar página de templates;
   - adicionar botão/link na navbar ou dashboard/home para `/templates`;
@@ -511,6 +511,8 @@ Validação executada (local):
 
 - [2026-05-26 11:40] `cd frontend && npm run build` (OK) após integrar templates no `/campaign-flow`.
 - Commit: 23e1e23
+- [2026-05-26 14:10] `cd frontend && npm run build` (OK) após criar `/templates`.
+- Commits: 0d107a2, 5791e66
 
 ### P12 — Workflow operacional
 
