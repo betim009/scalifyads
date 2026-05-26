@@ -14,6 +14,7 @@ import { creativeTemplatesRouter } from './creativeTemplates.js'
 import { countryTemplatesRouter } from './countryTemplates.js'
 import { campaignTemplatesRouter } from './campaignTemplates.js'
 import { authRouter } from './auth.js'
+import { flowTemplatesRouter } from './flowTemplates.js'
 
 export function apiRouter() {
   const router = Router()
@@ -37,6 +38,7 @@ export function apiRouter() {
   router.use('/creative-templates', creativeTemplatesRouter())
   router.use('/country-templates', countryTemplatesRouter())
   router.use('/campaign-templates', campaignTemplatesRouter())
+  router.use('/flow-templates', flowTemplatesRouter())
 
   return router
 }
