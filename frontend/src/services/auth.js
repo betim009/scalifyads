@@ -37,7 +37,8 @@ export async function listOperationalCountries({ limit = 200 } = {}) {
   const query = new URLSearchParams();
   if (limit) query.set("limit", String(limit));
   const data = await apiGet(`/api/auth/operational-countries?${query.toString()}`);
-  return { ok: true, countryCodes: Array.isArray(data?.country_codes) ? data.country_codes : [] };
+  const list = Array.isArray(data?.operational_countries) ? data.operational_countries : [];
+  return { ok: true, operationalCountries: list };
 }
 
 export async function addOperationalCountry({ countryCode } = {}) {
@@ -52,5 +53,10 @@ export async function removeOperationalCountry({ countryCode } = {}) {
 
 export async function addAllOperationalCountries() {
   const data = await apiPost(`/api/auth/operational-countries/add-all`, {});
+  return { ok: true, ...data };
+}
+
+export async function setOperationalCountryLanguage({ countryCode, primaryLanguage } = {}) {
+  const data = await apiPost(`/api/auth/operational-countries/language`, { countryCode, primaryLanguage });
   return { ok: true, ...data };
 }

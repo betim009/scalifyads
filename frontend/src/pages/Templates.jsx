@@ -7,6 +7,7 @@ import {
   listFlowTemplates,
   updateFlowTemplate,
 } from "../services/flowTemplates.js";
+import { getAuthMe } from "../services/auth.js";
 
 const STORAGE_LAST_EXECUTION_KEY = "campaignFlow:lastExecution:v1";
 
@@ -131,6 +132,7 @@ export default function Templates() {
 
   const [templates, setTemplates] = useState([]);
   const [selectedId, setSelectedId] = useState("");
+  const [profileCountryCodes, setProfileCountryCodes] = useState([]);
 
   const [form, setForm] = useState({
     name: "",
@@ -165,6 +167,23 @@ export default function Templates() {
       .finally(() => {
         if (!alive) return;
         setLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    getAuthMe()
+      .then((res) => {
+        if (!alive) return;
+        const codes = Array.isArray(res?.user?.operationalCountryCodes) ? res.user.operationalCountryCodes : [];
+        setProfileCountryCodes(codes.map((c) => String(c || "").trim().toUpperCase()).filter(Boolean));
+      })
+      .catch(() => {
+        if (!alive) return;
+        setProfileCountryCodes([]);
       });
     return () => {
       alive = false;
@@ -397,10 +416,10 @@ export default function Templates() {
 
             <div className="card" style={{ padding: 16 }}>
               <div style={{ fontWeight: 900, marginBottom: 10 }}>Editar / criar</div>
-              <div style={{ display: "grid", gap: 12 }}>
-                <Field label="Name" hint="Nome do template (ex: Padrão LATAM • Tráfego)">
-                  <InputLike value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
-                </Field>
+                <div style={{ display: "grid", gap: 12 }}>
+                  <Field label="Name" hint="Nome do template (ex: Padrão LATAM • Tráfego)">
+                    <InputLike value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
+                  </Field>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <Field label="Objective">
@@ -420,6 +439,18 @@ export default function Templates() {
                       onChange={(e) => setForm((p) => ({ ...p, countryCodes: e.target.value }))}
                       placeholder="BR,AR"
                     />
+                    {profileCountryCodes.length ? (
+                      <div style={{ marginTop: 8, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                        <button
+                          type="button"
+                          className="pillOutline"
+                          disabled={busy}
+                          onClick={() => setForm((p) => ({ ...p, countryCodes: profileCountryCodes.join(",") }))}
+                        >
+                          Usar países do perfil ({profileCountryCodes.length})
+                        </button>
+                      </div>
+                    ) : null}
                   </Field>
                 </div>
 
@@ -527,4 +558,3 @@ export default function Templates() {
     </PageShell>
   );
 }
-

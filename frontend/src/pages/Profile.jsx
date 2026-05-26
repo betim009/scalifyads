@@ -8,6 +8,7 @@ import {
   listOperationalCountries,
   logout,
   removeOperationalCountry,
+  setOperationalCountryLanguage,
   saveMetaCredentials,
 } from "../services/auth.js";
 import { getCountries } from "../services/reference.js";
@@ -25,8 +26,9 @@ export default function Profile() {
   const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
   const [countries, setCountries] = useState([]);
-  const [operationalCountryCodes, setOperationalCountryCodes] = useState([]);
+  const [operationalCountries, setOperationalCountries] = useState([]);
   const [countryToAdd, setCountryToAdd] = useState("BR");
+  const [languageByCountry, setLanguageByCountry] = useState({});
 
   const [metaAdAccountId, setMetaAdAccountId] = useState("");
   const [metaPageId, setMetaPageId] = useState("");
@@ -45,7 +47,15 @@ export default function Profile() {
         setMe(res.user ?? null);
         setMetaAdAccountId(res?.user?.metaAdAccountId ?? "");
         setMetaPageId(res?.user?.metaPageId ?? "");
-        setOperationalCountryCodes(Array.isArray(res?.user?.operationalCountryCodes) ? res.user.operationalCountryCodes : []);
+        const list = Array.isArray(res?.user?.operationalCountries) ? res.user.operationalCountries : [];
+        setOperationalCountries(list);
+        setLanguageByCountry(
+          Object.fromEntries(
+            list
+              .filter((i) => i?.countryCode)
+              .map((i) => [i.countryCode, i.primaryLanguage ?? ""])
+          )
+        );
       })
       .catch((err) => {
         if (!alive) return;
@@ -91,8 +101,14 @@ export default function Profile() {
       setSuccess("Credenciais salvas (token não é exibido).");
       const refreshed = await getAuthMe();
       setMe(refreshed.user ?? null);
-      setOperationalCountryCodes(
-        Array.isArray(refreshed?.user?.operationalCountryCodes) ? refreshed.user.operationalCountryCodes : []
+      const list = Array.isArray(refreshed?.user?.operationalCountries) ? refreshed.user.operationalCountries : [];
+      setOperationalCountries(list);
+      setLanguageByCountry(
+        Object.fromEntries(
+          list
+            .filter((i) => i?.countryCode)
+            .map((i) => [i.countryCode, i.primaryLanguage ?? ""])
+        )
       );
     } catch (err) {
       setError(err?.message ? String(err.message) : "Falha ao salvar credenciais.");
@@ -114,7 +130,15 @@ export default function Profile() {
 
   async function refreshOperationalCountries() {
     const res = await listOperationalCountries({ limit: 500 });
-    setOperationalCountryCodes(Array.isArray(res?.countryCodes) ? res.countryCodes : []);
+    const list = Array.isArray(res?.operationalCountries) ? res.operationalCountries : [];
+    setOperationalCountries(list);
+    setLanguageByCountry(
+      Object.fromEntries(
+        list
+          .filter((i) => i?.countryCode)
+          .map((i) => [i.countryCode, i.primaryLanguage ?? ""])
+      )
+    );
   }
 
   async function onAddAllCountries() {
@@ -165,6 +189,33 @@ export default function Profile() {
     }
   }
 
+  async function onSetLanguage(code, lang) {
+    if (saving) return;
+    setSaving(true);
+    setError("");
+    setSuccess("");
+    try {
+      await setOperationalCountryLanguage({ countryCode: code, primaryLanguage: lang || null });
+      await refreshOperationalCountries();
+      setSuccess("Idioma atualizado.");
+    } catch (err) {
+      setError(err?.message ? String(err.message) : "Falha ao atualizar idioma.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const languageOptions = [
+    { value: "", label: "—", disabled: false },
+    { value: "pt", label: "Português", disabled: false },
+    { value: "en", label: "Inglês", disabled: false },
+    { value: "es", label: "Espanhol", disabled: false },
+    { value: "fr", label: "Francês", disabled: false },
+    { value: "de", label: "Alemão", disabled: false },
+    { value: "it", label: "Italiano", disabled: false },
+    { value: "ar", label: "Árabe", disabled: false },
+  ];
+
   return (
     <PageShell title="Perfil" subtitle="Configuração interna + credenciais Meta por usuário" align="center" backFallbackTo="/">
       <div style={{ maxWidth: 860, margin: "0 auto" }}>
@@ -203,7 +254,7 @@ export default function Profile() {
             </section>
 
             <section className="card" style={{ marginTop: 16, padding: 20 }}>
-              <div style={{ fontWeight: 950, fontSize: 18 }}>Países da operação</div>
+              <div style={{ fontWeight: 950, fontSize: 18 }}>Países e idiomas da operação</div>
               <p style={{ marginTop: 6, marginBottom: 0, color: "#6b7280", fontWeight: 750 }}>
                 O `/campaign-flow` prioriza estes países como base para seleção em lote.
               </p>
@@ -245,22 +296,58 @@ export default function Profile() {
                 <div className="card" style={{ padding: 14 }}>
                   <div style={{ fontWeight: 900 }}>Lista do usuário</div>
                   <div className="muted" style={{ marginTop: 6, fontWeight: 800 }}>
-                    {operationalCountryCodes.length ? `${operationalCountryCodes.length} país(es)` : "Nenhum país configurado"}
+                    {operationalCountries.length ? `${operationalCountries.length} país(es)` : "Nenhum país configurado"}
                   </div>
-                  <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                    {operationalCountryCodes.length ? (
-                      operationalCountryCodes.map((code) => (
-                        <button
-                          key={code}
-                          type="button"
-                          className="pillOutline"
-                          disabled={saving}
-                          onClick={() => onRemoveCountry(code)}
-                          title="Clique para remover"
-                        >
-                          {code} ×
-                        </button>
-                      ))
+                  <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+                    {operationalCountries.length ? (
+                      operationalCountries.map((item) => {
+                        const code = item?.countryCode;
+                        if (!code) return null;
+                        return (
+                          <div
+                            key={code}
+                            className="card"
+                            style={{ padding: 12, display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", alignItems: "center" }}
+                          >
+                            <div style={{ fontWeight: 950 }}>{code}</div>
+                            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                              <select
+                                value={languageByCountry[code] ?? ""}
+                                disabled={saving}
+                                onChange={(e) => {
+                                  const next = e.target.value;
+                                  setLanguageByCountry((p) => ({ ...p, [code]: next }));
+                                  onSetLanguage(code, next);
+                                }}
+                                style={{
+                                  height: 40,
+                                  borderRadius: 12,
+                                  border: "1px solid #e5e7eb",
+                                  padding: "0 12px",
+                                  fontSize: 13,
+                                  fontWeight: 900,
+                                  background: "#ffffff",
+                                }}
+                              >
+                                {languageOptions.map((opt) => (
+                                  <option key={opt.value} value={opt.value} disabled={opt.disabled}>
+                                    {opt.label}
+                                  </option>
+                                ))}
+                              </select>
+                              <button
+                                type="button"
+                                className="pillOutline"
+                                disabled={saving}
+                                onClick={() => onRemoveCountry(code)}
+                                title="Remover país"
+                              >
+                                Remover
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })
                     ) : (
                       <div className="muted" style={{ fontWeight: 800 }}>
                         Dica: adicione pelo menos 1 país para operar lote com segurança.

@@ -51,6 +51,22 @@ function normalizeNonEmptyString(value) {
   return value.trim();
 }
 
+function normalizeCountrySuffixName(base, countryCode, { fallbackPrefix } = {}) {
+  const cc = String(countryCode || "").trim().toUpperCase();
+  const raw = typeof base === "string" ? base.trim() : "";
+  const cleaned = raw || (fallbackPrefix ? `${fallbackPrefix}` : "");
+  const withoutSuffix = cleaned.replace(/\s*•\s*[A-Z]{2}\s*$/, "").trim();
+  return `${withoutSuffix} • ${cc}`.trim();
+}
+
+function normalizeCampaignNameForCountry(baseName, countryCode) {
+  const cc = String(countryCode || "").trim().toUpperCase();
+  const name = typeof baseName === "string" ? baseName.trim() : "";
+  if (!name) return `Campaign • ${cc}`;
+  if (new RegExp(`\\b${cc}\\b`).test(name)) return name;
+  return `${name} • ${cc}`.trim();
+}
+
 function safeJsonParse(raw) {
   if (typeof raw !== "string") return null;
   try {
@@ -181,6 +197,7 @@ export default function CampaignFlow() {
   const [step, setStep] = useState(0);
   const [countries, setCountries] = useState([]);
   const [operationalCountryCodes, setOperationalCountryCodes] = useState([]);
+  const [countryLanguageByCode, setCountryLanguageByCode] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -231,10 +248,19 @@ export default function CampaignFlow() {
         if (!alive) return;
         const codes = Array.isArray(res?.user?.operationalCountryCodes) ? res.user.operationalCountryCodes : [];
         setOperationalCountryCodes(codes.map((c) => String(c || "").trim().toUpperCase()).filter(Boolean));
+        const list = Array.isArray(res?.user?.operationalCountries) ? res.user.operationalCountries : [];
+        setCountryLanguageByCode(
+          Object.fromEntries(
+            list
+              .filter((i) => i?.countryCode)
+              .map((i) => [String(i.countryCode).toUpperCase(), i.primaryLanguage ?? null])
+          )
+        );
       })
       .catch(() => {
         if (!alive) return;
         setOperationalCountryCodes([]);
+        setCountryLanguageByCode({});
       });
     return () => {
       alive = false;
@@ -242,6 +268,7 @@ export default function CampaignFlow() {
   }, []);
 
   const operationalCountriesMissing = batchEnabled && operationalCountryCodes.length === 0;
+  const countryLanguagesMissing = batchEnabled && operationalCountryCodes.length > 0 && Object.keys(countryLanguageByCode || {}).length === 0;
 
   useEffect(() => {
     const last = safeJsonParse(localStorage.getItem(STORAGE_LAST_EXECUTION_KEY));
@@ -626,7 +653,7 @@ export default function CampaignFlow() {
 
           try {
             const campaignRes = await createMetaCampaignSimple({
-              name: campaign.name,
+              name: normalizeCampaignNameForCountry(campaign.name, countryCode),
               objective: campaign.objective,
               metaAdAccountId: campaign.metaAdAccountId,
               countryCode,
@@ -641,7 +668,7 @@ export default function CampaignFlow() {
             setProgress({ total: codes.length, currentIndex: i, currentCountryCode: countryCode, stage: "adset" });
             const adSetRes = await createMetaAdSet({
               generatedCampaignId,
-              name: adSet.name,
+              name: normalizeCountrySuffixName(adSet.name, countryCode, { fallbackPrefix: "AdSet" }),
               dailyBudgetCents: Number(adSet.dailyBudgetCents),
               billingEvent: adSet.billingEvent,
               optimizationGoal: adSet.optimizationGoal,
@@ -676,7 +703,7 @@ export default function CampaignFlow() {
             setProgress({ total: codes.length, currentIndex: i, currentCountryCode: countryCode, stage: "ad" });
             const adRes = await createMetaAd({
               generatedCampaignId,
-              name: ad.name,
+              name: normalizeCountrySuffixName(ad.name, countryCode, { fallbackPrefix: "Ad" }),
               creativeDraftId,
               mode: campaign.mode,
             });
@@ -823,6 +850,11 @@ export default function CampaignFlow() {
             {operationalCountriesMissing ? (
               <div style={{ fontWeight: 800, color: "#92400e", fontSize: 13 }}>
                 Aviso: nenhum “País da operação” configurado no Perfil. Configure em `/profile` para operar lote com base segura.
+              </div>
+            ) : null}
+            {countryLanguagesMissing ? (
+              <div style={{ fontWeight: 800, color: "#92400e", fontSize: 13 }}>
+                Aviso: defina o idioma principal por país no `/profile` (P25) para padronizar operação. (Sem tradução automática.)
               </div>
             ) : null}
           </div>
