@@ -248,3 +248,26 @@ export async function metaListAdAccountCampaigns({
 
   return out
 }
+
+export async function metaPauseCampaign({ metaCampaignId, accessToken } = {}) {
+  const id = normalizeNonEmptyString(metaCampaignId)
+  if (!id) {
+    const err = new Error('metaCampaignId is required')
+    err.status = 400
+    throw err
+  }
+
+  const token = normalizeNonEmptyString(accessToken)
+  if (!token) {
+    const err = new Error('accessToken is required')
+    err.status = 400
+    throw err
+  }
+
+  const params = new URLSearchParams()
+  params.set('access_token', token)
+  params.set('status', 'PAUSED')
+
+  await fetchJson(buildUrl(id), { method: 'POST', body: params, retries: 3 })
+  return metaFetchCampaign({ metaCampaignId: id, accessToken: token })
+}

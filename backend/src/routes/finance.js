@@ -2,6 +2,8 @@ import { Router } from 'express'
 import { getPool } from '../db.js'
 import { asyncHandler } from '../lib/asyncHandler.js'
 import { jsonError, parseLimit } from '../lib/http.js'
+import { resolveAuthUser } from '../lib/internalAuth.js'
+import { isUuid } from '../lib/validate.js'
 
 function isYyyyMmDd(value) {
   return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
@@ -82,8 +84,26 @@ function computeRoiPercent({ spendCents, revenueCents }) {
   return Math.round((profit / spendCents) * 10000) / 100
 }
 
+function normalizeNonEmptyString(value, { maxLen } = {}) {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  if (maxLen && trimmed.length > maxLen) return trimmed.slice(0, maxLen)
+  return trimmed
+}
+
 export function financeRouter() {
   const router = Router()
+
+  async function requireAuthAsync(req, res) {
+    const pool = getPool()
+    const auth = await resolveAuthUser(pool, req)
+    if (!auth?.userId) {
+      jsonError(res, 401, 'Unauthorized')
+      return null
+    }
+    return auth
+  }
 
   router.get(
     '/monthly',
@@ -394,6 +414,10 @@ export function financeRouter() {
         return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
       }
 
+      // ROI mínimo operacional (P22) é protegido por login.
+      // (O endpoint legacy /roi continua sem auth para compatibilidade interna.)
+      // Use /roi-operational para operação com ações.
+
       const date = parseDateOrNull(req.query.date) ?? addDaysUtc(todayUtcYyyyMmDd(), -1)
       if (!isYyyyMmDd(date)) {
         return jsonError(res, 400, 'Invalid date. Use YYYY-MM-DD.')
@@ -457,6 +481,162 @@ export function financeRouter() {
         },
         rows: list
       })
+    })
+  )
+
+  router.get(
+    '/roi-operational',
+    asyncHandler(async (req, res) => {
+      if (!req.app.locals.dbEnabled) {
+        return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
+      }
+
+      const auth = await requireAuthAsync(req, res)
+      if (!auth) return
+
+      const date = parseDateOrNull(req.query.date) ?? addDaysUtc(todayUtcYyyyMmDd(), -1)
+      if (!isYyyyMmDd(date)) {
+        return jsonError(res, 400, 'Invalid date. Use YYYY-MM-DD.')
+      }
+
+      const limit = parseLimit(req.query.limit, 200, 500)
+      const pool = getPool()
+
+      const totalsResult = await pool.query(
+        `
+          SELECT
+            COALESCE(SUM(cm.spend_cents), 0) AS spend_cents,
+            SUM(cm.revenue_cents) AS revenue_cents
+          FROM campaign_metrics cm
+          WHERE cm.metric_date = $1::date
+        `,
+        [date]
+      )
+
+      const totalsRow = totalsResult.rows?.[0] ?? {}
+      const spendCents = toInt(totalsRow.spend_cents)
+      const revenueCents = toNullableInt(totalsRow.revenue_cents)
+      const profitCents = revenueCents === null ? null : revenueCents - spendCents
+
+      const rowsResult = await pool.query(
+        `
+          SELECT
+            gc.id AS generated_campaign_id,
+            c.name AS campaign_name,
+            gc.country_code,
+            gc.status AS generated_status,
+            gc.meta_run_mode,
+            gc.meta_campaign_id,
+            gc.meta_adset_id,
+            COALESCE(SUM(cm.spend_cents), 0) AS spend_cents,
+            SUM(cm.revenue_cents) AS revenue_cents
+          FROM campaign_metrics cm
+          JOIN generated_campaigns gc ON gc.id = cm.generated_campaign_id
+          JOIN campaigns c ON c.id = gc.campaign_id
+          WHERE cm.metric_date = $1::date
+          GROUP BY
+            gc.id,
+            c.name,
+            gc.country_code,
+            gc.status,
+            gc.meta_run_mode,
+            gc.meta_campaign_id,
+            gc.meta_adset_id
+          ORDER BY COALESCE(SUM(cm.revenue_cents), 0) - COALESCE(SUM(cm.spend_cents), 0) DESC, c.name ASC
+          LIMIT $2
+        `,
+        [date, limit]
+      )
+
+      const rows = rowsResult.rows.map((r) => {
+        const spend = toInt(r.spend_cents)
+        const revenue = toNullableInt(r.revenue_cents)
+        const profit = revenue === null ? null : revenue - spend
+        return {
+          generated_campaign_id: r.generated_campaign_id,
+          campaign_name: r.campaign_name,
+          country_code: r.country_code,
+          status: r.generated_status,
+          meta_run_mode: r.meta_run_mode ?? null,
+          meta_campaign_id: r.meta_campaign_id ?? null,
+          meta_adset_id: r.meta_adset_id ?? null,
+          spend_cents: spend,
+          revenue_cents: revenue,
+          profit_cents: profit,
+          roi_percent: computeRoiPercent({ spendCents: spend, revenueCents: revenue })
+        }
+      })
+
+      return res.json({
+        ok: true,
+        date,
+        summary: {
+          spend_cents: spendCents,
+          revenue_cents: revenueCents,
+          profit_cents: profitCents,
+          roi_percent: computeRoiPercent({ spendCents, revenueCents })
+        },
+        rows
+      })
+    })
+  )
+
+  router.post(
+    '/revenue',
+    asyncHandler(async (req, res) => {
+      if (!req.app.locals.dbEnabled) {
+        return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
+      }
+
+      const auth = await requireAuthAsync(req, res)
+      if (!auth) return
+
+      const generatedCampaignId = normalizeNonEmptyString(req.body?.generatedCampaignId)
+      if (!generatedCampaignId || !isUuid(generatedCampaignId)) {
+        return jsonError(res, 400, 'Invalid generatedCampaignId')
+      }
+
+      const date = parseDateOrNull(req.body?.date) ?? null
+      if (!date || !isYyyyMmDd(date)) {
+        return jsonError(res, 400, 'Invalid date. Use YYYY-MM-DD.')
+      }
+
+      const revenueCentsRaw = req.body?.revenueCents
+      let revenueCents = null
+      if (revenueCentsRaw !== null && revenueCentsRaw !== undefined) {
+        const n = Number(revenueCentsRaw)
+        if (!Number.isFinite(n) || n < 0) {
+          return jsonError(res, 400, 'Invalid revenueCents (expected >= 0)')
+        }
+        revenueCents = Math.trunc(n)
+      }
+
+      const pool = getPool()
+      const { rowCount: exists } = await pool.query(`SELECT 1 FROM generated_campaigns WHERE id = $1`, [generatedCampaignId])
+      if (exists === 0) {
+        return jsonError(res, 404, 'Generated campaign not found')
+      }
+
+      const { rows } = await pool.query(
+        `
+          INSERT INTO campaign_metrics (generated_campaign_id, metric_date, revenue_cents)
+          VALUES ($1::uuid, $2::date, $3::integer)
+          ON CONFLICT (generated_campaign_id, metric_date)
+          DO UPDATE SET revenue_cents = EXCLUDED.revenue_cents
+          RETURNING
+            id,
+            generated_campaign_id,
+            metric_date::text AS metric_date,
+            spend_cents,
+            impressions,
+            clicks,
+            revenue_cents,
+            created_at
+        `,
+        [generatedCampaignId, date, revenueCents]
+      )
+
+      return res.status(201).json({ ok: true, campaign_metric: rows[0] })
     })
   )
 

@@ -254,3 +254,34 @@ export async function metaCreateAdSet({
   const created = await metaFetchAdSet({ metaAdSetId: id, accessToken: token })
   return created
 }
+
+export async function metaUpdateAdSetDailyBudgetPaused({ metaAdSetId, dailyBudgetCents, accessToken } = {}) {
+  const id = normalizeNonEmptyString(metaAdSetId)
+  if (!id) {
+    const err = new Error('metaAdSetId is required')
+    err.status = 400
+    throw err
+  }
+
+  const budget = normalizePositiveInt(dailyBudgetCents)
+  if (!budget) {
+    const err = new Error('dailyBudgetCents is required (expected positive int)')
+    err.status = 400
+    throw err
+  }
+
+  const token = normalizeNonEmptyString(accessToken)
+  if (!token) {
+    const err = new Error('accessToken is required')
+    err.status = 400
+    throw err
+  }
+
+  const params = new URLSearchParams()
+  params.set('access_token', token)
+  params.set('daily_budget', String(budget))
+  params.set('status', 'PAUSED')
+
+  await fetchJson(buildUrl(id), { method: 'POST', body: params, retries: 3 })
+  return metaFetchAdSet({ metaAdSetId: id, accessToken: token })
+}

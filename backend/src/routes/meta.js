@@ -9,9 +9,9 @@ import { syncGeneratedCampaignMetrics } from '../meta/sync.js'
 import { metaFetchMe } from '../meta/graph.js'
 import { coerceAccessToken, resolveAccessToken } from '../meta/accessToken.js'
 import { insertOpsLogBestEffort } from '../ops/opsLogs.js'
-import { metaCreateCampaign, metaFetchCampaign, metaListAdAccountCampaigns } from '../meta/campaigns.js'
+import { metaCreateCampaign, metaFetchCampaign, metaListAdAccountCampaigns, metaPauseCampaign } from '../meta/campaigns.js'
 import { slugify } from '../lib/slugify.js'
-import { metaCreateAdSet, metaCreateAdSetStub, metaFetchAdSet } from '../meta/adsets.js'
+import { metaCreateAdSet, metaCreateAdSetStub, metaFetchAdSet, metaUpdateAdSetDailyBudgetPaused } from '../meta/adsets.js'
 import { metaCreateAd, metaCreateAdStub, metaFetchAd, metaFetchAdPreviews } from '../meta/ads.js'
 import {
   metaCreateAdCreative,
@@ -1519,6 +1519,55 @@ export function metaRouter() {
     })
   )
 
+  // P22 — ROI operacional mínimo: ações seguras (nunca ACTIVE)
+  router.post(
+    '/campaigns/:id/pause',
+    asyncHandler(async (req, res) => {
+      const denied = requireAuth(req, res)
+      if (denied) return denied
+
+      const metaCampaignId = normalizeNonEmptyString(req.params.id)
+      if (!metaCampaignId) {
+        return jsonError(res, 400, 'Invalid meta campaign id')
+      }
+
+      const pool = getPool()
+      const accessToken = await resolveAccessToken(pool, req)
+      if (!accessToken) {
+        return jsonError(
+          res,
+          400,
+          'Missing accessToken (provide body.accessToken, META_ACCESS_TOKEN, or save via /tokens)'
+        )
+      }
+
+      try {
+        const paused = await metaPauseCampaign({ metaCampaignId, accessToken })
+
+        insertOpsLogBestEffort(pool, {
+          source: 'roi-operational',
+          entity: 'meta.campaign',
+          action: 'meta.campaign.pause',
+          ok: true,
+          details: { metaCampaignId }
+        })
+
+        return res.json({ ok: true, meta_campaign: paused })
+      } catch (err) {
+        insertOpsLogBestEffort(pool, {
+          source: 'roi-operational',
+          entity: 'meta.campaign',
+          action: 'meta.campaign.pause',
+          ok: false,
+          error: err?.message ?? 'Meta campaign pause failed',
+          details: { metaCampaignId, details: err?.details ?? null, status: err?.status ?? null }
+        })
+        const status = typeof err?.status === 'number' ? err.status : 502
+        return jsonError(res, status, err?.message ?? 'Meta campaign pause failed', err?.details)
+      }
+    })
+  )
+
   router.get(
     '/adsets/:id',
     asyncHandler(async (req, res) => {
@@ -1547,6 +1596,60 @@ export function metaRouter() {
       } catch (err) {
         const status = typeof err?.status === 'number' ? err.status : 502
         return jsonError(res, status, err?.message ?? 'Meta ad set fetch failed', err?.details)
+      }
+    })
+  )
+
+  router.post(
+    '/adsets/:id/budget',
+    asyncHandler(async (req, res) => {
+      const denied = requireAuth(req, res)
+      if (denied) return denied
+
+      const metaAdSetId = normalizeNonEmptyString(req.params.id)
+      if (!metaAdSetId) {
+        return jsonError(res, 400, 'Invalid meta ad set id')
+      }
+
+      const dailyBudgetCents = req.body?.dailyBudgetCents
+
+      const pool = getPool()
+      const accessToken = await resolveAccessToken(pool, req)
+      if (!accessToken) {
+        return jsonError(
+          res,
+          400,
+          'Missing accessToken (provide body.accessToken, META_ACCESS_TOKEN, or save via /tokens)'
+        )
+      }
+
+      try {
+        const updated = await metaUpdateAdSetDailyBudgetPaused({
+          metaAdSetId,
+          dailyBudgetCents,
+          accessToken
+        })
+
+        insertOpsLogBestEffort(pool, {
+          source: 'roi-operational',
+          entity: 'meta.adset',
+          action: 'meta.adset.budget.update',
+          ok: true,
+          details: { metaAdSetId, dailyBudgetCents: Number(dailyBudgetCents) }
+        })
+
+        return res.json({ ok: true, meta_adset: updated })
+      } catch (err) {
+        insertOpsLogBestEffort(pool, {
+          source: 'roi-operational',
+          entity: 'meta.adset',
+          action: 'meta.adset.budget.update',
+          ok: false,
+          error: err?.message ?? 'Meta ad set budget update failed',
+          details: { metaAdSetId, dailyBudgetCents, details: err?.details ?? null, status: err?.status ?? null }
+        })
+        const status = typeof err?.status === 'number' ? err.status : 502
+        return jsonError(res, status, err?.message ?? 'Meta ad set budget update failed', err?.details)
       }
     })
   )
