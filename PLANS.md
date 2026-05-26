@@ -1386,7 +1386,7 @@ Validação executada (local):
 
 ### P26 — Templates multilíngues com LibreTranslate
 
-Última atualização: [2026-05-26 16:30]
+Última atualização: [2026-05-26 16:45]
 
 Objetivo:
 permitir que templates tenham variações por país/idioma (geradas via backend), baseadas nos países e idiomas configurados no `/profile`, com revisão/edição obrigatória antes de uso no lote.
@@ -1405,22 +1405,27 @@ Regras obrigatórias (guardrails):
 
 Backlog (execução incremental):
 
-- [ ] Configurar LibreTranslate no ambiente:
+- [x] Configurar LibreTranslate no ambiente:
   - env `LIBRETRANSLATE_URL` (default local sugerido: `http://localhost:5000`)
   - (se fizer sentido) service no `docker-compose.yml` (`libretranslate/libretranslate`, porta `5000`)
-- [ ] Backend: criar service para chamar LibreTranslate (retry/timeout básico).
-- [ ] Backend: endpoint autenticado para “Gerar traduções” de um template (sem chamar do frontend).
-- [ ] Persistir variações traduzidas (sem quebrar schema existente; preferir `payload` jsonb se possível).
-- [ ] `/templates`: botão “Gerar traduções” + exibir variações por país/idioma.
-- [ ] `/templates`: permitir revisar/editar textos traduzidos e salvar variações.
-- [ ] `/campaign-flow`: ao executar lote, usar a variação correta por país quando existir.
+- [x] Backend: criar service para chamar LibreTranslate (retry/timeout básico).
+- [x] Backend: endpoint autenticado para “Gerar traduções” de um template (sem chamar do frontend).
+- [x] Persistir variações traduzidas (sem quebrar schema existente; preferir `payload` jsonb se possível).
+- [x] `/templates`: botão “Gerar traduções” + exibir variações por país/idioma.
+- [x] `/templates`: permitir revisar/editar textos traduzidos e salvar variações.
+- [x] `/campaign-flow`: ao executar lote, usar a variação correta por país quando existir.
   - Se não existir tradução para um país, avisar claramente e usar texto base **apenas com confirmação**.
-- [ ] Atualizar `RUNBOOK.md`:
+- [x] Atualizar `RUNBOOK.md`:
   - como subir LibreTranslate;
   - como validar endpoint;
   - como gerar traduções;
   - troubleshooting básico.
-- [ ] Atualizar `PROJECT_STATUS.md` se necessário.
+- [x] Atualizar `PROJECT_STATUS.md` se necessário.
+
+Validação executada (local):
+
+- [2026-05-26 16:42] `cd frontend && npm run build` (OK) após P26 (LibreTranslate + variações no `/templates` + uso no lote).
+- Commit: 234fb9d
 
 Campos que devem gerar variações:
 
