@@ -439,7 +439,7 @@ Regras:
 
 ## Backlog Ativo — Próxima Fase Operacional
 
-Última atualização: [2026-05-26 11:40]
+Última atualização: [2026-05-26 14:05]
 ### P8 — Console operacional
 
 - [x] Consolidar layout operacional definitivo (commits: bd27f80, 25164d7)
@@ -498,6 +498,14 @@ Backlog (P11 — foco atual):
 - [x] `/campaign-flow`: permitir escolher template(s) de Creative/Copy/CTA para preencher automaticamente a Etapa 3.
 - [x] `/campaign-flow`: permitir escolher Country Template (lista de países) para lote.
 - [x] `/campaign-flow`: permitir salvar “estrutura executada” como template (quando fizer sentido) sem expor payloads técnicos por padrão.
+- [ ] Criar página `/templates` e melhorar navegação de templates.
+  - criar rota `/templates`;
+  - criar página de templates;
+  - adicionar botão/link na navbar ou dashboard/home para `/templates`;
+  - adicionar botão/link em `/templates` para voltar para `/`;
+  - permitir gerenciamento básico de templates (listar/criar/editar quando houver suporte simples/excluir);
+  - manter `/campaign-flow` apenas como local de aplicação do template;
+  - manter `/meta-test` intacto.
 
 Validação executada (local):
 
