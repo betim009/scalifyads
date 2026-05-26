@@ -896,7 +896,7 @@ Critérios de aceite:
 
 ### P18 — Primeira versão do fluxo operacional limpo
 
-Última atualização: [2026-05-26 09:25]
+Última atualização: [2026-05-26 09:40]
 
 Objetivo:
 Criar a primeira versão de uma interface operacional mais simples para criação de campanhas Meta, reaproveitando o fluxo REAL já validado no `/meta-test`, mas sem expor excesso de informações técnicas para o usuário final.
@@ -1047,6 +1047,14 @@ Backlog:
   - Registrar decisão no `Decision Log`.
 
 - [x] Criar commit incremental (commit: 265062c).
+- [x] Validar manualmente `/campaign-flow` em modo REAL (sucesso; guardrails preservados; tudo `PAUSED`).
+
+Validação prática (P18):
+
+- [2026-05-26] Validação manual executada com sucesso em modo `REAL` via `/campaign-flow`.
+  - Resultado: Campaign → AdSet → Creative → Ad criados com sucesso.
+  - Segurança: toda criação REAL permaneceu `PAUSED` (nunca `ACTIVE`).
+  - Observação: `/meta-test` permanece preservado como laboratório técnico/debug (não removido, não quebrado).
 
 Critérios de aceite:
 

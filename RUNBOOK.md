@@ -316,6 +316,40 @@ Exemplos (`curl`, sem token no frontend):
 - Consultar Creative no Graph (evidência):
   - `curl http://localhost:3001/api/meta/creatives/<meta_creative_id>`
 
+### Playbook — Validação manual via `/campaign-flow` (P18)
+
+Última atualização: [2026-05-26 09:40]
+
+Objetivo:
+validar o fluxo guiado “limpo” em modo `REAL`, preservando guardrails (**tudo `PAUSED`**, nunca `ACTIVE`) e mantendo o `/meta-test` como laboratório técnico/debug.
+
+Pré-requisitos:
+
+- Stack no ar: `docker compose up -d`
+- Backend OK: `curl http://localhost:3001/healthz`
+- Token no backend:
+  - `curl http://localhost:3001/api/meta/status` (esperado: `hasAccessToken=true`)
+  - `curl -X POST http://localhost:3001/api/meta/validate -H 'Content-Type: application/json' -d '{}'`
+- Page ID disponível (para publish do Creative REAL):
+  - preferir `META_PAGE_ID` no backend **ou** informar `pageId` no formulário do `/campaign-flow`.
+
+Fluxo (UI):
+
+1) Abrir `http://localhost:5173/campaign-flow`.
+2) Selecionar modo `REAL (sempre PAUSED)` e preencher:
+   - `metaAdAccountId` (`act_<id>`)
+   - `objective` (ex.: `OUTCOME_TRAFFIC`)
+   - `countryCode` (ex.: `BR`)
+3) Preencher AdSet (budget/optimization/billing).
+4) Preencher Criativo (mínimo: `primaryText`, `destinationUrl`, `ctaType`; `pageId` quando necessário).
+5) Revisão → clicar em **Criar tudo (PAUSED)**.
+
+Resultado esperado:
+
+- IDs retornados (quando aplicável): `meta_campaign_id`, `meta_adset_id`, `meta_creative_id`, `meta_ad_id`.
+- Tudo criado como `PAUSED` no modo `REAL`.
+- Em caso de erro, usar o botão **Abrir /meta-test (debug)** para troubleshooting.
+
 ### Registros operacionais (cronológico)
 
 Esta seção deve ser atualizada sempre que:
@@ -338,6 +372,12 @@ Esta seção deve ser atualizada sempre que:
   - Evidências (backend sem expor token):
     - `GET /api/meta/status` → `ok=true`, `has_access_token=true`, `has_page_id=true`, `db_enabled=false`
     - `POST /api/meta/validate {}` → `ok=true` (Graph `/me`)
+
+[2026-05-26 09:40]
+
+- P18 (`/campaign-flow`) validado manualmente em modo `REAL` com sucesso.
+- Guardrails preservados: toda criação REAL permaneceu `PAUSED` (nunca `ACTIVE`).
+- `/meta-test` permanece preservado como laboratório técnico/debug.
     - `GET /api/meta/diagnostics` → permissões evidenciadas (ex.: `ads_management`, `pages_show_list`)
 - Bloqueio atual nesta máquina: Docker daemon indisponível → `db_enabled=false` impede P4/P5 REAL via `creative_drafts`/persistência.
 

@@ -1,6 +1,6 @@
 # CLEAN_FLOW_PROPOSAL — Proposta + base do fluxo operacional “limpo” (`/campaign-flow`)
 
-Última atualização: [2026-05-26 09:25]
+Última atualização: [2026-05-26 09:40]
 
 Objetivo:
 documentar uma proposta para um fluxo operacional mais simples e seguro, preservando o `/meta-test` como laboratório técnico.
@@ -15,6 +15,7 @@ Regras:
 Status atual:
 
 - Implementado um fluxo guiado inicial em `/campaign-flow` (frontend).
+- Fluxo guiado validado manualmente em modo `REAL` (sucesso; tudo permanece `PAUSED`).
 - `/meta-test` permanece como console técnico (operação + troubleshooting).
 
 ## Problema atual

@@ -1,6 +1,6 @@
 # PROJECT_STATUS — Campaign Builder
 
-Última atualização: [2026-05-25 18:57]
+Última atualização: [2026-05-26 09:40]
 
 ## 1. Resumo executivo
 
@@ -17,6 +17,7 @@ O Campaign Builder deixou de ser apenas um protótipo: hoje existe um **MVP oper
 - Banco Postgres (migrations + seed).
 - Docker (stack db/backend/frontend).
 - `/meta-test` como console operacional (fluxo principal para validação).
+- `/campaign-flow` como fluxo guiado inicial (operação limpa) — validado manualmente em modo REAL.
 - Integração Meta REAL (Marketing API via backend; token nunca no frontend).
 - Fallback STUB (para desenvolvimento e persistência sem credenciais).
 - Logs operacionais (incluindo persistência em `ops_logs` quando DB está habilitado).
