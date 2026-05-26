@@ -42,9 +42,21 @@ const DEFAULTS = {
   },
 };
 
+const STORAGE_LAST_EXECUTION_KEY = "campaignFlow:lastExecution:v1";
+const STORAGE_PRESETS_KEY = "campaignFlow:quickPresets:v1";
+
 function normalizeNonEmptyString(value) {
   if (typeof value !== "string") return "";
   return value.trim();
+}
+
+function safeJsonParse(raw) {
+  if (typeof raw !== "string") return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
 }
 
 function StepPill({ active, label }) {
@@ -188,6 +200,9 @@ export default function CampaignFlow() {
   const [selectedCountryTemplateId, setSelectedCountryTemplateId] = useState("");
   const [selectedCampaignTemplateId, setSelectedCampaignTemplateId] = useState("");
   const [selectedCreativeTemplateId, setSelectedCreativeTemplateId] = useState("");
+  const [lastExecution, setLastExecution] = useState(null);
+  const [quickPresets, setQuickPresets] = useState([]);
+  const [selectedQuickPresetId, setSelectedQuickPresetId] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -203,6 +218,13 @@ export default function CampaignFlow() {
     return () => {
       alive = false;
     };
+  }, []);
+
+  useEffect(() => {
+    const last = safeJsonParse(localStorage.getItem(STORAGE_LAST_EXECUTION_KEY));
+    if (last && typeof last === "object") setLastExecution(last);
+    const presets = safeJsonParse(localStorage.getItem(STORAGE_PRESETS_KEY));
+    if (Array.isArray(presets)) setQuickPresets(presets);
   }, []);
 
   useEffect(() => {
@@ -325,6 +347,106 @@ export default function CampaignFlow() {
     if (normalizeNonEmptyString(creative.destinationUrl)) params.set("destinationUrl", creative.destinationUrl);
     if (normalizeNonEmptyString(generatedCampaignId)) params.set("generatedCampaignId", generatedCampaignId);
     navigate(`/meta-test?${params.toString()}`);
+  }
+
+  function persistLastExecution(snapshot) {
+    try {
+      localStorage.setItem(STORAGE_LAST_EXECUTION_KEY, JSON.stringify(snapshot ?? {}));
+      setLastExecution(snapshot ?? null);
+    } catch {
+      // best-effort
+    }
+  }
+
+  function persistQuickPresets(next) {
+    try {
+      localStorage.setItem(STORAGE_PRESETS_KEY, JSON.stringify(next ?? []));
+    } catch {
+      // best-effort
+    }
+    setQuickPresets(next ?? []);
+  }
+
+  function applyExecutionSnapshot(snapshot, { nameSuffix } = {}) {
+    const snap = snapshot && typeof snapshot === "object" ? snapshot : null;
+    if (!snap) return;
+    const base = snap.base && typeof snap.base === "object" ? snap.base : {};
+    const nextCampaign = base.campaign && typeof base.campaign === "object" ? base.campaign : {};
+    const nextAdSet = base.adSet && typeof base.adSet === "object" ? base.adSet : {};
+    const nextCreative = base.creative && typeof base.creative === "object" ? base.creative : {};
+    const nextAd = base.ad && typeof base.ad === "object" ? base.ad : {};
+
+    setCampaign((p) => ({
+      ...p,
+      ...nextCampaign,
+      name: normalizeNonEmptyString(nextCampaign?.name)
+        ? `${String(nextCampaign.name)}${nameSuffix || ""}`
+        : p.name,
+    }));
+    setAdSet((p) => ({ ...p, ...nextAdSet }));
+    setCreative((p) => ({ ...p, ...nextCreative }));
+    setAd((p) => ({ ...p, ...nextAd }));
+
+    const snapBatchEnabled = Boolean(snap.batchEnabled);
+    setBatchEnabled(snapBatchEnabled);
+    setSelectedCountryCodes(Array.isArray(snap.selectedCountryCodes) ? snap.selectedCountryCodes : ["BR"]);
+    if (!snapBatchEnabled) {
+      const first = Array.isArray(snap.selectedCountryCodes) && snap.selectedCountryCodes.length ? snap.selectedCountryCodes[0] : "BR";
+      setCampaign((p) => ({ ...p, countryCode: first || "BR" }));
+    }
+
+    setRealConfirm(false);
+    setSelectedCampaignTemplateId("");
+    setSelectedCountryTemplateId("");
+    setSelectedCreativeTemplateId("");
+    setNotice("Execução carregada. Revise antes de criar (REAL exige confirmação).");
+    setStep(3);
+  }
+
+  function repeatLastExecution() {
+    if (!lastExecution) return;
+    applyExecutionSnapshot(lastExecution);
+  }
+
+  function duplicateLastExecution() {
+    if (!lastExecution) return;
+    const suffix = ` • DUP ${new Date().toISOString().slice(0, 10)}`;
+    applyExecutionSnapshot(lastExecution, { nameSuffix: suffix });
+  }
+
+  function saveCurrentAsQuickPreset() {
+    setNotice("");
+    const name = window.prompt("Nome do preset rápido:", "");
+    if (name == null) return;
+    const trimmed = normalizeNonEmptyString(name);
+    if (!trimmed) {
+      setNotice("Nome inválido.");
+      return;
+    }
+
+    const preset = {
+      id: `${Date.now()}`,
+      name: trimmed,
+      createdAt: new Date().toISOString(),
+      snapshot: {
+        base: { campaign, adSet, creative, ad },
+        batchEnabled,
+        selectedCountryCodes,
+      },
+    };
+
+    const next = [preset, ...(quickPresets || [])].slice(0, 20);
+    persistQuickPresets(next);
+    setNotice("Preset salvo.");
+  }
+
+  function applySelectedQuickPreset() {
+    setNotice("");
+    const id = normalizeNonEmptyString(selectedQuickPresetId);
+    if (!id) return;
+    const preset = (quickPresets || []).find((p) => String(p?.id) === id);
+    if (!preset?.snapshot) return;
+    applyExecutionSnapshot(preset.snapshot);
   }
 
   function applySelectedCountryTemplate() {
@@ -527,13 +649,15 @@ export default function CampaignFlow() {
         }
 
         setProgress(null);
-        setResult({
+        const nextResult = {
           type: "batch",
           mode: campaign.mode,
           base: { campaign, adSet, creative, ad },
           perCountry,
           createdAt: new Date().toISOString(),
-        });
+        };
+        setResult(nextResult);
+        persistLastExecution({ base: { campaign, adSet, creative, ad }, batchEnabled: true, selectedCountryCodes: codes });
         setStep(4);
       } else {
         const campaignRes = await createMetaCampaignSimple({
@@ -588,7 +712,7 @@ export default function CampaignFlow() {
           mode: campaign.mode,
         });
 
-        setResult({
+        const nextResult = {
           type: "single",
           mode: campaign.mode,
           countryCode: campaign.countryCode,
@@ -600,6 +724,12 @@ export default function CampaignFlow() {
           metaAdId: adRes?.metaAd?.id ?? null,
           metaAdEffectiveStatus: adRes?.metaAd?.effective_status ?? null,
           createdAt: new Date().toISOString(),
+        };
+        setResult(nextResult);
+        persistLastExecution({
+          base: { campaign, adSet, creative, ad },
+          batchEnabled: false,
+          selectedCountryCodes: [campaign.countryCode || "BR"],
         });
 
         setStep(4);
@@ -654,6 +784,56 @@ export default function CampaignFlow() {
           <section className="card" style={{ marginTop: 16, padding: 24 }}>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 950 }}>Etapa 1 — Dados da campanha</h2>
             <div style={{ marginTop: 18, display: "grid", gap: 16 }}>
+              <Field label="Atalhos (P21)" hint="Acelere repetição/duplicação sem expor payloads técnicos.">
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    className="pillOutline"
+                    disabled={submitting || !lastExecution}
+                    onClick={repeatLastExecution}
+                  >
+                    Repetir última execução
+                  </button>
+                  <button
+                    type="button"
+                    className="pillOutline"
+                    disabled={submitting || !lastExecution}
+                    onClick={duplicateLastExecution}
+                  >
+                    Duplicar último lote
+                  </button>
+                  <button type="button" className="pillOutline" disabled={submitting} onClick={saveCurrentAsQuickPreset}>
+                    Salvar preset rápido
+                  </button>
+                </div>
+                {(quickPresets || []).length ? (
+                  <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                    <div style={{ flex: 1, minWidth: 260 }}>
+                      <SelectLike
+                        value={selectedQuickPresetId}
+                        onChange={(e) => setSelectedQuickPresetId(e.target.value)}
+                        disabled={submitting}
+                        options={[
+                          { value: "", label: "Selecionar preset…", disabled: true },
+                          ...(quickPresets || []).map((p) => ({
+                            value: p.id,
+                            label: p?.name ?? "Preset",
+                          })),
+                        ]}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="pillOutline"
+                      disabled={submitting || !normalizeNonEmptyString(selectedQuickPresetId)}
+                      onClick={applySelectedQuickPreset}
+                    >
+                      Aplicar preset
+                    </button>
+                  </div>
+                ) : null}
+              </Field>
+
               <Field label="Templates (opcional)" hint="P11: use templates para reduzir preenchimento manual.">
                 <div style={{ display: "grid", gap: 12 }}>
                   <div style={{ display: "grid", gap: 10 }}>
@@ -1146,6 +1326,28 @@ export default function CampaignFlow() {
                       >
                         Abrir /meta-test (debug)
                       </button>
+                      <button
+                        type="button"
+                        className="pillOutline"
+                        onClick={() =>
+                          copySummaryToClipboard({
+                            mode: result.mode,
+                            countryCode: result.countryCode,
+                            generatedCampaignId: result.generatedCampaignId ?? null,
+                            metaCampaignId: result.metaCampaignId ?? null,
+                            metaAdSetId: result.metaAdSetId ?? null,
+                            metaCreativeId: result.metaCreativeId ?? null,
+                            metaAdId: result.metaAdId ?? null,
+                            metaAdEffectiveStatus: result.metaAdEffectiveStatus ?? null,
+                            createdAt: result.createdAt,
+                          })
+                        }
+                      >
+                        Copiar resumo (curto)
+                      </button>
+                      <button type="button" className="pillOutline" onClick={() => copySummaryToClipboard(result)}>
+                        Copiar JSON completo
+                      </button>
                       {result.generatedCampaignId ? (
                         <button
                           type="button"
@@ -1183,9 +1385,33 @@ export default function CampaignFlow() {
                         <button
                           type="button"
                           className="pillOutline"
+                          onClick={() =>
+                            copySummaryToClipboard({
+                              mode: result.mode,
+                              success: (result.perCountry || []).filter((r) => r.ok).length,
+                              failed: (result.perCountry || []).filter((r) => !r.ok).length,
+                              perCountry: (result.perCountry || []).map((r) => ({
+                                ok: r.ok,
+                                countryCode: r.countryCode,
+                                generatedCampaignId: r.generatedCampaignId ?? null,
+                                metaCampaignId: r.metaCampaignId ?? null,
+                                metaAdSetId: r.metaAdSetId ?? null,
+                                metaCreativeId: r.metaCreativeId ?? null,
+                                metaAdId: r.metaAdId ?? null,
+                                error: r.ok ? null : r.error ?? "Falha",
+                              })),
+                              createdAt: result.createdAt,
+                            })
+                          }
+                        >
+                          Copiar resumo (curto)
+                        </button>
+                        <button
+                          type="button"
+                          className="pillOutline"
                           onClick={() => copySummaryToClipboard(result)}
                         >
-                          Copiar resumo (JSON)
+                          Copiar JSON completo
                         </button>
                         <button type="button" className="pillOutline" onClick={() => setStep(0)}>
                           Novo lote
