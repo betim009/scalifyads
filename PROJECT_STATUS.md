@@ -1,6 +1,6 @@
 # PROJECT_STATUS — Campaign Builder
 
-Última atualização: [2026-05-26 14:10]
+Última atualização: [2026-05-26 16:30]
 
 ## 1. Resumo executivo
 
@@ -26,6 +26,7 @@ O Campaign Builder já passou da fase de prova técnica: existe um **fluxo opera
 - `/roi-operacional` (P22): ROI mínimo operacional com receita manual + ações seguras (pausar/editar orçamento com confirmação).
 - `/templates` (P11): página dedicada para gerenciar templates operacionais e aplicar no `/campaign-flow`.
 - Perfil: países e idiomas da operação (P25) para padronizar lote e preparar base multilíngue futura (sem tradução automática agora).
+- Templates multilíngues (P26): geração via LibreTranslate (backend) + revisão/edição no `/templates` + uso da variação correta no lote do `/campaign-flow` (sem criar anúncios automaticamente).
 - Workflow operacional (ops_state + eventos/checkpoints).
 - Scheduler/automação leve (opt-in por env; endpoints de status).
 - Páginas legais para publicação do app Meta (privacy/terms/data deletion) + deploy SPA.

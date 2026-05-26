@@ -22,6 +22,7 @@ services:
     environment:
       PORT: "3001"
       DATABASE_URL: postgres://postgres:postgres@db:5432/campaign_builder
+      LIBRETRANSLATE_URL: ${LIBRETRANSLATE_URL:-http://libretranslate:5000}
       META_SYNC_PROVIDER: ${META_SYNC_PROVIDER:-}
       META_GRAPH_VERSION: ${META_GRAPH_VERSION:-v20.0}
       META_ACCESS_TOKEN: ${META_ACCESS_TOKEN:-}
@@ -35,6 +36,13 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      libretranslate:
+        condition: service_started
+
+  libretranslate:
+    image: libretranslate/libretranslate:latest
+    ports:
+      - "5000:5000"
 
   frontend:
     image: node:22-alpine

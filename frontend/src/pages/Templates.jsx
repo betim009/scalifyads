@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import {
   createFlowTemplate,
   deleteFlowTemplate,
+  generateFlowTemplateTranslations,
   listFlowTemplates,
   updateFlowTemplate,
 } from "../services/flowTemplates.js";
@@ -133,6 +134,8 @@ export default function Templates() {
   const [templates, setTemplates] = useState([]);
   const [selectedId, setSelectedId] = useState("");
   const [profileCountryCodes, setProfileCountryCodes] = useState([]);
+  const [profileCountryLanguageByCode, setProfileCountryLanguageByCode] = useState({});
+  const [translationsByCountry, setTranslationsByCountry] = useState({});
 
   const [form, setForm] = useState({
     name: "",
@@ -149,6 +152,7 @@ export default function Templates() {
   });
 
   const selectedTemplate = useMemo(() => templates.find((t) => String(t.id) === String(selectedId)), [templates, selectedId]);
+  const selectedTemplateCountryCodes = useMemo(() => uniqueCountryCodes(form.countryCodes), [form.countryCodes]);
 
   useEffect(() => {
     let alive = true;
@@ -180,10 +184,19 @@ export default function Templates() {
         if (!alive) return;
         const codes = Array.isArray(res?.user?.operationalCountryCodes) ? res.user.operationalCountryCodes : [];
         setProfileCountryCodes(codes.map((c) => String(c || "").trim().toUpperCase()).filter(Boolean));
+        const list = Array.isArray(res?.user?.operationalCountries) ? res.user.operationalCountries : [];
+        setProfileCountryLanguageByCode(
+          Object.fromEntries(
+            list
+              .filter((i) => i?.countryCode)
+              .map((i) => [String(i.countryCode).toUpperCase(), i.primaryLanguage ?? null])
+          )
+        );
       })
       .catch(() => {
         if (!alive) return;
         setProfileCountryCodes([]);
+        setProfileCountryLanguageByCode({});
       });
     return () => {
       alive = false;
@@ -205,6 +218,7 @@ export default function Templates() {
       destinationUrl: payload.destinationUrl ?? "",
       ctaType: payload.ctaType ?? "LEARN_MORE",
     });
+    setTranslationsByCountry(payload?.translationsByCountry && typeof payload.translationsByCountry === "object" ? payload.translationsByCountry : {});
   }
 
   async function refresh() {
@@ -225,6 +239,7 @@ export default function Templates() {
       setError("Destination URL é obrigatório (para Creative REAL).");
       return;
     }
+    payload.translationsByCountry = translationsByCountry && typeof translationsByCountry === "object" ? translationsByCountry : {};
     setBusy(true);
     try {
       const res = await createFlowTemplate({ name, payload });
@@ -255,6 +270,7 @@ export default function Templates() {
       setError("Destination URL é obrigatório (para Creative REAL).");
       return;
     }
+    payload.translationsByCountry = translationsByCountry && typeof translationsByCountry === "object" ? translationsByCountry : {};
     setBusy(true);
     try {
       await updateFlowTemplate(selectedId, { name, payload });
@@ -281,6 +297,48 @@ export default function Templates() {
       await refresh();
     } catch (err) {
       setError(err?.message ? String(err.message) : "Falha ao excluir template.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onGenerateTranslations() {
+    setNotice("");
+    setError("");
+    if (!selectedId) {
+      setError("Selecione um template para gerar traduções.");
+      return;
+    }
+
+    const currentTplPayload = selectedTemplate?.payload && typeof selectedTemplate.payload === "object" ? selectedTemplate.payload : {};
+    const savedCodes = uniqueCountryCodes(currentTplPayload.countryCodes);
+    const formCodes = selectedTemplateCountryCodes;
+    if (savedCodes.join(",") !== formCodes.join(",")) {
+      setError("Salve o template (Country codes) antes de gerar traduções.");
+      return;
+    }
+
+    const missingLang = (selectedTemplateCountryCodes || [])
+      .map((c) => ({ code: String(c || "").toUpperCase(), lang: profileCountryLanguageByCode?.[String(c || "").toUpperCase()] ?? null }))
+      .filter((i) => !i.lang);
+
+    if (missingLang.length) {
+      setError(`Defina o idioma principal no /profile para: ${missingLang.map((i) => i.code).join(", ")}.`);
+      return;
+    }
+
+    const ok = window.confirm("Confirmo: gerar traduções via LibreTranslate? Você poderá revisar/editar antes de usar.");
+    if (!ok) return;
+
+    setBusy(true);
+    try {
+      const res = await generateFlowTemplateTranslations(selectedId, { overwrite: false });
+      const updated = res?.flowTemplate ?? null;
+      setNotice("Traduções geradas. Revise e edite antes de usar no lote.");
+      await refresh();
+      if (updated) fillFormFromTemplate(updated);
+    } catch (err) {
+      setError(err?.message ? String(err.message) : "Falha ao gerar traduções.");
     } finally {
       setBusy(false);
     }
@@ -316,6 +374,8 @@ export default function Templates() {
         description: payload.description ?? "",
         destinationUrl: payload.destinationUrl ?? "",
         ctaType: payload.ctaType ?? "LEARN_MORE",
+        translationsByCountry: payload.translationsByCountry && typeof payload.translationsByCountry === "object" ? payload.translationsByCountry : {},
+        translationsRequired: true,
         pageId: "",
         instagramActorId: "",
       },
@@ -386,6 +446,15 @@ export default function Templates() {
                 onClick={useInCampaignFlow}
               >
                 Usar no /campaign-flow
+              </button>
+              <button
+                type="button"
+                className="pillOutline"
+                disabled={busy || loading || !selectedId}
+                onClick={onGenerateTranslations}
+                title="Gera variações por país/idioma via backend (LibreTranslate)"
+              >
+                Gerar traduções
               </button>
               <button type="button" className="pillOutline" disabled={busy || loading || !selectedId} onClick={onDelete}>
                 Excluir
@@ -520,6 +589,92 @@ export default function Templates() {
                   />
                 </Field>
 
+                <div className="card" style={{ padding: 14, borderColor: "#e5e7eb" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontWeight: 950 }}>Variações por país/idioma</div>
+                      <div className="muted" style={{ marginTop: 4, fontWeight: 750 }}>
+                        Gere via “Gerar traduções”, revise/edite e salve antes de usar no `/campaign-flow`.
+                      </div>
+                    </div>
+                    <div className="muted" style={{ fontWeight: 800 }}>
+                      {Object.keys(translationsByCountry || {}).length ? `${Object.keys(translationsByCountry || {}).length} país(es)` : "—"}
+                    </div>
+                  </div>
+
+                  {selectedTemplateCountryCodes.length ? (
+                    <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
+                      {selectedTemplateCountryCodes.map((code) => {
+                        const c = String(code || "").toUpperCase();
+                        const lang = profileCountryLanguageByCode?.[c] ?? null;
+                        const item = translationsByCountry?.[c] && typeof translationsByCountry[c] === "object" ? translationsByCountry[c] : null;
+                        return (
+                          <div key={c} className="card" style={{ padding: 12 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                              <div style={{ fontWeight: 950 }}>{c}</div>
+                              <div style={{ color: "#6b7280", fontWeight: 850, fontSize: 12 }}>
+                                idioma: {item?.language || lang || "—"}
+                              </div>
+                            </div>
+
+                            {!lang ? (
+                              <div style={{ marginTop: 8, color: "#92400e", fontWeight: 850, fontSize: 12 }}>
+                                Defina o idioma principal deste país no `/profile` para gerar traduções.
+                              </div>
+                            ) : null}
+
+                            <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+                              <Field label="primaryText">
+                                <TextAreaLike
+                                  value={item?.primaryText ?? ""}
+                                  onChange={(e) =>
+                                    setTranslationsByCountry((p) => ({
+                                      ...(p && typeof p === "object" ? p : {}),
+                                      [c]: { ...(item ?? {}), language: item?.language || lang, primaryText: e.target.value },
+                                    }))
+                                  }
+                                  rows={3}
+                                  placeholder="Tradução do primaryText"
+                                />
+                              </Field>
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                                <Field label="headline">
+                                  <InputLike
+                                    value={item?.headline ?? ""}
+                                    onChange={(e) =>
+                                      setTranslationsByCountry((p) => ({
+                                        ...(p && typeof p === "object" ? p : {}),
+                                        [c]: { ...(item ?? {}), language: item?.language || lang, headline: e.target.value },
+                                      }))
+                                    }
+                                    placeholder="Tradução do headline"
+                                  />
+                                </Field>
+                                <Field label="description">
+                                  <InputLike
+                                    value={item?.description ?? ""}
+                                    onChange={(e) =>
+                                      setTranslationsByCountry((p) => ({
+                                        ...(p && typeof p === "object" ? p : {}),
+                                        [c]: { ...(item ?? {}), language: item?.language || lang, description: e.target.value },
+                                      }))
+                                    }
+                                    placeholder="Tradução do description"
+                                  />
+                                </Field>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: 10, color: "#6b7280", fontWeight: 800, fontSize: 12 }}>
+                      Dica: preencha “Country codes” para habilitar a lista de variações.
+                    </div>
+                  )}
+                </div>
+
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                   <button type="button" className="pillPrimary" disabled={busy} onClick={onCreate}>
                     Criar
@@ -531,7 +686,7 @@ export default function Templates() {
                     type="button"
                     className="pillOutline"
                     disabled={busy}
-                    onClick={() =>
+                    onClick={() => {
                       setForm({
                         name: "",
                         objective: "OUTCOME_TRAFFIC",
@@ -544,8 +699,9 @@ export default function Templates() {
                         description: "",
                         destinationUrl: "",
                         ctaType: "LEARN_MORE",
-                      })
-                    }
+                      });
+                      setTranslationsByCountry({});
+                    }}
                   >
                     Limpar
                   </button>

@@ -22,3 +22,7 @@ export async function deleteFlowTemplate(id) {
   return { ok: true, flowTemplate: data?.flow_template ?? null };
 }
 
+export async function generateFlowTemplateTranslations(id, { overwrite = false } = {}) {
+  const data = await apiPost(`/api/flow-templates/${encodeURIComponent(String(id))}/generate-translations`, { overwrite: Boolean(overwrite) });
+  return { ok: true, flowTemplate: data?.flow_template ?? null };
+}

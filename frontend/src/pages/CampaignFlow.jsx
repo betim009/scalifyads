@@ -645,6 +645,33 @@ export default function CampaignFlow() {
         const codes = Array.from(new Set((selectedCountryCodes || []).map((c) => String(c || "").trim()).filter(Boolean)));
         const perCountry = [];
 
+        const translationsRequired = creative?.translationsRequired === true;
+        const translationsByCountry =
+          creative?.translationsByCountry && typeof creative.translationsByCountry === "object" ? creative.translationsByCountry : null;
+
+        if (translationsRequired) {
+          const missing = [];
+          for (const raw of codes) {
+            const cc = String(raw || "").trim().toUpperCase();
+            const lang = countryLanguageByCode?.[cc] ?? null;
+            if (!lang) continue;
+            const entry = translationsByCountry?.[cc] && typeof translationsByCountry[cc] === "object" ? translationsByCountry[cc] : null;
+            if (!entry || (entry?.language && String(entry.language) !== String(lang))) {
+              missing.push(`${cc}(${lang})`);
+            }
+          }
+          if (missing.length) {
+            const ok = window.confirm(
+              `Tradução não encontrada para: ${missing.join(", ")}.\n\nContinuar usando o texto BASE para esses países?`
+            );
+            if (!ok) {
+              setSubmitting(false);
+              setNotice("Execução cancelada: traduções pendentes.");
+              return;
+            }
+          }
+        }
+
         for (let i = 0; i < codes.length; i += 1) {
           const countryCode = codes[i];
           const label = `${countryCode} — ${countryNameByCode[countryCode] ?? ""}`.trim();
@@ -676,11 +703,18 @@ export default function CampaignFlow() {
             });
 
             setProgress({ total: codes.length, currentIndex: i, currentCountryCode: countryCode, stage: "creativeDraft" });
+
+            const cc = String(countryCode || "").trim().toUpperCase();
+            const lang = countryLanguageByCode?.[cc] ?? null;
+            const entry =
+              translationsByCountry?.[cc] && typeof translationsByCountry[cc] === "object" ? translationsByCountry[cc] : null;
+            const useEntry = Boolean(translationsRequired && lang && entry && (!entry.language || String(entry.language) === String(lang)));
+
             const draftRes = await createCreativeDraft({
               generatedCampaignId,
-              primaryText: creative.primaryText,
-              headline: creative.headline || null,
-              description: creative.description || null,
+              primaryText: useEntry ? entry?.primaryText ?? creative.primaryText : creative.primaryText,
+              headline: useEntry ? entry?.headline || null : creative.headline || null,
+              description: useEntry ? entry?.description || null : creative.description || null,
               destinationUrl: creative.destinationUrl,
               ctaType: creative.ctaType,
             });
@@ -764,11 +798,20 @@ export default function CampaignFlow() {
           mode: campaign.mode,
         });
 
+        const translationsRequired = creative?.translationsRequired === true;
+        const translationsByCountry =
+          creative?.translationsByCountry && typeof creative.translationsByCountry === "object" ? creative.translationsByCountry : null;
+        const cc = String(campaign.countryCode || "").trim().toUpperCase();
+        const lang = countryLanguageByCode?.[cc] ?? null;
+        const entry =
+          translationsByCountry?.[cc] && typeof translationsByCountry[cc] === "object" ? translationsByCountry[cc] : null;
+        const useEntry = Boolean(translationsRequired && lang && entry && (!entry.language || String(entry.language) === String(lang)));
+
         const draftRes = await createCreativeDraft({
           generatedCampaignId,
-          primaryText: creative.primaryText,
-          headline: creative.headline || null,
-          description: creative.description || null,
+          primaryText: useEntry ? entry?.primaryText ?? creative.primaryText : creative.primaryText,
+          headline: useEntry ? entry?.headline || null : creative.headline || null,
+          description: useEntry ? entry?.description || null : creative.description || null,
           destinationUrl: creative.destinationUrl,
           ctaType: creative.ctaType,
         });

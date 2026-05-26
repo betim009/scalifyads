@@ -4,6 +4,7 @@ import { asyncHandler } from '../lib/asyncHandler.js'
 import { jsonError, parseLimit } from '../lib/http.js'
 import { resolveAuthUser } from '../lib/internalAuth.js'
 import { isUuid } from '../lib/validate.js'
+import { libreTranslateText } from '../services/libreTranslate.js'
 
 function normalizeNonEmptyString(value, { maxLen } = {}) {
   if (typeof value !== 'string') return null
@@ -141,6 +142,105 @@ export function flowTemplatesRouter() {
     })
   )
 
+  router.post(
+    '/:id/generate-translations',
+    asyncHandler(async (req, res) => {
+      const denied = requireAuth(req, res)
+      if (denied) return denied
+
+      const id = req.params.id
+      if (!isUuid(id)) return jsonError(res, 400, 'Invalid flow template id')
+
+      const overwrite = Boolean(req.body?.overwrite)
+
+      const pool = getPool()
+      const { rows: found, rowCount } = await pool.query(
+        `
+          SELECT id, user_id, name, payload, created_at, updated_at
+          FROM flow_templates
+          WHERE id = $1::uuid AND user_id = $2::uuid
+          LIMIT 1
+        `,
+        [id, req.auth.userId]
+      )
+      if (rowCount === 0) return jsonError(res, 404, 'Flow template not found')
+
+      const tpl = found[0]
+      const payload = tpl?.payload && typeof tpl.payload === 'object' ? tpl.payload : {}
+
+      const basePrimaryText = normalizeNonEmptyString(payload?.primaryText, { maxLen: 5000 })
+      const baseHeadline = normalizeNonEmptyString(payload?.headline, { maxLen: 255 })
+      const baseDescription = normalizeNonEmptyString(payload?.description, { maxLen: 1000 })
+
+      if (!basePrimaryText && !baseHeadline && !baseDescription) {
+        return jsonError(res, 400, 'Nothing to translate (primaryText/headline/description are empty)')
+      }
+
+      const { rows: op } = await pool.query(
+        `
+          SELECT country_code, primary_language
+          FROM user_operational_countries
+          WHERE user_id = $1::uuid
+          ORDER BY country_code ASC
+        `,
+        [req.auth.userId]
+      )
+
+      const allowedCountryCodes = Array.isArray(payload?.countryCodes)
+        ? new Set(payload.countryCodes.map((c) => String(c || '').trim().toUpperCase()).filter(Boolean))
+        : null
+
+      const translationsByCountry =
+        payload?.translationsByCountry && typeof payload.translationsByCountry === 'object' ? payload.translationsByCountry : {}
+
+      const nextTranslationsByCountry = { ...translationsByCountry }
+
+      for (const row of op) {
+        const countryCode = normalizeNonEmptyString(row?.country_code, { maxLen: 12 })
+        const lang = normalizeNonEmptyString(row?.primary_language, { maxLen: 12 })
+        if (!countryCode || !lang) continue
+        if (allowedCountryCodes && allowedCountryCodes.size > 0 && !allowedCountryCodes.has(countryCode.toUpperCase())) continue
+
+        const existing = nextTranslationsByCountry[countryCode] && typeof nextTranslationsByCountry[countryCode] === 'object'
+          ? nextTranslationsByCountry[countryCode]
+          : null
+
+        if (!overwrite && existing && normalizeNonEmptyString(existing?.language) === lang) {
+          // Already exists for this language; keep it.
+          continue
+        }
+
+        const translatedPrimaryText = basePrimaryText ? await libreTranslateText({ q: basePrimaryText, source: 'auto', target: lang }) : ''
+        const translatedHeadline = baseHeadline ? await libreTranslateText({ q: baseHeadline, source: 'auto', target: lang }) : ''
+        const translatedDescription = baseDescription ? await libreTranslateText({ q: baseDescription, source: 'auto', target: lang }) : ''
+
+        nextTranslationsByCountry[countryCode] = {
+          language: lang,
+          provider: 'libretranslate',
+          sourceLanguage: 'auto',
+          generatedAt: new Date().toISOString(),
+          primaryText: translatedPrimaryText,
+          headline: translatedHeadline,
+          description: translatedDescription
+        }
+      }
+
+      const nextPayload = { ...payload, translationsByCountry: nextTranslationsByCountry }
+
+      const { rows: updated } = await pool.query(
+        `
+          UPDATE flow_templates
+          SET payload = $3::jsonb, updated_at = now()
+          WHERE id = $1::uuid AND user_id = $2::uuid
+          RETURNING id, user_id, name, payload, created_at, updated_at
+        `,
+        [id, req.auth.userId, JSON.stringify(nextPayload)]
+      )
+
+      return res.json({ ok: true, flow_template: updated[0] })
+    })
+  )
+
   router.delete(
     '/:id',
     asyncHandler(async (req, res) => {
@@ -173,4 +273,3 @@ export function flowTemplatesRouter() {
 
   return router
 }
-

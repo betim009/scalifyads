@@ -231,6 +231,52 @@ Validação rápida (UI):
    - aviso aparece se não houver países configurados;
    - nomes do lote usam o país correto (ex.: `AdSet • BR` vs `AdSet • AE`).
 
+### P26 — Templates multilíngues com LibreTranslate
+
+Última atualização: [2026-05-26 16:30]
+
+Pré-requisitos:
+
+- DB habilitado + login interno funcionando.
+- Países e idiomas configurados no `/profile` (P25).
+
+Subir LibreTranslate (Docker Compose):
+
+- `docker compose up -d libretranslate`
+
+Configuração:
+
+- Backend usa `LIBRETRANSLATE_URL`.
+  - Default local (host): `http://localhost:5000`
+  - No `docker-compose.yml` (backend → container): default `http://libretranslate:5000`
+
+Validar LibreTranslate (host):
+
+- `curl -s -X POST http://localhost:5000/translate -H 'Content-Type: application/json' -d '{"q":"Olá mundo","source":"auto","target":"en","format":"text"}'`
+
+Gerar traduções (UI):
+
+1) Logar em `http://localhost:5173/login`.
+2) Configurar países/idiomas em `http://localhost:5173/profile`.
+3) Criar (ou selecionar) template base em `http://localhost:5173/templates`.
+4) Clicar “Gerar traduções”.
+5) Revisar/editar `primaryText`, `headline`, `description` por país e clicar “Salvar alterações”.
+
+Validar uso no lote (`/campaign-flow`):
+
+1) Em `/templates`, clicar “Usar no /campaign-flow”.
+2) No `/campaign-flow`, executar lote.
+3) Esperado:
+   - quando existir variação para o país (idioma do `/profile`), o texto do Creative Draft usa a tradução.
+   - quando faltar variação, aparece confirmação para usar o texto BASE (sem bloquear a execução).
+
+Troubleshooting:
+
+- Erro ao gerar traduções:
+  - confirmar `LIBRETRANSLATE_URL` no backend;
+  - confirmar que `libretranslate` está de pé: `curl http://localhost:5000`;
+  - se o template não foi salvo após mudar “Country codes”, salvar antes de gerar traduções.
+
 ### Demo operacional controlada
 
 Última atualização: [2026-05-25 18:57]

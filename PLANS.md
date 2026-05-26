@@ -1384,6 +1384,58 @@ Validação executada (local):
 
 - [2026-05-26 15:45] `cd frontend && npm run build` (OK) após P25 (idiomas + naming lote).
 
+### P26 — Templates multilíngues com LibreTranslate
+
+Última atualização: [2026-05-26 16:30]
+
+Objetivo:
+permitir que templates tenham variações por país/idioma (geradas via backend), baseadas nos países e idiomas configurados no `/profile`, com revisão/edição obrigatória antes de uso no lote.
+
+Decisão técnica:
+usar **LibreTranslate** (self-host via Docker) como API gratuita/open source para tradução. Sem API paga. Sem OpenAI. Sem Google Translate unofficial.
+
+Regras obrigatórias (guardrails):
+
+- Tradução **não** pode criar anúncio REAL automaticamente.
+- Tradução sempre deve poder ser **revisada/editada** antes de usar.
+- LibreTranslate deve ser chamado **apenas pelo backend** (nunca direto do frontend).
+- Nenhuma API key/segredo no frontend.
+- Toda criação REAL continua `PAUSED`. Nunca permitir `ACTIVE`.
+- Mudanças pequenas/incrementais. Não quebrar `/templates`, `/campaign-flow`, `/profile`, `/meta-test`.
+
+Backlog (execução incremental):
+
+- [ ] Configurar LibreTranslate no ambiente:
+  - env `LIBRETRANSLATE_URL` (default local sugerido: `http://localhost:5000`)
+  - (se fizer sentido) service no `docker-compose.yml` (`libretranslate/libretranslate`, porta `5000`)
+- [ ] Backend: criar service para chamar LibreTranslate (retry/timeout básico).
+- [ ] Backend: endpoint autenticado para “Gerar traduções” de um template (sem chamar do frontend).
+- [ ] Persistir variações traduzidas (sem quebrar schema existente; preferir `payload` jsonb se possível).
+- [ ] `/templates`: botão “Gerar traduções” + exibir variações por país/idioma.
+- [ ] `/templates`: permitir revisar/editar textos traduzidos e salvar variações.
+- [ ] `/campaign-flow`: ao executar lote, usar a variação correta por país quando existir.
+  - Se não existir tradução para um país, avisar claramente e usar texto base **apenas com confirmação**.
+- [ ] Atualizar `RUNBOOK.md`:
+  - como subir LibreTranslate;
+  - como validar endpoint;
+  - como gerar traduções;
+  - troubleshooting básico.
+- [ ] Atualizar `PROJECT_STATUS.md` se necessário.
+
+Campos que devem gerar variações:
+
+- `primaryText`
+- `headline`
+- `description`
+
+Não precisa traduzir:
+
+- `objective`
+- `ctaType`
+- `billingEvent`
+- `optimizationGoal`
+- IDs técnicos
+
 ## Decision Log (Ativo)
 
 Última atualização: [2026-05-26 12:10]
