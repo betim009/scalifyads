@@ -289,21 +289,26 @@ Exemplos (`curl`, sempre `PAUSED` e sem token no frontend):
 
 ### Templates operacionais — uso atual (console `/meta-test`)
 
-Última atualização: [2026-05-26 10:45]
+Última atualização: [2026-05-26 11:40]
 
 Estado atual:
 
 - Templates já existem e são operados pelo console `/meta-test` (Campaign/Country/Creative Templates).
-- O objetivo operacional é usar esses templates para acelerar o `/campaign-flow` (ver P11 em `PLANS.md`), mas a integração direta no `/campaign-flow` pode estar parcialmente pendente dependendo da versão.
+- Templates também podem ser aplicados diretamente no `/campaign-flow` (fluxo guiado), para reduzir preenchimento manual e acelerar lote.
 
 Procedimento (hoje):
 
-1) Abrir `/meta-test` e criar/gerenciar templates:
+1) Criar/gerenciar templates no `/meta-test`:
    - Campaign Templates
    - Country Templates
    - Creative Templates
-2) Aplicar template(s) via UI do `/meta-test` (ou via endpoints listados acima) para gerar drafts/estruturas.
-3) Usar os IDs/estrutura gerada como base para continuar troubleshooting/validação no próprio `/meta-test` quando necessário.
+2) (Opcional) Aplicar templates no `/campaign-flow`:
+   - Etapa 1: selecionar **Campaign Template** → clicar **Aplicar** (prefill de `name/objective/ad account` + nomes base).
+   - (Se lote) Etapa 1: ativar “Criar em lote” → selecionar **Country Template** → clicar **Aplicar** (prefill de países).
+   - Etapa 3: selecionar **Creative Template** → clicar **Aplicar** (prefill de copy/URL/CTA).
+3) Após executar e criar `generated_campaign`, salvar como template quando fizer sentido:
+   - Em “Etapa 5 — Resultado”, clicar **Salvar como template** (gera Campaign Template via backend).
+4) Em caso de erro no `/campaign-flow`, abrir `/meta-test` pelo botão “Abrir /meta-test” e seguir o troubleshooting.
 
 ### Meta — Creative REAL (AdCreative)
 

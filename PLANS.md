@@ -441,7 +441,7 @@ Regras:
 
 ## Backlog Ativo — Próxima Fase Operacional
 
-Última atualização: [2026-05-19 17:12]
+Última atualização: [2026-05-26 11:40]
 ### P8 — Console operacional
 
 - [x] Consolidar layout operacional definitivo (commits: bd27f80, 25164d7)
@@ -496,10 +496,14 @@ Reativação (operacional atual):
 
 Backlog (P11 — foco atual):
 
-- [ ] `/campaign-flow`: permitir escolher um Campaign Template como estrutura base do lote.
-- [ ] `/campaign-flow`: permitir escolher template(s) de Creative/Copy/CTA para preencher automaticamente a Etapa 3.
-- [ ] `/campaign-flow`: permitir escolher Country Template (lista de países) para lote.
-- [ ] `/campaign-flow`: permitir salvar “estrutura executada” como template (quando fizer sentido) sem expor payloads técnicos por padrão.
+- [x] `/campaign-flow`: permitir escolher um Campaign Template como estrutura base do lote.
+- [x] `/campaign-flow`: permitir escolher template(s) de Creative/Copy/CTA para preencher automaticamente a Etapa 3.
+- [x] `/campaign-flow`: permitir escolher Country Template (lista de países) para lote.
+- [x] `/campaign-flow`: permitir salvar “estrutura executada” como template (quando fizer sentido) sem expor payloads técnicos por padrão.
+
+Validação executada (local):
+
+- [2026-05-26 11:40] `cd frontend && npm run build` (OK) após integrar templates no `/campaign-flow`.
 
 ### P12 — Workflow operacional
 

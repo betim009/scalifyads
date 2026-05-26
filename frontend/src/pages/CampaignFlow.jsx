@@ -7,6 +7,12 @@ import { createMetaAdSet } from "../services/metaAdSets.js";
 import { createCreativeDraft } from "../services/creativeDrafts.js";
 import { publishMetaCreativeDraft } from "../services/metaCreatives.js";
 import { createMetaAd } from "../services/metaAds.js";
+import { listCountryTemplates } from "../services/countryTemplates.js";
+import {
+  createCampaignTemplateFromGenerated,
+  listCampaignTemplates,
+} from "../services/campaignTemplates.js";
+import { listCreativeTemplates } from "../services/creativeTemplates.js";
 
 const DEFAULTS = {
   campaign: {
@@ -162,6 +168,7 @@ export default function CampaignFlow() {
   const [countries, setCountries] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [realConfirm, setRealConfirm] = useState(false);
   const [batchEnabled, setBatchEnabled] = useState(false);
   const [selectedCountryCodes, setSelectedCountryCodes] = useState(["BR"]);
@@ -174,6 +181,14 @@ export default function CampaignFlow() {
 
   const [result, setResult] = useState(null);
 
+  const [countryTemplates, setCountryTemplates] = useState([]);
+  const [campaignTemplates, setCampaignTemplates] = useState([]);
+  const [creativeTemplates, setCreativeTemplates] = useState([]);
+  const [templatesInfo, setTemplatesInfo] = useState("");
+  const [selectedCountryTemplateId, setSelectedCountryTemplateId] = useState("");
+  const [selectedCampaignTemplateId, setSelectedCampaignTemplateId] = useState("");
+  const [selectedCreativeTemplateId, setSelectedCreativeTemplateId] = useState("");
+
   useEffect(() => {
     let alive = true;
     getCountries()
@@ -185,6 +200,46 @@ export default function CampaignFlow() {
         if (!alive) return;
         setCountries([]);
       });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+
+    async function loadTemplates() {
+      setTemplatesInfo("");
+      try {
+        const [ct, camp, creativeRes] = await Promise.allSettled([
+          listCountryTemplates({ limit: 100 }),
+          listCampaignTemplates({ limit: 100 }),
+          listCreativeTemplates({ limit: 100 }),
+        ]);
+
+        if (!alive) return;
+
+        if (ct.status === "fulfilled") setCountryTemplates(ct.value?.countryTemplates ?? []);
+        else setCountryTemplates([]);
+
+        if (camp.status === "fulfilled") setCampaignTemplates(camp.value?.campaignTemplates ?? []);
+        else setCampaignTemplates([]);
+
+        if (creativeRes.status === "fulfilled") setCreativeTemplates(creativeRes.value?.creativeTemplates ?? []);
+        else setCreativeTemplates([]);
+
+        const anyOk = ct.status === "fulfilled" || camp.status === "fulfilled" || creativeRes.status === "fulfilled";
+        if (!anyOk) setTemplatesInfo("Templates indisponíveis agora (DB offline ou sem acesso).");
+      } catch {
+        if (!alive) return;
+        setCountryTemplates([]);
+        setCampaignTemplates([]);
+        setCreativeTemplates([]);
+        setTemplatesInfo("Templates indisponíveis agora (DB offline ou sem acesso).");
+      }
+    }
+
+    loadTemplates();
     return () => {
       alive = false;
     };
@@ -240,12 +295,128 @@ export default function CampaignFlow() {
     "5. Resultado",
   ];
 
+  const countryTemplateOptions = useMemo(() => {
+    const opts = (countryTemplates || []).map((t) => ({
+      value: t.id,
+      label: `${t.name ?? "Country Template"} • ${(Array.isArray(t.codes) ? t.codes.length : 0)} países`,
+    }));
+    return [{ value: "", label: "Nenhum (opcional)", disabled: false }, ...opts];
+  }, [countryTemplates]);
+
+  const campaignTemplateOptions = useMemo(() => {
+    const opts = (campaignTemplates || []).map((t) => ({
+      value: t.id,
+      label: t.name ?? "Campaign Template",
+    }));
+    return [{ value: "", label: "Nenhum (opcional)", disabled: false }, ...opts];
+  }, [campaignTemplates]);
+
+  const creativeTemplateOptions = useMemo(() => {
+    const opts = (creativeTemplates || []).map((t) => ({
+      value: t.id,
+      label: t.name ?? "Creative Template",
+    }));
+    return [{ value: "", label: "Nenhum (opcional)", disabled: false }, ...opts];
+  }, [creativeTemplates]);
+
   function openMetaTest({ generatedCampaignId } = {}) {
     const params = new URLSearchParams();
     if (normalizeNonEmptyString(campaign.name)) params.set("name", campaign.name);
     if (normalizeNonEmptyString(creative.destinationUrl)) params.set("destinationUrl", creative.destinationUrl);
     if (normalizeNonEmptyString(generatedCampaignId)) params.set("generatedCampaignId", generatedCampaignId);
     navigate(`/meta-test?${params.toString()}`);
+  }
+
+  function applySelectedCountryTemplate() {
+    setNotice("");
+    const templateId = normalizeNonEmptyString(selectedCountryTemplateId);
+    if (!templateId) return;
+    const t = (countryTemplates || []).find((x) => String(x?.id) === templateId);
+    const codes = Array.isArray(t?.codes) ? t.codes : [];
+    const normalized = Array.from(
+      new Set(
+        codes
+          .map((c) => String(c || "").trim().toUpperCase())
+          .filter(Boolean)
+      )
+    );
+    if (normalized.length === 0) {
+      setNotice("Country Template vazio (sem países).");
+      return;
+    }
+    setSelectedCountryCodes(normalized);
+    setNotice(`Country Template aplicado: ${normalized.length} países.`);
+  }
+
+  function applySelectedCampaignTemplate() {
+    setNotice("");
+    const templateId = normalizeNonEmptyString(selectedCampaignTemplateId);
+    if (!templateId) return;
+    const t = (campaignTemplates || []).find((x) => String(x?.id) === templateId);
+    const payload = t?.payload && typeof t.payload === "object" ? t.payload : {};
+    const payloadCampaign = payload?.campaign && typeof payload.campaign === "object" ? payload.campaign : {};
+    const payloadStructure = payload?.structure && typeof payload.structure === "object" ? payload.structure : {};
+
+    const templateName =
+      normalizeNonEmptyString(payloadCampaign?.name) ||
+      normalizeNonEmptyString(t?.name) ||
+      null;
+    const metaObjective =
+      normalizeNonEmptyString(payloadCampaign?.metaObjective) ||
+      normalizeNonEmptyString(payloadCampaign?.meta_objective) ||
+      null;
+    const metaAdAccountId =
+      normalizeNonEmptyString(payloadCampaign?.metaAdAccountId) ||
+      normalizeNonEmptyString(payloadCampaign?.meta_ad_account_id) ||
+      null;
+
+    const firstAdSetName =
+      normalizeNonEmptyString(payloadStructure?.adsets?.[0]?.name) || null;
+    const firstAdName = normalizeNonEmptyString(payloadStructure?.ads?.[0]?.name) || null;
+
+    setCampaign((p) => ({
+      ...p,
+      name: templateName ?? p.name,
+      objective: metaObjective ?? p.objective,
+      metaAdAccountId: metaAdAccountId ?? p.metaAdAccountId,
+    }));
+    if (firstAdSetName) setAdSet((p) => ({ ...p, name: firstAdSetName }));
+    if (firstAdName) setAd((p) => ({ ...p, name: firstAdName }));
+    setNotice("Campaign Template aplicado (campos base preenchidos).");
+  }
+
+  function applySelectedCreativeTemplate() {
+    setNotice("");
+    const templateId = normalizeNonEmptyString(selectedCreativeTemplateId);
+    if (!templateId) return;
+    const t = (creativeTemplates || []).find((x) => String(x?.id) === templateId);
+    if (!t) return;
+
+    setCreative((p) => ({
+      ...p,
+      primaryText: normalizeNonEmptyString(t.primary_text) || p.primaryText,
+      headline: normalizeNonEmptyString(t.headline) || p.headline,
+      description: normalizeNonEmptyString(t.description) || p.description,
+      destinationUrl: normalizeNonEmptyString(t.destination_url) || p.destinationUrl,
+      ctaType: normalizeNonEmptyString(t.cta_type) || p.ctaType,
+    }));
+    setNotice("Creative Template aplicado (Etapa 3 preenchida).");
+  }
+
+  async function saveAsCampaignTemplate(generatedCampaignId, { suggestedName } = {}) {
+    setNotice("");
+    const id = normalizeNonEmptyString(generatedCampaignId);
+    if (!id) return;
+
+    const name = window.prompt("Nome do Campaign Template (opcional):", suggestedName || "");
+    if (name === null) return;
+
+    try {
+      await createCampaignTemplateFromGenerated(id, { name: normalizeNonEmptyString(name) || undefined });
+      setNotice("Template salvo com sucesso.");
+    } catch (err) {
+      setNotice(err?.message ? String(err.message) : "Falha ao salvar template.");
+    }
   }
 
   async function copySummaryToClipboard(summary) {
@@ -261,6 +432,7 @@ export default function CampaignFlow() {
   async function runFlow() {
     setSubmitting(true);
     setError("");
+    setNotice("");
     setResult(null);
     setProgress(null);
 
@@ -460,6 +632,9 @@ export default function CampaignFlow() {
                 ? "Modo REAL: requer backend com token e Page ID configurado (ou informe Page ID aqui)."
                 : "Modo STUB: cria stubs no backend (sem chamadas ao Graph)."}
             </div>
+            {templatesInfo ? (
+              <div style={{ fontWeight: 750, color: "#92400e", fontSize: 13 }}>{templatesInfo}</div>
+            ) : null}
           </div>
         </div>
 
@@ -469,10 +644,76 @@ export default function CampaignFlow() {
           ))}
         </div>
 
+        {notice ? (
+          <div className="card" style={{ marginTop: 14, padding: 14, borderColor: "#bfdbfe", color: "#1d4ed8" }}>
+            <div style={{ fontWeight: 900 }}>{notice}</div>
+          </div>
+        ) : null}
+
         {step === 0 ? (
           <section className="card" style={{ marginTop: 16, padding: 24 }}>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 950 }}>Etapa 1 — Dados da campanha</h2>
             <div style={{ marginTop: 18, display: "grid", gap: 16 }}>
+              <Field label="Templates (opcional)" hint="P11: use templates para reduzir preenchimento manual.">
+                <div style={{ display: "grid", gap: 12 }}>
+                  <div style={{ display: "grid", gap: 10 }}>
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                      <div style={{ fontWeight: 850, color: "#374151" }}>Campaign Template</div>
+                      <div style={{ color: "#6b7280", fontWeight: 750, fontSize: 12 }}>
+                        (preenche name/objective/ad account e nomes base)
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                      <div style={{ flex: 1, minWidth: 260 }}>
+                        <SelectLike
+                          value={selectedCampaignTemplateId}
+                          onChange={(e) => setSelectedCampaignTemplateId(e.target.value)}
+                          disabled={submitting}
+                          options={campaignTemplateOptions}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        className="pillOutline"
+                        disabled={submitting || !normalizeNonEmptyString(selectedCampaignTemplateId)}
+                        onClick={applySelectedCampaignTemplate}
+                      >
+                        Aplicar
+                      </button>
+                    </div>
+                  </div>
+
+                  {batchEnabled ? (
+                    <div style={{ display: "grid", gap: 10 }}>
+                      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                        <div style={{ fontWeight: 850, color: "#374151" }}>Country Template</div>
+                        <div style={{ color: "#6b7280", fontWeight: 750, fontSize: 12 }}>
+                          (preenche países do lote)
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                        <div style={{ flex: 1, minWidth: 260 }}>
+                          <SelectLike
+                            value={selectedCountryTemplateId}
+                            onChange={(e) => setSelectedCountryTemplateId(e.target.value)}
+                            disabled={submitting}
+                            options={countryTemplateOptions}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          className="pillOutline"
+                          disabled={submitting || !normalizeNonEmptyString(selectedCountryTemplateId)}
+                          onClick={applySelectedCountryTemplate}
+                        >
+                          Aplicar
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              </Field>
+
               <Field label="Nome" required>
                 <InputLike
                   placeholder="Ex: DEMO • Campaign Builder • BR • 2026-05-26"
@@ -514,6 +755,7 @@ export default function CampaignFlow() {
                       const next = e.target.checked;
                       setBatchEnabled(next);
                       setRealConfirm(false);
+                      setSelectedCountryTemplateId("");
                       if (!next) {
                         // fallback: keep current single country if possible
                         const first = selectedCountryCodes?.[0] || "BR";
@@ -659,6 +901,26 @@ export default function CampaignFlow() {
           <section className="card" style={{ marginTop: 16, padding: 24 }}>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 950 }}>Etapa 3 — Criativo</h2>
             <div style={{ marginTop: 18, display: "grid", gap: 16 }}>
+              <Field label="Creative Template (opcional)" hint="Preenche automaticamente textos/URL/CTA quando disponível.">
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                  <div style={{ flex: 1, minWidth: 260 }}>
+                    <SelectLike
+                      value={selectedCreativeTemplateId}
+                      onChange={(e) => setSelectedCreativeTemplateId(e.target.value)}
+                      disabled={submitting}
+                      options={creativeTemplateOptions}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="pillOutline"
+                    disabled={submitting || !normalizeNonEmptyString(selectedCreativeTemplateId)}
+                    onClick={applySelectedCreativeTemplate}
+                  >
+                    Aplicar
+                  </button>
+                </div>
+              </Field>
               <Field label="Primary text" required>
                 <TextAreaLike
                   placeholder="Ex: Teste controlado do Campaign Builder. Não ativar."
@@ -884,6 +1146,19 @@ export default function CampaignFlow() {
                       >
                         Abrir /meta-test (debug)
                       </button>
+                      {result.generatedCampaignId ? (
+                        <button
+                          type="button"
+                          className="pillOutline"
+                          onClick={() =>
+                            saveAsCampaignTemplate(result.generatedCampaignId, {
+                              suggestedName: `${campaign.name || "Template"} • ${result.countryCode || ""}`.trim(),
+                            })
+                          }
+                        >
+                          Salvar como template
+                        </button>
+                      ) : null}
                       <button type="button" className="pillOutline" onClick={() => setStep(0)}>
                         Criar outra
                       </button>
@@ -940,6 +1215,19 @@ export default function CampaignFlow() {
                                   onClick={() => openMetaTest({ generatedCampaignId: r.generatedCampaignId })}
                                 >
                                   Abrir /meta-test
+                                </button>
+                              ) : null}
+                              {r.ok && r.generatedCampaignId ? (
+                                <button
+                                  type="button"
+                                  className="pillOutline"
+                                  onClick={() =>
+                                    saveAsCampaignTemplate(r.generatedCampaignId, {
+                                      suggestedName: `${campaign.name || "Template"} • ${r.countryCode || ""}`.trim(),
+                                    })
+                                  }
+                                >
+                                  Salvar como template
                                 </button>
                               ) : null}
                             </div>
