@@ -504,6 +504,7 @@ Backlog (P11 — foco atual):
 Validação executada (local):
 
 - [2026-05-26 11:40] `cd frontend && npm run build` (OK) após integrar templates no `/campaign-flow`.
+- Commit: 23e1e23
 
 ### P12 — Workflow operacional
 
