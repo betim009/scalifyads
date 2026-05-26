@@ -161,6 +161,57 @@ Troubleshooting:
 
 - Se alguma ação REAL falhar, abrir `/meta-test` para diagnóstico (token nunca no frontend).
 
+### P24 — Entrega controlada ao cliente (operação gradual)
+
+Última atualização: [2026-05-26 13:40]
+
+Objetivo:
+entregar o Campaign Builder para uso real **com segurança**, mantendo guardrails (**REAL sempre `PAUSED`**) e reduzindo risco operacional.
+
+Princípios (obrigatório):
+
+- Começar pequeno → validar → ajustar → repetir → só depois escalar volume.
+- Nunca criar `ACTIVE` e nunca ativar automaticamente.
+- Token Meta sempre no backend; nunca no frontend/logs/docs.
+- Se algo der errado, **parar, registrar e diagnosticar** (não improvisar).
+
+Checklist de entrega (antes do cliente usar):
+
+- [ ] Stack OK: `docker compose up -d`
+- [ ] Backend OK: `curl http://localhost:3001/healthz`
+- [ ] DB OK: `docker compose exec backend npm run migrate` + `docker compose exec backend npm run seed`
+- [ ] Login OK: abrir `http://localhost:5173/login` e logar
+- [ ] Perfil OK: `http://localhost:5173/profile`
+  - salvar `meta_ad_account_id`
+  - salvar `meta_page_id` (se for usar Creative REAL)
+  - salvar `meta_access_token` (token fica apenas no backend; UI mostra `...XXXX`)
+- [ ] Guardrails: confirmar que tudo REAL continua `PAUSED` (sem opção `ACTIVE` no UI)
+- [ ] Build frontend: `cd frontend && npm run build`
+
+Roteiro operacional inicial (primeiro dia / primeiro lote):
+
+1) Criar 1 campanha (STUB) no `/campaign-flow` para validar o fluxo e entendimento.
+2) Criar 1 campanha (REAL) no `/campaign-flow`:
+   - revisar Etapa 4
+   - marcar confirmação explícita do REAL
+   - confirmar no Ads Manager que nasceu `PAUSED`
+3) Criar lote pequeno (2–3 países) no `/campaign-flow`:
+   - validar que erro em 1 país não interrompe os próximos
+   - usar “Abrir /meta-test” só para diagnóstico quando necessário
+4) ROI mínimo:
+   - abrir `/roi-operacional`
+   - preencher receita manual e validar lucro/prejuízo/ROI
+   - usar “Pausar negativos” apenas com confirmação explícita
+
+Rotina diária mínima (operação):
+
+- Revisar `/roi-operacional` (D-1) e registrar decisões (pausar/ajustar orçamento) com confirmação.
+- Manter volume controlado (não criar “muitas campanhas” sem revisão).
+- Se uma ação REAL falhar:
+  - abrir `/meta-test` para evidência e troubleshooting;
+  - capturar mensagem objetiva de erro (sem token);
+  - registrar no `PLANS.md` como incidente/bloqueio operacional.
+
 ### Demo operacional controlada
 
 Última atualização: [2026-05-25 18:57]

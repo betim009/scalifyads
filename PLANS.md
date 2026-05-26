@@ -1325,7 +1325,7 @@ Validação executada (local):
 
 ### P24 — Plano de entrega controlada ao cliente
 
-Última atualização: [2026-05-26 12:10]
+Última atualização: [2026-05-26 13:40]
 
 Objetivo:
 preparar documentação, roteiro e orientação para o cliente operar com segurança (execução controlada, validação por etapas e guardrails preservados).
@@ -1339,9 +1339,9 @@ Orientação estratégica (obrigatória):
 
 Backlog (alto nível):
 
-- [ ] Roteiro de onboarding operacional (passo-a-passo).
-- [ ] Checklist de segurança (PAUSED/token/sessão) para operação diária.
-- [ ] Plano de suporte inicial (o que fazer quando falhar; quando abrir `/meta-test`).
+- [x] Roteiro de onboarding operacional (passo-a-passo). (RUNBOOK.md)
+- [x] Checklist de segurança (PAUSED/token/sessão) para operação diária. (RUNBOOK.md)
+- [x] Plano de suporte inicial (o que fazer quando falhar; quando abrir `/meta-test`). (RUNBOOK.md)
 
 ## Decision Log (Ativo)
 

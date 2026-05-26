@@ -22,6 +22,7 @@ Referências:
 - Checklist de segurança: `SAFETY_CHECKLIST.md`
 - Playbooks e comandos: `RUNBOOK.md`
 - Fluxo passo-a-passo (com exemplos): `OPERATING_FLOW.md`
+- Operação limpa (cliente): `/campaign-flow` e `/roi-operacional` (debug via `/meta-test`)
 
 ## Checklist — Antes de iniciar (2 minutos)
 
@@ -129,4 +130,3 @@ Evidência esperada:
 - [ ] Se algo falhou:
   - registrar o erro objetivo (mensagem + subcode)
   - registrar no `PLANS.md` (P15) e seguir para próxima ação segura
-

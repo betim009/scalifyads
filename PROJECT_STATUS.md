@@ -79,6 +79,10 @@ Apesar do fluxo REAL estar validado, isto **ainda não é produção**. Ainda fa
   - ações operacionais seguras (pausar/editar orçamento com confirmação).
 - Depois: P23 (revisão UX operacional) → P24 (plano de entrega controlada ao cliente).
 
+## 10. Entrega controlada
+
+- Existe playbook de entrega e operação gradual no `RUNBOOK.md` (P24).
+
 ## 8. Riscos atuais
 
 - Risco de gasto se algum item for ativado (ex.: criar/alterar para `ACTIVE`).
