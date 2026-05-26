@@ -1328,10 +1328,12 @@ Backlog (alto nível):
 - [x] Revisar UX do `/roi-operacional` (destaque de negativos, ações, atalho /meta-test).
 - [x] Revisar dashboard/telas operacionais principais para consistência visual e operacional.
 - [x] Revisar `/profile` (atalhos e microcopy operacional).
+- [x] `/profile`: permitir configurar “Países da operação” por usuário e fazer o `/campaign-flow` priorizar esses países.
 
 Validação executada (local):
 
 - [2026-05-26 13:25] `cd frontend && npm run build` (OK) após ajustes UX (P23).
+- [2026-05-26 15:05] `cd frontend && npm run build` (OK) após “Países da operação” no `/profile` e filtro no `/campaign-flow`.
 
 ### P24 — Plano de entrega controlada ao cliente
 
