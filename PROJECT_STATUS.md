@@ -25,6 +25,7 @@ O Campaign Builder já passou da fase de prova técnica: existe um **fluxo opera
 - Templates (campaign/country/creative/copy) para acelerar fluxo no `/meta-test`.
 - `/roi-operacional` (P22): ROI mínimo operacional com receita manual + ações seguras (pausar/editar orçamento com confirmação).
 - `/templates` (P11): página dedicada para gerenciar templates operacionais e aplicar no `/campaign-flow`.
+- Perfil: países e idiomas da operação (P25) para padronizar lote e preparar base multilíngue futura (sem tradução automática agora).
 - Workflow operacional (ops_state + eventos/checkpoints).
 - Scheduler/automação leve (opt-in por env; endpoints de status).
 - Páginas legais para publicação do app Meta (privacy/terms/data deletion) + deploy SPA.

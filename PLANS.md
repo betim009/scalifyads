@@ -1355,6 +1355,35 @@ Backlog (alto nível):
 - [x] Checklist de segurança (PAUSED/token/sessão) para operação diária. (RUNBOOK.md)
 - [x] Plano de suporte inicial (o que fazer quando falhar; quando abrir `/meta-test`). (RUNBOOK.md)
 
+### P25 — Países e idiomas da operação
+
+Última atualização: [2026-05-26 15:35]
+
+Objetivo:
+permitir que o usuário configure, no `/profile`, **quais países usa** e **qual idioma principal** de cada país, para padronizar operação em lote e preparar base para templates multilíngues (futuro).
+
+Regras:
+
+- Não implementar tradução automática agora.
+- Não implementar templates multilíngues agora.
+- Guardrails continuam absolutos: REAL sempre `PAUSED`; nunca `ACTIVE`; token nunca no frontend/logs.
+- Não quebrar `/campaign-flow`, `/templates` e `/meta-test`.
+
+Backlog:
+
+- [x] Persistir por usuário: país → idioma principal (DB + API).
+- [x] `/profile`: seção “Países e idiomas da operação” (adicionar/remover país e selecionar idioma).
+- [x] Permitir “Adicionar todos os países” (quando viável) mantendo configuração por usuário.
+- [x] `/campaign-flow`: priorizar países do perfil e exibir aviso claro quando não houver países configurados.
+- [x] Naming operacional em lote: garantir nomes por país (ex.: BR + AE não gera “AdSet • BR” para ambos).
+- [x] `/templates`: reutilizar países do perfil como base (sem refactor).
+- [x] Atualizar `RUNBOOK.md` com validação básica.
+- [x] Atualizar `PROJECT_STATUS.md`.
+
+Validação executada (local):
+
+- [2026-05-26 15:45] `cd frontend && npm run build` (OK) após P25 (idiomas + naming lote).
+
 ## Decision Log (Ativo)
 
 Última atualização: [2026-05-26 12:10]

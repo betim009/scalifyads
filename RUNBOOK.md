@@ -212,6 +212,25 @@ Rotina diária mínima (operação):
   - capturar mensagem objetiva de erro (sem token);
   - registrar no `PLANS.md` como incidente/bloqueio operacional.
 
+### P25 — Países e idiomas da operação (base operacional)
+
+Última atualização: [2026-05-26 15:45]
+
+Objetivo:
+configurar no `/profile` quais países o usuário opera e qual idioma principal por país (sem tradução automática).
+
+Validação rápida (UI):
+
+1) Abrir `http://localhost:5173/profile`.
+2) Em “Países e idiomas da operação”:
+   - adicionar um país (ex.: `BR`) e selecionar idioma (ex.: `Português`).
+   - adicionar outro país (ex.: `AE`) e selecionar idioma (ex.: `Árabe`).
+3) Abrir `http://localhost:5173/campaign-flow`.
+4) Ativar lote e confirmar:
+   - lista de países segue o perfil;
+   - aviso aparece se não houver países configurados;
+   - nomes do lote usam o país correto (ex.: `AdSet • BR` vs `AdSet • AE`).
+
 ### Demo operacional controlada
 
 Última atualização: [2026-05-25 18:57]
