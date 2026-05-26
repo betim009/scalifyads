@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { getPool } from '../db.js'
 import { asyncHandler } from '../lib/asyncHandler.js'
-import { jsonError } from '../lib/http.js'
+import { jsonError, parseLimit } from '../lib/http.js'
 import { buildSetCookie } from '../lib/cookies.js'
 import {
   SESSION_COOKIE_NAME,
@@ -11,7 +11,6 @@ import {
   insertSession,
   resolveAuthUser
 } from '../lib/internalAuth.js'
-
 function normalizeNonEmptyString(value) {
   if (typeof value !== 'string') return null
   const trimmed = value.trim()
@@ -41,6 +40,17 @@ export function authRouter() {
         return res.json({ ok: true, authenticated: false, user: null })
       }
 
+      const { rows: opCountriesRows } = await pool.query(
+        `
+          SELECT country_code
+          FROM user_operational_countries
+          WHERE user_id = $1::uuid
+          ORDER BY country_code ASC
+        `,
+        [auth.userId]
+      )
+      const operationalCountryCodes = opCountriesRows.map((r) => r.country_code).filter(Boolean)
+
       const { rows } = await pool.query(
         `
           SELECT access_token, created_at
@@ -62,6 +72,7 @@ export function authRouter() {
           username: auth.username,
           metaAdAccountId: auth.metaAdAccountId,
           metaPageId: auth.metaPageId,
+          operationalCountryCodes,
           metaAccessToken: {
             saved: tokenMeta.hasToken,
             last4: tokenMeta.last4,
@@ -224,6 +235,123 @@ export function authRouter() {
       }
 
       return res.status(201).json({ ok: true })
+    })
+  )
+
+  router.get(
+    '/operational-countries',
+    asyncHandler(async (req, res) => {
+      if (!req.app.locals.dbEnabled) {
+        return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
+      }
+      const pool = getPool()
+      const auth = await resolveAuthUser(pool, req)
+      if (!auth) return jsonError(res, 401, 'Login required')
+
+      const limit = parseLimit(req.query.limit, 200, 500)
+      const { rows } = await pool.query(
+        `
+          SELECT country_code, created_at
+          FROM user_operational_countries
+          WHERE user_id = $1::uuid
+          ORDER BY created_at DESC
+          LIMIT $2
+        `,
+        [auth.userId, limit]
+      )
+      return res.json({ ok: true, country_codes: rows.map((r) => r.country_code).filter(Boolean) })
+    })
+  )
+
+  router.post(
+    '/operational-countries/add',
+    asyncHandler(async (req, res) => {
+      if (!req.app.locals.dbEnabled) {
+        return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
+      }
+      const pool = getPool()
+      const auth = await resolveAuthUser(pool, req)
+      if (!auth) return jsonError(res, 401, 'Login required')
+
+      const countryCode = normalizeNonEmptyString(req.body?.countryCode)
+      if (!countryCode) return jsonError(res, 400, 'Invalid countryCode')
+
+      const { rowCount: exists } = await pool.query(`SELECT 1 FROM countries WHERE code = $1`, [countryCode.toUpperCase()])
+      if (exists === 0) return jsonError(res, 400, 'Invalid countryCode (not found)')
+
+      await pool.query(
+        `
+          INSERT INTO user_operational_countries (user_id, country_code)
+          VALUES ($1::uuid, $2)
+          ON CONFLICT (user_id, country_code) DO NOTHING
+        `,
+        [auth.userId, countryCode.toUpperCase()]
+      )
+
+      return res.status(201).json({ ok: true })
+    })
+  )
+
+  router.post(
+    '/operational-countries/remove',
+    asyncHandler(async (req, res) => {
+      if (!req.app.locals.dbEnabled) {
+        return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
+      }
+      const pool = getPool()
+      const auth = await resolveAuthUser(pool, req)
+      if (!auth) return jsonError(res, 401, 'Login required')
+
+      const countryCode = normalizeNonEmptyString(req.body?.countryCode)
+      if (!countryCode) return jsonError(res, 400, 'Invalid countryCode')
+
+      await pool.query(
+        `
+          DELETE FROM user_operational_countries
+          WHERE user_id = $1::uuid AND country_code = $2
+        `,
+        [auth.userId, countryCode.toUpperCase()]
+      )
+
+      return res.json({ ok: true })
+    })
+  )
+
+  router.post(
+    '/operational-countries/add-all',
+    asyncHandler(async (req, res) => {
+      if (!req.app.locals.dbEnabled) {
+        return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
+      }
+      const pool = getPool()
+      const auth = await resolveAuthUser(pool, req)
+      if (!auth) return jsonError(res, 401, 'Login required')
+
+      const { rows: all } = await pool.query(`SELECT code FROM countries ORDER BY code ASC`)
+      const codes = all.map((r) => r.code).filter(Boolean)
+
+      const client = await pool.connect()
+      try {
+        await client.query('BEGIN')
+        for (const code of codes) {
+          await client.query(
+            `
+              INSERT INTO user_operational_countries (user_id, country_code)
+              VALUES ($1::uuid, $2)
+              ON CONFLICT (user_id, country_code) DO NOTHING
+            `,
+            [auth.userId, code]
+          )
+        }
+        await client.query('COMMIT')
+      } catch (err) {
+        await client.query('ROLLBACK')
+        throw err
+      } finally {
+        client.release()
+      }
+
+      return res.status(201).json({ ok: true, count: codes.length })
     })
   )
 
