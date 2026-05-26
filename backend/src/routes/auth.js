@@ -42,14 +42,18 @@ export function authRouter() {
 
       const { rows: opCountriesRows } = await pool.query(
         `
-          SELECT country_code
+          SELECT country_code, primary_language
           FROM user_operational_countries
           WHERE user_id = $1::uuid
           ORDER BY country_code ASC
         `,
         [auth.userId]
       )
-      const operationalCountryCodes = opCountriesRows.map((r) => r.country_code).filter(Boolean)
+      const operationalCountries = opCountriesRows.map((r) => ({
+        countryCode: r.country_code,
+        primaryLanguage: r.primary_language ?? null
+      }))
+      const operationalCountryCodes = operationalCountries.map((r) => r.countryCode).filter(Boolean)
 
       const { rows } = await pool.query(
         `
@@ -73,6 +77,7 @@ export function authRouter() {
           metaAdAccountId: auth.metaAdAccountId,
           metaPageId: auth.metaPageId,
           operationalCountryCodes,
+          operationalCountries,
           metaAccessToken: {
             saved: tokenMeta.hasToken,
             last4: tokenMeta.last4,
@@ -251,7 +256,7 @@ export function authRouter() {
       const limit = parseLimit(req.query.limit, 200, 500)
       const { rows } = await pool.query(
         `
-          SELECT country_code, created_at
+          SELECT country_code, primary_language, created_at
           FROM user_operational_countries
           WHERE user_id = $1::uuid
           ORDER BY created_at DESC
@@ -259,7 +264,14 @@ export function authRouter() {
         `,
         [auth.userId, limit]
       )
-      return res.json({ ok: true, country_codes: rows.map((r) => r.country_code).filter(Boolean) })
+      return res.json({
+        ok: true,
+        operational_countries: rows.map((r) => ({
+          countryCode: r.country_code,
+          primaryLanguage: r.primary_language ?? null,
+          createdAt: r.created_at ?? null
+        }))
+      })
     })
   )
 
@@ -279,6 +291,8 @@ export function authRouter() {
       const { rowCount: exists } = await pool.query(`SELECT 1 FROM countries WHERE code = $1`, [countryCode.toUpperCase()])
       if (exists === 0) return jsonError(res, 400, 'Invalid countryCode (not found)')
 
+      const primaryLanguage = normalizeNonEmptyString(req.body?.primaryLanguage)
+
       await pool.query(
         `
           INSERT INTO user_operational_countries (user_id, country_code)
@@ -287,6 +301,17 @@ export function authRouter() {
         `,
         [auth.userId, countryCode.toUpperCase()]
       )
+
+      if (primaryLanguage) {
+        await pool.query(
+          `
+            UPDATE user_operational_countries
+            SET primary_language = $3
+            WHERE user_id = $1::uuid AND country_code = $2
+          `,
+          [auth.userId, countryCode.toUpperCase(), primaryLanguage]
+        )
+      }
 
       return res.status(201).json({ ok: true })
     })
@@ -352,6 +377,36 @@ export function authRouter() {
       }
 
       return res.status(201).json({ ok: true, count: codes.length })
+    })
+  )
+
+  router.post(
+    '/operational-countries/language',
+    asyncHandler(async (req, res) => {
+      if (!req.app.locals.dbEnabled) {
+        return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
+      }
+      const pool = getPool()
+      const auth = await resolveAuthUser(pool, req)
+      if (!auth) return jsonError(res, 401, 'Login required')
+
+      const countryCode = normalizeNonEmptyString(req.body?.countryCode)
+      if (!countryCode) return jsonError(res, 400, 'Invalid countryCode')
+
+      const primaryLanguageRaw = req.body?.primaryLanguage
+      const primaryLanguage = primaryLanguageRaw === null ? null : normalizeNonEmptyString(primaryLanguageRaw)
+
+      const { rowCount } = await pool.query(
+        `
+          UPDATE user_operational_countries
+          SET primary_language = $3
+          WHERE user_id = $1::uuid AND country_code = $2
+        `,
+        [auth.userId, countryCode.toUpperCase(), primaryLanguage]
+      )
+      if (rowCount === 0) return jsonError(res, 404, 'Operational country not found')
+
+      return res.json({ ok: true })
     })
   )
 
