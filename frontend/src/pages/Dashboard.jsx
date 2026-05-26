@@ -147,7 +147,7 @@ export default function Dashboard() {
             />
             <ActionCard
               title="ROI - Dia Anterior"
-              description="Decisões baseadas em lucro real - Escale ou desative"
+              description="Visão D-1 (legado) — sem dashboard avançado nesta fase"
               items={[
                 { icon: <PercentIcon fontSize="small" />, text: "ROI por campanha" },
                 { icon: <BoltIcon fontSize="small" />, text: "Otimização 1 clique" },

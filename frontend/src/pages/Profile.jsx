@@ -101,6 +101,9 @@ export default function Profile() {
                   <button type="button" className="pillOutline" onClick={() => navigate("/campaign-flow")}>
                     Abrir /campaign-flow
                   </button>
+                  <button type="button" className="pillOutline" onClick={() => navigate("/roi-operacional")}>
+                    Abrir /roi-operacional
+                  </button>
                   <button type="button" className="pillOutline" onClick={() => navigate("/meta-test")}>
                     Abrir /meta-test
                   </button>
@@ -202,4 +205,3 @@ export default function Profile() {
     </PageShell>
   );
 }
-

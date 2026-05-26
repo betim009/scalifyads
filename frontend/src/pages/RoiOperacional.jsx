@@ -1,5 +1,6 @@
 import PageShell from "../components/PageShell.jsx";
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { getFinanceRoiOperational, setFinanceRevenue } from "../services/finance.js";
 import { pauseMetaCampaign } from "../services/metaCampaigns.js";
 import { updateMetaAdSetBudget } from "../services/metaAdSets.js";
@@ -56,6 +57,7 @@ function Metric({ label, value, tone }) {
 }
 
 export default function RoiOperacional() {
+  const navigate = useNavigate();
   const defaultDate = useMemo(() => addDaysUtc(todayUtcYyyyMmDd(), -1), []);
   const [date, setDate] = useState(defaultDate);
   const [loading, setLoading] = useState(true);
@@ -105,6 +107,12 @@ export default function RoiOperacional() {
   const negativeRows = useMemo(() => {
     return rows.filter((r) => typeof r?.profit_cents === "number" && r.profit_cents < 0 && r?.meta_campaign_id);
   }, [rows]);
+
+  function openMetaTest({ generatedCampaignId } = {}) {
+    const params = new URLSearchParams();
+    if (generatedCampaignId) params.set("generatedCampaignId", String(generatedCampaignId));
+    navigate(`/meta-test?${params.toString()}`);
+  }
 
   async function logOps(entry) {
     try {
@@ -317,6 +325,9 @@ export default function RoiOperacional() {
         <button type="button" className="pillOutline" disabled={busy || loading} onClick={pauseAllNegatives}>
           Pausar negativos ({negativeRows.length})
         </button>
+        <button type="button" className="pillOutline" disabled={busy} onClick={() => openMetaTest({})}>
+          Abrir /meta-test (debug)
+        </button>
       </section>
 
       <section style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 14 }}>
@@ -359,7 +370,12 @@ export default function RoiOperacional() {
                   const profit = r.profit_cents;
                   const isNegative = typeof profit === "number" && profit < 0;
                   return (
-                    <tr key={r.generated_campaign_id}>
+                    <tr
+                      key={r.generated_campaign_id}
+                      style={{
+                        background: isNegative ? "#fff1f2" : "transparent",
+                      }}
+                    >
                       <td style={{ fontWeight: 900 }}>
                         {r.campaign_name}
                         <div className="muted" style={{ fontWeight: 800, fontSize: 12, marginTop: 4 }}>
@@ -409,6 +425,14 @@ export default function RoiOperacional() {
                           <button
                             type="button"
                             className="pillOutline"
+                            disabled={busy}
+                            onClick={() => openMetaTest({ generatedCampaignId: r.generated_campaign_id })}
+                          >
+                            /meta-test
+                          </button>
+                          <button
+                            type="button"
+                            className="pillOutline"
                             disabled={busy || !r.meta_campaign_id}
                             onClick={() => pauseOne(r.meta_campaign_id, { generatedCampaignId: r.generated_campaign_id })}
                           >
@@ -441,4 +465,3 @@ export default function RoiOperacional() {
     </PageShell>
   );
 }
-

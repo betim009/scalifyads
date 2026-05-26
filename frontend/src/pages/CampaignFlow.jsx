@@ -317,6 +317,18 @@ export default function CampaignFlow() {
     "5. Resultado",
   ];
 
+  const progressStageLabel = useMemo(() => {
+    const stage = progress?.stage ? String(progress.stage) : "";
+    const map = {
+      campaign: "Criando Campaign",
+      adset: "Criando AdSet",
+      creativeDraft: "Criando Creative Draft",
+      creativePublish: "Publicando Creative (REAL)",
+      ad: "Criando Ad (PAUSED)",
+    };
+    return map[stage] ?? stage;
+  }, [progress]);
+
   const countryTemplateOptions = useMemo(() => {
     const opts = (countryTemplates || []).map((t) => ({
       value: t.id,
@@ -787,114 +799,129 @@ export default function CampaignFlow() {
           <section className="card" style={{ marginTop: 16, padding: 24 }}>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 950 }}>Etapa 1 — Dados da campanha</h2>
             <div style={{ marginTop: 18, display: "grid", gap: 16 }}>
-              <Field label="Atalhos (P21)" hint="Acelere repetição/duplicação sem expor payloads técnicos.">
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                  <button
-                    type="button"
-                    className="pillOutline"
-                    disabled={submitting || !lastExecution}
-                    onClick={repeatLastExecution}
-                  >
-                    Repetir última execução
-                  </button>
-                  <button
-                    type="button"
-                    className="pillOutline"
-                    disabled={submitting || !lastExecution}
-                    onClick={duplicateLastExecution}
-                  >
-                    Duplicar último lote
-                  </button>
-                  <button type="button" className="pillOutline" disabled={submitting} onClick={saveCurrentAsQuickPreset}>
-                    Salvar preset rápido
-                  </button>
-                </div>
-                {(quickPresets || []).length ? (
-                  <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                    <div style={{ flex: 1, minWidth: 260 }}>
-                      <SelectLike
-                        value={selectedQuickPresetId}
-                        onChange={(e) => setSelectedQuickPresetId(e.target.value)}
-                        disabled={submitting}
-                        options={[
-                          { value: "", label: "Selecionar preset…", disabled: true },
-                          ...(quickPresets || []).map((p) => ({
-                            value: p.id,
-                            label: p?.name ?? "Preset",
-                          })),
-                        ]}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      className="pillOutline"
-                      disabled={submitting || !normalizeNonEmptyString(selectedQuickPresetId)}
-                      onClick={applySelectedQuickPreset}
-                    >
-                      Aplicar preset
-                    </button>
-                  </div>
-                ) : null}
-              </Field>
-
-              <Field label="Templates (opcional)" hint="P11: use templates para reduzir preenchimento manual.">
-                <div style={{ display: "grid", gap: 12 }}>
-                  <div style={{ display: "grid", gap: 10 }}>
-                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                      <div style={{ fontWeight: 850, color: "#374151" }}>Campaign Template</div>
-                      <div style={{ color: "#6b7280", fontWeight: 750, fontSize: 12 }}>
-                        (preenche name/objective/ad account e nomes base)
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                      <div style={{ flex: 1, minWidth: 260 }}>
-                        <SelectLike
-                          value={selectedCampaignTemplateId}
-                          onChange={(e) => setSelectedCampaignTemplateId(e.target.value)}
-                          disabled={submitting}
-                          options={campaignTemplateOptions}
-                        />
-                      </div>
+              <Field label="Atalhos e templates (opcional)" hint="Use para reduzir cliques e preenchimento manual.">
+                <details style={{ border: "1px solid #e5e7eb", borderRadius: 14, padding: 12, background: "#fff" }}>
+                  <summary style={{ cursor: "pointer", fontWeight: 950, color: "#111827" }}>
+                    Atalhos (P21) — repetir/duplicar/presets
+                  </summary>
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                       <button
                         type="button"
                         className="pillOutline"
-                        disabled={submitting || !normalizeNonEmptyString(selectedCampaignTemplateId)}
-                        onClick={applySelectedCampaignTemplate}
+                        disabled={submitting || !lastExecution}
+                        onClick={repeatLastExecution}
                       >
-                        Aplicar
+                        Repetir última execução
+                      </button>
+                      <button
+                        type="button"
+                        className="pillOutline"
+                        disabled={submitting || !lastExecution}
+                        onClick={duplicateLastExecution}
+                      >
+                        Duplicar último lote
+                      </button>
+                      <button
+                        type="button"
+                        className="pillOutline"
+                        disabled={submitting}
+                        onClick={saveCurrentAsQuickPreset}
+                      >
+                        Salvar preset rápido
                       </button>
                     </div>
-                  </div>
-
-                  {batchEnabled ? (
-                    <div style={{ display: "grid", gap: 10 }}>
-                      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                        <div style={{ fontWeight: 850, color: "#374151" }}>Country Template</div>
-                        <div style={{ color: "#6b7280", fontWeight: 750, fontSize: 12 }}>
-                          (preenche países do lote)
-                        </div>
-                      </div>
-                      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                    {(quickPresets || []).length ? (
+                      <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
                         <div style={{ flex: 1, minWidth: 260 }}>
                           <SelectLike
-                            value={selectedCountryTemplateId}
-                            onChange={(e) => setSelectedCountryTemplateId(e.target.value)}
+                            value={selectedQuickPresetId}
+                            onChange={(e) => setSelectedQuickPresetId(e.target.value)}
                             disabled={submitting}
-                            options={countryTemplateOptions}
+                            options={[
+                              { value: "", label: "Selecionar preset…", disabled: true },
+                              ...(quickPresets || []).map((p) => ({
+                                value: p.id,
+                                label: p?.name ?? "Preset",
+                              })),
+                            ]}
                           />
                         </div>
                         <button
                           type="button"
                           className="pillOutline"
-                          disabled={submitting || !normalizeNonEmptyString(selectedCountryTemplateId)}
-                          onClick={applySelectedCountryTemplate}
+                          disabled={submitting || !normalizeNonEmptyString(selectedQuickPresetId)}
+                          onClick={applySelectedQuickPreset}
+                        >
+                          Aplicar preset
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                </details>
+
+                <details style={{ marginTop: 10, border: "1px solid #e5e7eb", borderRadius: 14, padding: 12, background: "#fff" }}>
+                  <summary style={{ cursor: "pointer", fontWeight: 950, color: "#111827" }}>
+                    Templates (P11) — preencher estrutura base
+                  </summary>
+                  <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
+                    <div style={{ display: "grid", gap: 10 }}>
+                      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                        <div style={{ fontWeight: 850, color: "#374151" }}>Campaign Template</div>
+                        <div style={{ color: "#6b7280", fontWeight: 750, fontSize: 12 }}>
+                          (preenche name/objective/ad account e nomes base)
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                        <div style={{ flex: 1, minWidth: 260 }}>
+                          <SelectLike
+                            value={selectedCampaignTemplateId}
+                            onChange={(e) => setSelectedCampaignTemplateId(e.target.value)}
+                            disabled={submitting}
+                            options={campaignTemplateOptions}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          className="pillOutline"
+                          disabled={submitting || !normalizeNonEmptyString(selectedCampaignTemplateId)}
+                          onClick={applySelectedCampaignTemplate}
                         >
                           Aplicar
                         </button>
                       </div>
                     </div>
-                  ) : null}
-                </div>
+
+                    {batchEnabled ? (
+                      <div style={{ display: "grid", gap: 10 }}>
+                        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                          <div style={{ fontWeight: 850, color: "#374151" }}>Country Template</div>
+                          <div style={{ color: "#6b7280", fontWeight: 750, fontSize: 12 }}>
+                            (preenche países do lote)
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                          <div style={{ flex: 1, minWidth: 260 }}>
+                            <SelectLike
+                              value={selectedCountryTemplateId}
+                              onChange={(e) => setSelectedCountryTemplateId(e.target.value)}
+                              disabled={submitting}
+                              options={countryTemplateOptions}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            className="pillOutline"
+                            disabled={submitting || !normalizeNonEmptyString(selectedCountryTemplateId)}
+                            onClick={applySelectedCountryTemplate}
+                          >
+                            Aplicar
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </details>
               </Field>
 
               <Field label="Nome" required>
@@ -1188,7 +1215,7 @@ export default function CampaignFlow() {
                 <div style={{ fontWeight: 950 }}>Executando lote...</div>
                 <div style={{ marginTop: 6, fontWeight: 800, color: "#374151" }}>
                   {progress.currentCountryCode} ({(progress.currentIndex ?? 0) + 1}/{progress.total}) —{" "}
-                  {progress.stage}
+                  {progressStageLabel}
                 </div>
               </div>
             ) : null}
