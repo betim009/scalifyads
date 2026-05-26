@@ -162,6 +162,10 @@ export default function CampaignFlow() {
   const [countries, setCountries] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [realConfirm, setRealConfirm] = useState(false);
+  const [batchEnabled, setBatchEnabled] = useState(false);
+  const [selectedCountryCodes, setSelectedCountryCodes] = useState(["BR"]);
+  const [progress, setProgress] = useState(null);
 
   const [campaign, setCampaign] = useState(DEFAULTS.campaign);
   const [adSet, setAdSet] = useState(DEFAULTS.adSet);
@@ -192,13 +196,19 @@ export default function CampaignFlow() {
     return [{ value: "", label: "Selecione...", disabled: true }, ...opts];
   }, [countries]);
 
+  const countryNameByCode = useMemo(() => {
+    const pairs = (countries || []).map((c) => [c.code, c.name]);
+    if (!pairs.find(([code]) => code === "BR")) pairs.unshift(["BR", "Brasil"]);
+    return Object.fromEntries(pairs);
+  }, [countries]);
+
   const canGoNext = useMemo(() => {
     if (submitting) return false;
     if (step === 0) {
       return (
         normalizeNonEmptyString(campaign.name) &&
         normalizeNonEmptyString(campaign.objective) &&
-        normalizeNonEmptyString(campaign.countryCode) &&
+        (batchEnabled ? selectedCountryCodes.length > 0 : normalizeNonEmptyString(campaign.countryCode)) &&
         normalizeNonEmptyString(campaign.mode)
       );
     }
@@ -230,88 +240,204 @@ export default function CampaignFlow() {
     "5. Resultado",
   ];
 
-  function openMetaTest() {
+  function openMetaTest({ generatedCampaignId } = {}) {
     const params = new URLSearchParams();
     if (normalizeNonEmptyString(campaign.name)) params.set("name", campaign.name);
     if (normalizeNonEmptyString(creative.destinationUrl)) params.set("destinationUrl", creative.destinationUrl);
-    if (normalizeNonEmptyString(result?.generatedCampaign?.id)) params.set("generatedCampaignId", result.generatedCampaign.id);
+    if (normalizeNonEmptyString(generatedCampaignId)) params.set("generatedCampaignId", generatedCampaignId);
     navigate(`/meta-test?${params.toString()}`);
+  }
+
+  async function copySummaryToClipboard(summary) {
+    const txt = JSON.stringify(summary ?? {}, null, 2);
+    try {
+      await navigator.clipboard.writeText(txt);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async function runFlow() {
     setSubmitting(true);
     setError("");
     setResult(null);
+    setProgress(null);
 
     try {
-      const campaignRes = await createMetaCampaignSimple({
-        name: campaign.name,
-        objective: campaign.objective,
-        metaAdAccountId: campaign.metaAdAccountId,
-        countryCode: campaign.countryCode,
-        mode: campaign.mode,
-      });
+      if (batchEnabled) {
+        const codes = Array.from(new Set((selectedCountryCodes || []).map((c) => String(c || "").trim()).filter(Boolean)));
+        const perCountry = [];
 
-      const generatedCampaignId = campaignRes?.generatedCampaign?.id;
-      if (!normalizeNonEmptyString(generatedCampaignId)) {
-        throw new Error("Falha ao criar Campaign (generatedCampaignId ausente).");
-      }
+        for (let i = 0; i < codes.length; i += 1) {
+          const countryCode = codes[i];
+          const label = `${countryCode} — ${countryNameByCode[countryCode] ?? ""}`.trim();
 
-      const adSetRes = await createMetaAdSet({
-        generatedCampaignId,
-        name: adSet.name,
-        dailyBudgetCents: Number(adSet.dailyBudgetCents),
-        billingEvent: adSet.billingEvent,
-        optimizationGoal: adSet.optimizationGoal,
-        mode: campaign.mode,
-      });
+          setProgress({ total: codes.length, currentIndex: i, currentCountryCode: countryCode, stage: "campaign" });
 
-      const draftRes = await createCreativeDraft({
-        generatedCampaignId,
-        primaryText: creative.primaryText,
-        headline: creative.headline || null,
-        description: creative.description || null,
-        destinationUrl: creative.destinationUrl,
-        ctaType: creative.ctaType,
-      });
+          try {
+            const campaignRes = await createMetaCampaignSimple({
+              name: campaign.name,
+              objective: campaign.objective,
+              metaAdAccountId: campaign.metaAdAccountId,
+              countryCode,
+              mode: campaign.mode,
+            });
 
-      const creativeDraftId = draftRes?.creativeDraft?.id;
-      if (!normalizeNonEmptyString(creativeDraftId)) {
-        throw new Error("Falha ao criar Creative Draft (id ausente).");
-      }
+            const generatedCampaignId = campaignRes?.generatedCampaign?.id;
+            if (!normalizeNonEmptyString(generatedCampaignId)) {
+              throw new Error("Falha ao criar Campaign (generatedCampaignId ausente).");
+            }
 
-      let publishRes = null;
-      if (campaign.mode === "REAL") {
-        publishRes = await publishMetaCreativeDraft(creativeDraftId, {
-          pageId: normalizeNonEmptyString(creative.pageId) || null,
-          instagramActorId: normalizeNonEmptyString(creative.instagramActorId) || null,
-          force: false,
+            setProgress({ total: codes.length, currentIndex: i, currentCountryCode: countryCode, stage: "adset" });
+            const adSetRes = await createMetaAdSet({
+              generatedCampaignId,
+              name: adSet.name,
+              dailyBudgetCents: Number(adSet.dailyBudgetCents),
+              billingEvent: adSet.billingEvent,
+              optimizationGoal: adSet.optimizationGoal,
+              mode: campaign.mode,
+            });
+
+            setProgress({ total: codes.length, currentIndex: i, currentCountryCode: countryCode, stage: "creativeDraft" });
+            const draftRes = await createCreativeDraft({
+              generatedCampaignId,
+              primaryText: creative.primaryText,
+              headline: creative.headline || null,
+              description: creative.description || null,
+              destinationUrl: creative.destinationUrl,
+              ctaType: creative.ctaType,
+            });
+
+            const creativeDraftId = draftRes?.creativeDraft?.id;
+            if (!normalizeNonEmptyString(creativeDraftId)) {
+              throw new Error("Falha ao criar Creative Draft (id ausente).");
+            }
+
+            let publishRes = null;
+            if (campaign.mode === "REAL") {
+              setProgress({ total: codes.length, currentIndex: i, currentCountryCode: countryCode, stage: "creativePublish" });
+              publishRes = await publishMetaCreativeDraft(creativeDraftId, {
+                pageId: normalizeNonEmptyString(creative.pageId) || null,
+                instagramActorId: normalizeNonEmptyString(creative.instagramActorId) || null,
+                force: false,
+              });
+            }
+
+            setProgress({ total: codes.length, currentIndex: i, currentCountryCode: countryCode, stage: "ad" });
+            const adRes = await createMetaAd({
+              generatedCampaignId,
+              name: ad.name,
+              creativeDraftId,
+              mode: campaign.mode,
+            });
+
+            perCountry.push({
+              ok: true,
+              countryCode,
+              label,
+              generatedCampaignId,
+              metaCampaignId: campaignRes?.metaCampaign?.id ?? null,
+              metaAdSetId: adSetRes?.metaAdSet?.id ?? null,
+              creativeDraftId,
+              metaCreativeId: publishRes?.metaCreative?.id ?? null,
+              metaAdId: adRes?.metaAd?.id ?? null,
+              metaAdEffectiveStatus: adRes?.metaAd?.effective_status ?? null,
+            });
+          } catch (err) {
+            perCountry.push({
+              ok: false,
+              countryCode,
+              label,
+              error: err?.message ? String(err.message) : "Falha ao executar o lote para este país.",
+            });
+          }
+        }
+
+        setProgress(null);
+        setResult({
+          type: "batch",
+          mode: campaign.mode,
+          base: { campaign, adSet, creative, ad },
+          perCountry,
+          createdAt: new Date().toISOString(),
         });
+        setStep(4);
+      } else {
+        const campaignRes = await createMetaCampaignSimple({
+          name: campaign.name,
+          objective: campaign.objective,
+          metaAdAccountId: campaign.metaAdAccountId,
+          countryCode: campaign.countryCode,
+          mode: campaign.mode,
+        });
+
+        const generatedCampaignId = campaignRes?.generatedCampaign?.id;
+        if (!normalizeNonEmptyString(generatedCampaignId)) {
+          throw new Error("Falha ao criar Campaign (generatedCampaignId ausente).");
+        }
+
+        const adSetRes = await createMetaAdSet({
+          generatedCampaignId,
+          name: adSet.name,
+          dailyBudgetCents: Number(adSet.dailyBudgetCents),
+          billingEvent: adSet.billingEvent,
+          optimizationGoal: adSet.optimizationGoal,
+          mode: campaign.mode,
+        });
+
+        const draftRes = await createCreativeDraft({
+          generatedCampaignId,
+          primaryText: creative.primaryText,
+          headline: creative.headline || null,
+          description: creative.description || null,
+          destinationUrl: creative.destinationUrl,
+          ctaType: creative.ctaType,
+        });
+
+        const creativeDraftId = draftRes?.creativeDraft?.id;
+        if (!normalizeNonEmptyString(creativeDraftId)) {
+          throw new Error("Falha ao criar Creative Draft (id ausente).");
+        }
+
+        let publishRes = null;
+        if (campaign.mode === "REAL") {
+          publishRes = await publishMetaCreativeDraft(creativeDraftId, {
+            pageId: normalizeNonEmptyString(creative.pageId) || null,
+            instagramActorId: normalizeNonEmptyString(creative.instagramActorId) || null,
+            force: false,
+          });
+        }
+
+        const adRes = await createMetaAd({
+          generatedCampaignId,
+          name: ad.name,
+          creativeDraftId,
+          mode: campaign.mode,
+        });
+
+        setResult({
+          type: "single",
+          mode: campaign.mode,
+          countryCode: campaign.countryCode,
+          generatedCampaignId,
+          metaCampaignId: campaignRes?.metaCampaign?.id ?? null,
+          metaAdSetId: adSetRes?.metaAdSet?.id ?? null,
+          creativeDraftId,
+          metaCreativeId: publishRes?.metaCreative?.id ?? null,
+          metaAdId: adRes?.metaAd?.id ?? null,
+          metaAdEffectiveStatus: adRes?.metaAd?.effective_status ?? null,
+          createdAt: new Date().toISOString(),
+        });
+
+        setStep(4);
       }
-
-      const adRes = await createMetaAd({
-        generatedCampaignId,
-        name: ad.name,
-        creativeDraftId,
-        mode: campaign.mode,
-      });
-
-      setResult({
-        mode: campaign.mode,
-        generatedCampaign: campaignRes?.generatedCampaign ?? null,
-        metaCampaign: campaignRes?.metaCampaign ?? null,
-        metaAdSet: adSetRes?.metaAdSet ?? null,
-        creativeDraft: draftRes?.creativeDraft ?? null,
-        metaCreative: publishRes?.metaCreative ?? null,
-        metaAd: adRes?.metaAd ?? null,
-      });
-
-      setStep(4);
     } catch (err) {
       setError(err?.message ? String(err.message) : "Falha ao executar o fluxo.");
       setStep(4);
     } finally {
       setSubmitting(false);
+      setProgress(null);
     }
   }
 
@@ -378,14 +504,95 @@ export default function CampaignFlow() {
                   ]}
                 />
               </Field>
-              <Field label="Country" required>
-                <SelectLike
-                  value={campaign.countryCode}
-                  onChange={(e) => setCampaign((p) => ({ ...p, countryCode: e.target.value }))}
-                  disabled={submitting}
-                  options={countryOptions}
-                />
+              <Field label="Criação em lote" hint="Ative para criar uma estrutura por país selecionado (P20).">
+                <label style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 850, color: "#111827" }}>
+                  <input
+                    type="checkbox"
+                    checked={batchEnabled}
+                    disabled={submitting}
+                    onChange={(e) => {
+                      const next = e.target.checked;
+                      setBatchEnabled(next);
+                      setRealConfirm(false);
+                      if (!next) {
+                        // fallback: keep current single country if possible
+                        const first = selectedCountryCodes?.[0] || "BR";
+                        setCampaign((p) => ({ ...p, countryCode: first }));
+                      } else {
+                        setSelectedCountryCodes((prev) => (Array.isArray(prev) && prev.length ? prev : ["BR"]));
+                      }
+                    }}
+                  />
+                  Criar em lote (múltiplos países)
+                </label>
               </Field>
+
+              {batchEnabled ? (
+                <Field label="Países" required hint="Selecione 1 ou mais países para o lote.">
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      className="pillOutline"
+                      disabled={submitting}
+                      onClick={() => setSelectedCountryCodes((countryOptions || []).filter((o) => o.value).map((o) => o.value))}
+                    >
+                      Selecionar todos
+                    </button>
+                    <button
+                      type="button"
+                      className="pillOutline"
+                      disabled={submitting}
+                      onClick={() => setSelectedCountryCodes([])}
+                    >
+                      Limpar
+                    </button>
+                  </div>
+                  <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+                    {(countryOptions || [])
+                      .filter((o) => o.value)
+                      .map((opt) => {
+                        const checked = selectedCountryCodes.includes(opt.value);
+                        return (
+                          <label
+                            key={opt.value}
+                            className="card"
+                            style={{
+                              padding: 12,
+                              cursor: submitting ? "not-allowed" : "pointer",
+                              borderColor: checked ? "#111827" : "#e5e7eb",
+                            }}
+                          >
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                              <div style={{ fontWeight: 900, color: "#111827" }}>{opt.label}</div>
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                disabled={submitting}
+                                onChange={() => {
+                                  setSelectedCountryCodes((prev) => {
+                                    const set = new Set(prev || []);
+                                    if (set.has(opt.value)) set.delete(opt.value);
+                                    else set.add(opt.value);
+                                    return Array.from(set);
+                                  });
+                                }}
+                              />
+                            </div>
+                          </label>
+                        );
+                      })}
+                  </div>
+                </Field>
+              ) : (
+                <Field label="Country" required>
+                  <SelectLike
+                    value={campaign.countryCode}
+                    onChange={(e) => setCampaign((p) => ({ ...p, countryCode: e.target.value }))}
+                    disabled={submitting}
+                    options={countryOptions}
+                  />
+                </Field>
+              )}
               <Field label="Modo de execução" required hint="REAL sempre cria PAUSED (nunca ACTIVE).">
                 <SelectLike
                   value={campaign.mode}
@@ -531,6 +738,16 @@ export default function CampaignFlow() {
               Revise os dados antes de criar. Nada aqui permite `ACTIVE`.
             </p>
 
+            {progress ? (
+              <div className="card" style={{ marginTop: 14, padding: 14 }}>
+                <div style={{ fontWeight: 950 }}>Executando lote...</div>
+                <div style={{ marginTop: 6, fontWeight: 800, color: "#374151" }}>
+                  {progress.currentCountryCode} ({(progress.currentIndex ?? 0) + 1}/{progress.total}) —{" "}
+                  {progress.stage}
+                </div>
+              </div>
+            ) : null}
+
             <div style={{ marginTop: 18, display: "grid", gap: 16 }}>
               <div className="card" style={{ padding: 18 }}>
                 <div style={{ fontWeight: 950, marginBottom: 10 }}>Campaign</div>
@@ -538,7 +755,14 @@ export default function CampaignFlow() {
                   <SummaryRow label="name" value={campaign.name || "—"} />
                   <SummaryRow label="metaAdAccountId" value={campaign.metaAdAccountId || "—"} />
                   <SummaryRow label="objective" value={campaign.objective || "—"} />
-                  <SummaryRow label="countryCode" value={campaign.countryCode || "—"} />
+                  <SummaryRow
+                    label="countries"
+                    value={
+                      batchEnabled
+                        ? `${selectedCountryCodes.length} selecionados`
+                        : campaign.countryCode || "—"
+                    }
+                  />
                   <SummaryRow label="mode" value={campaign.mode || "—"} />
                 </div>
               </div>
@@ -573,11 +797,35 @@ export default function CampaignFlow() {
               </div>
             </div>
 
+            {modeIsReal ? (
+              <div className="card" style={{ marginTop: 16, padding: 14, borderColor: "#fde68a", background: "#fffbeb" }}>
+                <label style={{ display: "flex", gap: 10, alignItems: "flex-start", fontWeight: 900, color: "#92400e" }}>
+                  <input
+                    type="checkbox"
+                    checked={realConfirm}
+                    disabled={submitting}
+                    onChange={(e) => setRealConfirm(e.target.checked)}
+                    style={{ marginTop: 3 }}
+                  />
+                  Confirmo que vou executar em modo REAL e que tudo será criado como PAUSED.
+                </label>
+              </div>
+            ) : null}
+
             <div style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <button type="button" className="pillPrimary" disabled={submitting} onClick={runFlow}>
-                {submitting ? "Criando..." : "Criar tudo (PAUSED)"}
+              <button
+                type="button"
+                className="pillPrimary"
+                disabled={submitting || (modeIsReal && !realConfirm)}
+                onClick={runFlow}
+              >
+                {submitting
+                  ? "Criando..."
+                  : batchEnabled
+                    ? `Criar lote (PAUSED) • ${selectedCountryCodes.length} países`
+                    : "Criar tudo (PAUSED)"}
               </button>
-              <button type="button" className="pillOutline" disabled={submitting} onClick={openMetaTest}>
+              <button type="button" className="pillOutline" disabled={submitting} onClick={() => openMetaTest()}>
                 Abrir /meta-test (debug)
               </button>
             </div>
@@ -593,7 +841,7 @@ export default function CampaignFlow() {
                 <div style={{ fontWeight: 950 }}>Falha</div>
                 <div style={{ marginTop: 6, fontWeight: 750 }}>{error}</div>
                 <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                  <button type="button" className="pillOutline" onClick={openMetaTest}>
+                  <button type="button" className="pillOutline" onClick={() => openMetaTest()}>
                     Abrir /meta-test (debug)
                   </button>
                   <button type="button" className="pillOutline" onClick={() => setStep(0)}>
@@ -605,37 +853,117 @@ export default function CampaignFlow() {
 
             {result ? (
               <div style={{ marginTop: 16, display: "grid", gap: 14 }}>
-                <div className="card" style={{ padding: 16 }}>
-                  <div style={{ fontWeight: 950, marginBottom: 10 }}>IDs criados</div>
-                  <div style={{ display: "grid", gap: 10 }}>
-                    <SummaryRow label="mode" value={result.mode || "—"} />
-                    <SummaryRow label="generatedCampaignId" value={result?.generatedCampaign?.id ?? "—"} />
-                    <SummaryRow label="metaCampaignId" value={result?.metaCampaign?.id ?? "—"} />
-                    <SummaryRow label="metaAdSetId" value={result?.metaAdSet?.id ?? "—"} />
-                    <SummaryRow label="creativeDraftId" value={result?.creativeDraft?.id ?? "—"} />
-                    <SummaryRow label="metaCreativeId" value={result?.metaCreative?.id ?? "—"} />
-                    <SummaryRow label="metaAdId" value={result?.metaAd?.id ?? "—"} />
-                  </div>
-                </div>
+                {result.type === "single" ? (
+                  <>
+                    <div className="card" style={{ padding: 16 }}>
+                      <div style={{ fontWeight: 950, marginBottom: 10 }}>IDs criados</div>
+                      <div style={{ display: "grid", gap: 10 }}>
+                        <SummaryRow label="mode" value={result.mode || "—"} />
+                        <SummaryRow label="countryCode" value={result.countryCode || "—"} />
+                        <SummaryRow label="generatedCampaignId" value={result.generatedCampaignId ?? "—"} />
+                        <SummaryRow label="metaCampaignId" value={result.metaCampaignId ?? "—"} />
+                        <SummaryRow label="metaAdSetId" value={result.metaAdSetId ?? "—"} />
+                        <SummaryRow label="creativeDraftId" value={result.creativeDraftId ?? "—"} />
+                        <SummaryRow label="metaCreativeId" value={result.metaCreativeId ?? "—"} />
+                        <SummaryRow label="metaAdId" value={result.metaAdId ?? "—"} />
+                      </div>
+                    </div>
 
-                <div className="card" style={{ padding: 16 }}>
-                  <div style={{ fontWeight: 950, marginBottom: 10 }}>Status (quando disponível)</div>
-                  <div style={{ display: "grid", gap: 10 }}>
-                    <SummaryRow label="campaign.status" value={result?.metaCampaign?.status ?? "—"} />
-                    <SummaryRow label="adset.status" value={result?.metaAdSet?.status ?? "—"} />
-                    <SummaryRow label="ad.status" value={result?.metaAd?.status ?? "—"} />
-                    <SummaryRow label="ad.effective_status" value={result?.metaAd?.effective_status ?? "—"} />
-                  </div>
-                </div>
+                    <div className="card" style={{ padding: 16 }}>
+                      <div style={{ fontWeight: 950, marginBottom: 10 }}>Status (quando disponível)</div>
+                      <div style={{ display: "grid", gap: 10 }}>
+                        <SummaryRow label="ad.effective_status" value={result.metaAdEffectiveStatus ?? "—"} />
+                      </div>
+                    </div>
 
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                  <button type="button" className="pillOutline" onClick={openMetaTest}>
-                    Abrir /meta-test (debug)
-                  </button>
-                  <button type="button" className="pillOutline" onClick={() => setStep(0)}>
-                    Criar outra
-                  </button>
-                </div>
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                      <button
+                        type="button"
+                        className="pillOutline"
+                        onClick={() => openMetaTest({ generatedCampaignId: result.generatedCampaignId })}
+                      >
+                        Abrir /meta-test (debug)
+                      </button>
+                      <button type="button" className="pillOutline" onClick={() => setStep(0)}>
+                        Criar outra
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="card" style={{ padding: 16 }}>
+                      <div style={{ fontWeight: 950, marginBottom: 10 }}>Resumo do lote</div>
+                      <div style={{ display: "grid", gap: 10 }}>
+                        <SummaryRow label="mode" value={result.mode || "—"} />
+                        <SummaryRow
+                          label="success"
+                          value={String((result.perCountry || []).filter((r) => r.ok).length)}
+                        />
+                        <SummaryRow
+                          label="failed"
+                          value={String((result.perCountry || []).filter((r) => !r.ok).length)}
+                        />
+                      </div>
+                      <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                        <button
+                          type="button"
+                          className="pillOutline"
+                          onClick={() => copySummaryToClipboard(result)}
+                        >
+                          Copiar resumo (JSON)
+                        </button>
+                        <button type="button" className="pillOutline" onClick={() => setStep(0)}>
+                          Novo lote
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "grid", gap: 12 }}>
+                      {(result.perCountry || []).map((r) => (
+                        <div
+                          key={r.countryCode}
+                          className="card"
+                          style={{
+                            padding: 16,
+                            borderColor: r.ok ? "#bbf7d0" : "#fecaca",
+                          }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                            <div style={{ fontWeight: 950 }}>
+                              {r.label || r.countryCode} — {r.ok ? "OK" : "ERRO"}
+                            </div>
+                            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                              {r.generatedCampaignId ? (
+                                <button
+                                  type="button"
+                                  className="pillOutline"
+                                  onClick={() => openMetaTest({ generatedCampaignId: r.generatedCampaignId })}
+                                >
+                                  Abrir /meta-test
+                                </button>
+                              ) : null}
+                            </div>
+                          </div>
+
+                          {r.ok ? (
+                            <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
+                              <SummaryRow label="generatedCampaignId" value={r.generatedCampaignId ?? "—"} />
+                              <SummaryRow label="metaCampaignId" value={r.metaCampaignId ?? "—"} />
+                              <SummaryRow label="metaAdSetId" value={r.metaAdSetId ?? "—"} />
+                              <SummaryRow label="creativeDraftId" value={r.creativeDraftId ?? "—"} />
+                              <SummaryRow label="metaCreativeId" value={r.metaCreativeId ?? "—"} />
+                              <SummaryRow label="metaAdId" value={r.metaAdId ?? "—"} />
+                            </div>
+                          ) : (
+                            <div style={{ marginTop: 10, fontWeight: 850, color: "#991b1b" }}>
+                              {r.error || "Falha"}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             ) : null}
           </section>

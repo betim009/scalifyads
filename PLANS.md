@@ -1167,6 +1167,54 @@ Critérios de aceite:
 - Criações REAL continuam `PAUSED`.
 - Não existe criação `ACTIVE`.
 
+### P20 — Automatização operacional mínima
+
+Última atualização: [2026-05-26 10:25]
+
+Objetivo:
+Melhorar a automatização do Campaign Builder para reduzir trabalho manual na criação de múltiplas campanhas, mantendo o fluxo REAL seguro e sempre PAUSED.
+
+Contexto:
+P18 validou `/campaign-flow`.
+P19 validou login interno e credenciais Meta por usuário.
+Agora o foco é automatizar criação em lote para operação real controlada.
+
+Regras:
+- Não quebrar `/campaign-flow`.
+- Não quebrar `/meta-test`.
+- Não permitir `ACTIVE`.
+- Toda criação REAL deve continuar `PAUSED`.
+- Não expor token no frontend.
+- Não fazer refactor massivo.
+- Reaproveitar services já validados.
+
+Backlog:
+- [x] Criar modo de criação em lote no `/campaign-flow`.
+- [x] Permitir selecionar múltiplos países.
+- [x] Permitir reutilizar uma estrutura base de Campaign, AdSet, Creative e Ad.
+- [x] Gerar uma campanha por país selecionado.
+- [x] Criar resumo antes da execução.
+- [x] Exibir aviso: “Tudo será criado como PAUSED.”
+- [x] Exigir confirmação antes de executar em modo REAL.
+- [x] Exibir progresso por item criado.
+- [x] Exibir resultado individual por país.
+- [x] Permitir copiar resumo da execução.
+- [x] Em caso de erro em um país, continuar os próximos.
+- [x] Registrar falhas de forma clara.
+- [x] Adicionar botão para abrir item no `/meta-test`.
+- [ ] Atualizar `RUNBOOK.md`.
+- [ ] Atualizar `PROJECT_STATUS.md`.
+- [ ] Criar commit incremental.
+
+Critérios de aceite:
+- Usuário consegue selecionar mais de um país.
+- Sistema cria múltiplas estruturas em sequência.
+- Cada país gera sua própria Campaign/AdSet/Creative/Ad.
+- Tudo é criado como PAUSED.
+- Erro em um item não trava o lote inteiro.
+- Resultado mostra sucesso/erro por país.
+- Token continua protegido.
+
 ## Decision Log (Ativo)
 
 Última atualização: [2026-05-25 18:57]

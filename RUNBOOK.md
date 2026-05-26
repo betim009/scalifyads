@@ -106,6 +106,33 @@ Notas:
 - Sessão usa cookie `HttpOnly` (não acessível via JS).
 - Endpoints `/api/meta/*` exigem login (cookie) quando o DB está habilitado.
 
+### P20 — `/campaign-flow` em lote (múltiplos países)
+
+Última atualização: [2026-05-26 10:25]
+
+Objetivo:
+executar criação em lote no `/campaign-flow`, gerando **uma estrutura por país** (Campaign → AdSet → Creative → Ad), mantendo tudo `PAUSED` no modo `REAL`.
+
+Pré-requisitos:
+
+- Login OK (`/login`) e credenciais Meta salvas no `/profile` (token fica só no backend).
+- DB habilitado e migrations aplicadas:
+  - `docker compose exec backend npm run migrate`
+  - `docker compose exec backend npm run seed`
+
+Fluxo (UI):
+
+1) Abrir `http://localhost:5173/campaign-flow`.
+2) Ativar “Criação em lote”.
+3) Selecionar múltiplos países.
+4) Revisão → (se `REAL`) marcar confirmação explícita → executar.
+
+Resultado esperado:
+
+- Um resultado por país (OK/ERRO).
+- Falha em um país **não interrompe** os próximos.
+- Botão “Abrir /meta-test” por país para troubleshooting.
+
 ### Demo operacional controlada
 
 Última atualização: [2026-05-25 18:57]
