@@ -92,6 +92,18 @@ export default function Dashboard() {
 
           <section className="gridActions" aria-label="Ações">
             <ActionCard
+              title="Fluxo guiado Meta"
+              description="Fluxo operacional limpo (guiado) — cria Campaign → AdSet → Creative → Ad"
+              items={[
+                { icon: <RocketLaunchIcon fontSize="small" />, text: "Sem payloads técnicos por padrão" },
+                { icon: <BoltIcon fontSize="small" />, text: "REAL sempre PAUSED (guardrail)" },
+              ]}
+              buttonVariant="primary"
+              buttonIcon={<RocketLaunchIcon fontSize="small" />}
+              buttonText="Abrir fluxo guiado"
+              onButtonClick={() => navigate("/campaign-flow")}
+            />
+            <ActionCard
               title="Console Meta (/meta-test)"
               description="Fluxo operacional progressivo (Campaign → AdSet → Ad) + troubleshooting sem expor token"
               items={[

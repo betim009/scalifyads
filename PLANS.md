@@ -151,12 +151,14 @@ Prioridade operacional (estado real atual):
 - Mudanças devem ser pequenas, incrementais, verificáveis e sempre registradas com evidência.
 - `ARCHIVE.md` é apenas histórico e não deve ser usado como backlog ativo.
 
-Fases atuais (ordem obrigatória):
+Foco atual:
 
-- P14 — Auditoria e estabilização pós-fluxo REAL.
-- P15 — Demo operacional controlada.
-- P16 — Hardening mínimo e rotação futura.
-- P17 — Preparação do fluxo operacional limpo.
+- P18 — Primeira versão do fluxo operacional limpo.
+- Criar uma rota inicial mais simples para operação guiada.
+- Manter `/meta-test` como laboratório técnico.
+- Não remover, quebrar ou refatorar o `/meta-test`.
+- Reaproveitar services/endpoints já validados.
+- Garantir que toda criação REAL continue `PAUSED`.
 
 ## Execution Rules
 
@@ -178,10 +180,10 @@ Fases atuais (ordem obrigatória):
 
 Prioridade de execução atual:
 
-1. Executar P14 — Auditoria e estabilização pós-fluxo REAL.
-2. Depois executar P15 — Demo operacional controlada.
-3. Depois executar P16 — Hardening mínimo e rotação futura de credenciais.
-4. Depois executar P17 — Preparação do fluxo operacional limpo.
+1. Executar P18 — Primeira versão do fluxo operacional limpo.
+2. Manter `/meta-test` intacto como diagnóstico.
+3. Reaproveitar services existentes.
+4. Só depois evoluir para autenticação/perfil/credenciais por usuário.
 
 Regras obrigatórias:
 
@@ -880,7 +882,8 @@ Backlog:
   - `/console`;
   - ou `/campaign-builder`;
   - ou `/nova-campanha-real`.
-- [ ] Não implementar ainda o wizard completo.
+Regra:
+- O wizard completo não deve ser implementado em P17. A implementação começa em P18.
 - [x] Criar documentação de proposta antes de codar.
 - [x] Garantir que `/meta-test` continue como laboratório técnico (nenhuma mudança de código nesta fase; apenas documentação).
 - [x] Criar commit incremental (commit: d1107dc).
@@ -891,6 +894,171 @@ Critérios de aceite:
 - Nenhuma funcionalidade existente é removida.
 - O projeto fica pronto para evoluir para uma UI mais amigável sem perder o laboratório técnico.
 
+### P18 — Primeira versão do fluxo operacional limpo
+
+Última atualização: [2026-05-26 09:25]
+
+Objetivo:
+Criar a primeira versão de uma interface operacional mais simples para criação de campanhas Meta, reaproveitando o fluxo REAL já validado no `/meta-test`, mas sem expor excesso de informações técnicas para o usuário final.
+
+Contexto:
+O `/meta-test` validou o fluxo REAL completo:
+
+Campaign REAL → AdSet REAL → Creative REAL → Ad REAL
+
+Agora o objetivo é começar a transformar esse laboratório técnico em uma experiência mais limpa, guiada e segura, mantendo o `/meta-test` como console de diagnóstico.
+
+Regras:
+
+- Não remover o `/meta-test`.
+- Não quebrar o `/meta-test`.
+- Não duplicar lógica de backend desnecessariamente.
+- Reaproveitar services, endpoints e componentes existentes quando possível.
+- Toda criação REAL deve continuar obrigatoriamente `PAUSED`.
+- Não permitir criação `ACTIVE`.
+- Não expor token no frontend.
+- Não fazer redesign completo.
+- Não fazer refactor massivo.
+- Criar uma primeira versão simples, incremental e validável.
+- O fluxo limpo deve esconder payloads, logs e debug por padrão.
+- Em caso de erro, o usuário deve receber uma mensagem simples e ter opção de abrir o `/meta-test`.
+
+Backlog:
+
+- [x] Atualizar `Operational Priorities` para focar P18.
+- [x] Atualizar `Execution Rules` para priorizar P18.
+- [x] Limpar em `Blockers` qualquer instrução antiga de revalidar P4/P5.
+- [x] Corrigir o item pendente de P17 sobre “não implementar wizard completo”.
+
+- [x] Definir rota para o novo fluxo operacional limpo.
+  - Sugestão: `/campaign-flow`.
+  - Manter `/meta-test` como laboratório técnico.
+
+- [x] Criar página inicial do fluxo limpo.
+  - Arquivo sugerido: `frontend/src/pages/CampaignFlow.jsx`.
+  - A página deve ter layout simples, com etapas bem visíveis.
+  - Não precisa ter todos os recursos do `/meta-test` na primeira versão.
+
+- [x] Adicionar rota no React.
+  - Atualizar `frontend/src/App.jsx`.
+  - Criar rota `/campaign-flow`.
+
+- [x] Criar navegação por etapas.
+  - Etapa 1: Dados da campanha.
+  - Etapa 2: Configuração do AdSet.
+  - Etapa 3: Criativo.
+  - Etapa 4: Revisão.
+  - Etapa 5: Resultado.
+
+- [x] Etapa 1 — Dados da campanha.
+  - Campos:
+    - nome da campanha;
+    - Meta Ad Account ID;
+    - país;
+    - objetivo;
+    - modo `REAL` ou `STUB`.
+  - Valores padrão seguros:
+    - `objective=OUTCOME_TRAFFIC`;
+    - `countryCode=BR`;
+    - `mode=STUB` por padrão ou `REAL` com aviso claro.
+  - Regra:
+    - em modo REAL, a criação deve continuar `PAUSED`.
+
+- [x] Etapa 2 — Configuração do AdSet.
+  - Campos:
+    - nome do AdSet;
+    - orçamento diário;
+    - billing event;
+    - optimization goal.
+  - Valores padrão seguros:
+    - `dailyBudgetCents=1000`;
+    - `billingEvent=IMPRESSIONS`;
+    - `optimizationGoal=LINK_CLICKS`.
+
+- [x] Etapa 3 — Criativo.
+  - Campos:
+    - primary text;
+    - headline;
+    - description;
+    - destination URL;
+    - CTA type.
+  - Valor padrão sugerido:
+    - `ctaType=LEARN_MORE`.
+  - Criar ou usar creative draft.
+  - Não publicar Creative REAL sem `destinationUrl`.
+
+- [x] Etapa 4 — Revisão.
+  - Mostrar resumo antes de executar:
+    - Campaign;
+    - AdSet;
+    - Creative;
+    - Ad;
+    - orçamento;
+    - país;
+    - URL de destino.
+  - Exibir aviso claro:
+    - “Tudo será criado como PAUSED.”
+  - Exigir confirmação antes de operação REAL.
+
+- [x] Etapa 5 — Resultado.
+  - Exibir IDs criados, quando existirem:
+    - `meta_campaign_id`;
+    - `meta_adset_id`;
+    - `meta_creative_id`;
+    - `meta_ad_id`.
+  - Exibir status:
+    - `PAUSED`;
+    - `IN_PROCESS`, quando aplicável.
+  - Exibir ações:
+    - abrir preview;
+    - abrir `/meta-test` com o registro selecionado;
+    - copiar resumo da execução.
+
+- [x] Criar modo seguro de execução.
+  - O usuário não deve conseguir selecionar `ACTIVE`.
+  - O texto da UI deve reforçar que a campanha nasce pausada.
+  - Em caso de erro, mostrar mensagem simples e botão para abrir `/meta-test`.
+
+- [ ] Reaproveitar services existentes.
+  - Não criar chamadas duplicadas se já existirem services para Meta Campaign, AdSet, Creative e Ad.
+  - Evitar fetch direto em componente.
+  - Respeitar arquitetura atual do frontend.
+
+- [ ] Criar fallback para troubleshooting.
+  - Quando algo falhar, exibir:
+    - mensagem simples;
+    - etapa em que falhou;
+    - botão “Abrir no /meta-test para diagnóstico”.
+  - Não exibir payload técnico gigante por padrão.
+
+- [ ] Adicionar link de entrada para o novo fluxo.
+  - Adicionar atalho no Dashboard ou Configurações.
+  - Rotular como fluxo guiado/experimental/controlado.
+  - Manter “Nova Campanha” como legado.
+
+- [ ] Validar build do frontend.
+  - Rodar:
+    - `cd frontend && npm run build`
+
+- [ ] Atualizar documentação.
+  - Atualizar `PLANS.md`.
+  - Atualizar `RUNBOOK.md` somente se houver novo procedimento.
+  - Atualizar `CLEAN_FLOW_PROPOSAL.md`, se necessário.
+  - Registrar decisão no `Decision Log`.
+
+- [ ] Criar commit incremental.
+
+Critérios de aceite:
+
+- Existe rota `/campaign-flow`.
+- Existe página guiada inicial.
+- O `/meta-test` continua funcionando.
+- O novo fluxo orienta o usuário por etapas.
+- O novo fluxo não expõe token.
+- O novo fluxo não permite criar `ACTIVE`.
+- O novo fluxo deixa claro que tudo será criado como `PAUSED`.
+- O build do frontend passa.
+- Há caminho claro para abrir `/meta-test` em caso de debug.
 
 ## Decision Log (Ativo)
 
@@ -917,7 +1085,7 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 
 ## Blockers
 
-Última atualização: [2026-05-25 18:57]
+Última atualização: [2026-05-26 09:15]
 
 ### Blockers ativos
 
@@ -946,6 +1114,10 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
   - Graph read confirmado.
   - Preview retornado.
 
+### Próxima ação
+
+Executar P18 — Primeira versão do fluxo operacional limpo.
+
 ### Regras de segurança que continuam ativas
 
 - Mesmo sem blocker ativo, toda criação REAL deve continuar `PAUSED`.
@@ -953,46 +1125,6 @@ Mantém apenas decisões ainda válidas para execução atual. Histórico comple
 - Não criar fluxos que permitam `ACTIVE`.
 - Não remover validações de segurança.
 - Não expor token no frontend, logs, commits ou documentação.
-
-### Próxima ação
-
-Executar P14 — Auditoria e estabilização pós-fluxo REAL para consolidar evidências, limpar documentação e garantir repetibilidade segura.
-
-2. Validar backend:
-   - `curl http://localhost:3001/healthz`
-
-3. Validar status Meta:
-   - `curl http://localhost:3001/api/meta/status`
-
-4. Validar token atual:
-   - `curl -X POST http://localhost:3001/api/meta/validate -H "Content-Type: application/json" -d '{}'`
-
-5. Abrir `/meta-test`.
-
-6. Revalidar Creative REAL:
-   - selecionar `generatedCampaignId`;
-   - selecionar/criar `creative_draft`;
-   - garantir `destinationUrl`;
-   - garantir `pageId`;
-   - publicar Creative REAL;
-   - consultar Creative no Graph.
-
-7. Revalidar Ad REAL:
-   - usar `creativeDraftId` com `meta_creative_id`;
-   - criar Ad REAL;
-   - confirmar `PAUSED`;
-   - consultar Ad no Graph;
-   - confirmar persistência no DB.
-
-Regras:
-
-- Não marcar P4/P5 REAL como concluídos sem evidência real.
-- Não inventar validações.
-- Se surgir novo erro da Meta, registrar o erro exato nesta seção.
-- Se o erro `1885183` desaparecer, atualizar esta seção removendo o bloqueio antigo.
-- Se Creative REAL funcionar, atualizar P4.
-- Se Ad REAL funcionar, atualizar P5.
-- Se tudo funcionar, criar próxima fase para hardening/rotação de credenciais antes de produção.
 
 
 ## Risks

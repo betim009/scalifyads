@@ -1,16 +1,21 @@
-# CLEAN_FLOW_PROPOSAL — Proposta de fluxo operacional “limpo” (sem implementar agora)
+# CLEAN_FLOW_PROPOSAL — Proposta + base do fluxo operacional “limpo” (`/campaign-flow`)
 
-Última atualização: [2026-05-25 18:57]
+Última atualização: [2026-05-26 09:25]
 
 Objetivo:
 documentar uma proposta para um fluxo operacional mais simples e seguro, preservando o `/meta-test` como laboratório técnico.
 
 Regras:
 
-- Não implementar wizard completo agora.
+- A primeira versão pode ser simples (guiada), sem replicar tudo do `/meta-test`.
 - Não remover/alterar o `/meta-test` de forma que quebre o laboratório.
 - Toda criação REAL continua `PAUSED`.
 - Token continua apenas no backend.
+
+Status atual:
+
+- Implementado um fluxo guiado inicial em `/campaign-flow` (frontend).
+- `/meta-test` permanece como console técnico (operação + troubleshooting).
 
 ## Problema atual
 
@@ -59,4 +64,3 @@ Opções:
 - Um operador consegue criar o fluxo REAL completo sem abrir troubleshooting.
 - Qualquer falha aponta “o que faltou” e direciona para o `/meta-test`.
 - O `/meta-test` continua sendo a fonte de auditoria e diagnóstico.
-

@@ -8,6 +8,7 @@ import RoiOntem from "./pages/RoiOntem.jsx";
 import CampanhaDetalhes from "./pages/CampanhaDetalhes.jsx";
 import CampanhaDuplicar from "./pages/CampanhaDuplicar.jsx";
 import MetaPausedTest from "./pages/MetaPausedTest.jsx";
+import CampaignFlow from "./pages/CampaignFlow.jsx";
 import PoliticaPrivacidade from "./pages/PoliticaPrivacidade.jsx";
 import TermosDeUso from "./pages/TermosDeUso.jsx";
 import ExclusaoDados from "./pages/ExclusaoDados.jsx";
@@ -26,6 +27,7 @@ export default function App() {
         <Route path="/financeiro" element={<Financeiro />} />
         <Route path="/configuracoes" element={<Configuracoes />} />
         <Route path="/meta-test" element={<MetaPausedTest />} />
+        <Route path="/campaign-flow" element={<CampaignFlow />} />
         <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
         <Route path="/termos-de-uso" element={<TermosDeUso />} />
         <Route path="/exclusao-de-dados" element={<ExclusaoDados />} />
