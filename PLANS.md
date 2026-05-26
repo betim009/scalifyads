@@ -1426,6 +1426,8 @@ Validação executada (local):
 
 - [2026-05-26 16:42] `cd frontend && npm run build` (OK) após P26 (LibreTranslate + variações no `/templates` + uso no lote).
 - Commit: 234fb9d
+- [2026-05-26 17:10] `cd frontend && npm run build` (OK) após melhorar UX do `/templates` (fluxo cliente) + revisão do `/campaign-flow` (copy/idioma por país).
+- Commit: 6187167
 
 Campos que devem gerar variações:
 
