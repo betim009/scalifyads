@@ -1528,7 +1528,7 @@ Backlog (executável):
 - [x] Manter todas ações funcionais (usar/editar/excluir/gerar traduções/revisar/salvar).
 - [x] Validação: `cd frontend && npm run build`.
 - [ ] Validação manual do fluxo completo do `/templates` (abas, CRUD, traduções e `Usar no /campaign-flow`).
-- [ ] Registrar conclusão no `PLANS.md` com timestamp e criar commit incremental.
+- [ ] Registrar conclusão no `PLANS.md` com timestamp e criar commit incremental. (commit: d4261c3)
 
 Validação executada (local):
 
