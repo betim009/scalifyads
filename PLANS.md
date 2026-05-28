@@ -1445,7 +1445,7 @@ Não precisa traduzir:
 
 ### P27 — Redesign minimalista da tela `/templates`
 
-Última atualização: [2026-05-28 18:41]
+Última atualização: [2026-05-28 18:42]
 
 Objetivo:
 transformar `/templates` em uma tela **operacional, simples, bonita e minimalista** (pronta para cliente), mantendo compatibilidade com endpoints e sem refactor massivo.
@@ -1498,7 +1498,7 @@ Backlog (executável):
   - gerar traduções
   - salvar/revisar traduções
   - usar template no `/campaign-flow`
-- [ ] Registrar conclusão + evidências no `PLANS.md` com timestamp e criar commit incremental.
+- [x] Registrar conclusão + evidências no `PLANS.md` com timestamp e criar commit incremental. (commit: dcb62a4)
 
 Validação executada (local):
 
