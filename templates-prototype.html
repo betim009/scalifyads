@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Templates — Campaign Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Manrope:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:           #eef0f4;
+    --surface:      #ffffff;
+    --surface-2:    #ffffff;
+    --surface-3:    #f3f4f7;
+    --border:       #e2e5eb;
+    --border-mid:   #ced2da;
+    --border-strong:#a8adb8;
+    --text-1:       #181a20;
+    --text-2:       #565c6e;
+    --text-3:       #9399a8;
+    --accent:       #181a20;
+    --accent-glow:  rgba(24,26,32,.08);
+    --green:        #1a9e6a;
+    --green-soft:   #edfaf4;
+    --blue:         #2f5be8;
+    --blue-soft:    #eef2ff;
+    --red:          #d94040;
+    --red-soft:     #fff3f3;
+
+    --r-sm: 7px;
+    --r-md: 10px;
+    --r-lg: 14px;
+    --r-xl: 18px;
+
+    --shadow-sm: 0 1px 3px rgba(26,25,22,.06), 0 1px 2px rgba(26,25,22,.04);
+    --shadow-md: 0 4px 20px rgba(26,25,22,.07), 0 1px 4px rgba(26,25,22,.04);
+
+    --ease: cubic-bezier(.16,1,.3,1);
+    --t: 150ms;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Manrope', sans-serif;
+    background: var(--bg);
+    color: var(--text-1);
+    min-height: 100vh;
+    font-size: 13px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    position: sticky; top: 0; z-index: 100;
+    height: 48px;
+    background: rgba(255,255,255,.82);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 1px 0 var(--border);
+  }
+  .topbar-logo {
+    width: 26px; height: 26px;
+    background: var(--text-1);
+    border-radius: 7px;
+    display: grid; place-items: center;
+    font-family: 'Syne', sans-serif;
+    font-size: 12px; font-weight: 800;
+    color: #fff;
+    letter-spacing: -.5px;
+  }
+  .topbar-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px; font-weight: 600;
+    color: var(--text-2); letter-spacing: .02em;
+  }
+
+  /* ── SHELL ── */
+  .shell {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 36px 32px 80px;
+    animation: fadeUp .3s var(--ease) both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(12px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+
+  /* ── BACK ── */
+  .back-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 500;
+    color: var(--text-3); cursor: pointer;
+    margin-bottom: 28px; transition: color var(--t);
+    letter-spacing: .01em;
+  }
+  .back-link:hover { color: var(--text-2); }
+  .back-link svg { width: 13px; height: 13px; }
+
+  /* ── PAGE HEADER ── */
+  .page-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 32px;
+  }
+  .page-header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px; font-weight: 700;
+    letter-spacing: -.6px; color: var(--text-1);
+    margin-bottom: 5px;
+  }
+  .page-header p {
+    font-size: 12.5px; color: var(--text-3);
+    max-width: 400px; line-height: 1.6;
+  }
+  .header-routes { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+  .route-chip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; font-weight: 500;
+    padding: 5px 11px;
+    border-radius: var(--r-sm);
+    border: 1px solid var(--border);
+    color: var(--text-3); background: var(--surface);
+    cursor: pointer; transition: all var(--t);
+    box-shadow: var(--shadow-sm);
+  }
+  .route-chip:hover { color: var(--text-1); border-color: var(--border-strong); box-shadow: var(--shadow-md); }
+
+  /* ── TABS ── */
+  .tabs-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 22px;
+  }
+  .tabs {
+    display: flex; gap: 2px;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 3px;
+    box-shadow: var(--shadow-sm);
+  }
+  .tab-btn {
+    padding: 7px 18px;
+    border-radius: 8px;
+    font-family: 'Manrope', sans-serif;
+    font-size: 12.5px; font-weight: 600;
+    cursor: pointer; border: none;
+    background: transparent; color: var(--text-3);
+    transition: all var(--t); letter-spacing: .01em;
+  }
+  .tab-btn.active {
+    background: var(--surface);
+    color: var(--text-1);
+    box-shadow: 0 1px 4px rgba(26,25,22,.1), 0 0 0 1px var(--border);
+  }
+  .tab-btn:hover:not(.active) { color: var(--text-2); }
+
+  .count-pill {
+    font-size: 11.5px; color: var(--text-3);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px; padding: 4px 12px;
+    font-weight: 500; box-shadow: var(--shadow-sm);
+  }
+  .count-pill strong { color: var(--text-2); font-weight: 600; }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-xl);
+    padding: 22px;
+    box-shadow: var(--shadow-sm);
+  }
+  .card-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 10.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .12em;
+    color: var(--text-3); margin-bottom: 20px;
+  }
+
+  /* ── FIELDS ── */
+  .field { margin-bottom: 15px; }
+  .field:last-child { margin-bottom: 0; }
+  label {
+    display: block;
+    font-size: 11.5px; font-weight: 600;
+    color: var(--text-2); margin-bottom: 5px; letter-spacing: .01em;
+  }
+  .hint {
+    display: block; font-size: 11px;
+    color: var(--text-3); margin-bottom: 5px;
+  }
+  input[type="text"],
+  input[type="number"],
+  textarea,
+  select {
+    width: 100%;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 9px 11px;
+    font-family: 'Manrope', sans-serif;
+    font-size: 12.5px; color: var(--text-1);
+    outline: none;
+    transition: border-color var(--t), box-shadow var(--t), background var(--t);
+    appearance: none; -webkit-appearance: none;
+  }
+  input[type="text"]:focus,
+  input[type="number"]:focus,
+  textarea:focus,
+  select:focus {
+    border-color: var(--border-strong);
+    background: var(--surface);
+    box-shadow: 0 0 0 3px var(--accent-glow), 0 1px 3px rgba(24,26,32,.06);
+  }
+  input::placeholder, textarea::placeholder { color: var(--text-3); }
+  textarea { resize: vertical; min-height: 66px; line-height: 1.55; }
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239e9a90' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 11px center;
+    padding-right: 32px;
+    cursor: pointer; color: var(--text-2);
+  }
+  .input-unit { position: relative; }
+  .input-unit input { padding-right: 56px; font-family: 'JetBrains Mono', monospace; }
+  .unit {
+    position: absolute; right: 11px; top: 50%; transform: translateY(-50%);
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+    color: var(--text-3); pointer-events: none;
+  }
+  .countries-row { display: flex; gap: 8px; }
+  .countries-row input { flex: 1; font-family: 'JetBrains Mono', monospace; letter-spacing: .05em; }
+
+  /* ── BUTTONS ── */
+  .btn-primary {
+    padding: 9px 20px;
+    background: var(--accent); color: #fff;
+    border: none; border-radius: var(--r-sm);
+    font-family: 'Manrope', sans-serif;
+    font-size: 12.5px; font-weight: 700;
+    cursor: pointer; letter-spacing: .01em;
+    box-shadow: 0 1px 3px rgba(26,25,22,.2);
+    transition: opacity var(--t), transform var(--t), box-shadow var(--t);
+  }
+  .btn-primary:hover {
+    opacity: .88; transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(26,25,22,.18);
+  }
+  .btn-primary:active { transform: translateY(0); }
+
+  /* Limpar — texto discreto, sem caixa */
+  .btn-clear {
+    padding: 9px 14px;
+    background: none; border: none;
+    font-family: 'Manrope', sans-serif;
+    font-size: 12px; font-weight: 500;
+    color: var(--text-3); cursor: pointer;
+    transition: color var(--t); letter-spacing: .01em;
+  }
+  .btn-clear:hover { color: var(--red); }
+
+  .btn-profile {
+    padding: 9px 12px;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    font-family: 'Manrope', sans-serif;
+    font-size: 11.5px; font-weight: 500;
+    color: var(--text-2); white-space: nowrap;
+    cursor: pointer; transition: all var(--t);
+    box-shadow: var(--shadow-sm);
+  }
+  .btn-profile:hover { color: var(--text-1); border-color: var(--border-strong); }
+
+  .btn-outline {
+    padding: 7px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    font-family: 'Manrope', sans-serif;
+    font-size: 12px; font-weight: 600;
+    color: var(--text-2); cursor: pointer;
+    transition: all var(--t);
+    box-shadow: var(--shadow-sm);
+  }
+  .btn-outline:hover { color: var(--text-1); border-color: var(--border-strong); background: var(--surface-2); }
+  .btn-outline.primary {
+    background: var(--accent); color: #fff;
+    border-color: var(--accent);
+    box-shadow: 0 1px 3px rgba(26,25,22,.2);
+  }
+  .btn-outline.primary:hover { opacity: .88; box-shadow: 0 4px 12px rgba(26,25,22,.18); }
+  .btn-outline.danger:hover { color: var(--red); border-color: #f5b8b8; background: var(--red-soft); box-shadow: none; }
+
+  .btn-action {
+    padding: 8px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    font-family: 'Manrope', sans-serif;
+    font-size: 12px; font-weight: 600;
+    color: var(--text-2); cursor: pointer;
+    transition: all var(--t);
+    box-shadow: var(--shadow-sm);
+  }
+  .btn-action:hover { color: var(--text-1); border-color: var(--border-strong); }
+  .btn-action.filled {
+    background: var(--accent); color: #fff;
+    border-color: var(--accent);
+    box-shadow: 0 1px 3px rgba(26,25,22,.2);
+  }
+  .btn-action.filled:hover { opacity: .88; }
+
+  /* ── FORM FOOTER ── */
+  .form-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 18px;
+    padding: 13px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-sm);
+  }
+  .form-footer-label {
+    font-size: 11.5px; color: var(--text-3);
+    font-style: italic;
+  }
+  .btn-group { display: flex; align-items: center; gap: 4px; }
+
+  /* ── VIEWS ── */
+  .view { display: none; }
+  .view.active { display: block; animation: fadeUp .2s var(--ease) both; }
+
+  /* ── CREATE GRID ── */
+  .create-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px; align-items: start;
+  }
+
+  /* ── MY TEMPLATES LAYOUT ── */
+  .templates-layout {
+    display: grid;
+    grid-template-columns: 268px 1fr;
+    gap: 10px; align-items: start;
+  }
+
+  /* ── LIST PANEL ── */
+  .list-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-xl);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+  .list-header {
+    padding: 18px 18px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .list-header h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px; font-weight: 700;
+    color: var(--text-1); margin-bottom: 2px;
+  }
+  .list-header p { font-size: 11.5px; color: var(--text-3); }
+
+  .search-wrap {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-2);
+  }
+
+  .new-tpl-btn {
+    display: flex; align-items: center; gap: 8px;
+    width: 100%; padding: 11px 16px;
+    background: none; border: none;
+    font-family: 'Manrope', sans-serif;
+    font-size: 12px; font-weight: 600;
+    color: var(--text-3); cursor: pointer;
+    text-align: left; border-bottom: 1px solid var(--border);
+    transition: all var(--t);
+  }
+  .new-tpl-btn:hover { color: var(--text-1); background: var(--surface-2); }
+  .new-tpl-btn svg { width: 13px; height: 13px; }
+
+  .tpl-list { list-style: none; }
+  .tpl-item {
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer; transition: background var(--t);
+    position: relative;
+  }
+  .tpl-item:last-child { border-bottom: none; }
+  .tpl-item::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 2px; background: transparent;
+    transition: background var(--t);
+    border-radius: 0 2px 2px 0;
+  }
+  .tpl-item:hover { background: var(--surface-2); }
+  .tpl-item.selected { background: var(--surface-3); }
+  .tpl-item.selected::before { background: var(--text-2); }
+  .tpl-item-name {
+    font-size: 12.5px; font-weight: 600;
+    color: var(--text-1); margin-bottom: 4px;
+  }
+  .tpl-item-meta {
+    font-size: 11.5px; color: var(--text-3);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .tag-ok {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    color: var(--green); background: var(--green-soft);
+    padding: 2px 7px; border-radius: 20px; letter-spacing: .04em;
+  }
+
+  /* ── DETAIL PANEL ── */
+  .detail-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-xl);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+  .detail-head {
+    padding: 20px 24px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+    background: var(--surface);
+  }
+  .detail-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px; font-weight: 700;
+    letter-spacing: -.4px; margin-bottom: 7px;
+  }
+  .detail-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .country-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    padding: 2px 7px;
+    background: var(--surface-3);
+    border: 1px solid var(--border-mid);
+    border-radius: 4px; color: var(--text-2);
+    letter-spacing: .04em;
+  }
+  .sep { color: var(--text-3); font-size: 11px; }
+  .var-badge {
+    font-size: 10.5px; font-weight: 600;
+    color: var(--blue); background: var(--blue-soft);
+    padding: 2px 8px; border-radius: 20px;
+  }
+  .detail-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+  .detail-body {
+    display: grid; grid-template-columns: 1fr 1fr;
+    border-bottom: 1px solid var(--border);
+  }
+  .detail-col {
+    padding: 20px 24px;
+    background: var(--surface);
+  }
+  .detail-col + .detail-col {
+    border-left: 1px solid var(--border);
+    background: var(--surface-2);
+  }
+  .col-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .12em;
+    color: var(--text-3); margin-bottom: 16px;
+  }
+  .kv { display: flex; gap: 10px; margin-bottom: 10px; }
+  .kv:last-child { margin-bottom: 0; }
+  .k {
+    font-size: 11.5px; color: var(--text-3);
+    min-width: 112px; flex-shrink: 0; padding-top: 1px; font-weight: 500;
+  }
+  .v {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px; color: var(--text-1); font-weight: 500; word-break: break-all;
+  }
+  .detail-creative {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .detail-translations {
+    padding: 16px 24px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    background: var(--surface-2);
+  }
+  .tl-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .12em;
+    color: var(--text-3); margin-bottom: 3px;
+  }
+  .tl-hint { font-size: 11.5px; color: var(--text-3); }
+  .translations-right { display: flex; gap: 8px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">C</div>
+  <span class="topbar-name">Campaign Builder</span>
+</div>
+
+<div class="shell">
+
+  <div class="back-link">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+    Voltar
+  </div>
+
+  <div class="page-header">
+    <div>
+      <h1>Templates</h1>
+      <p>Crie templates operacionais, gere traduções e aplique no /campaign-flow — REAL sempre PAUSED.</p>
+    </div>
+    <div class="header-routes">
+      <span class="route-chip">/campaign-flow</span>
+      <span class="route-chip">/meta-test</span>
+    </div>
+  </div>
+
+  <div class="tabs-row">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('criar')">Criar template</button>
+      <button class="tab-btn" onclick="switchTab('meus')">Meus templates</button>
+    </div>
+    <span class="count-pill"><strong>5</strong> template(s)</span>
+  </div>
+
+  <!-- ═══ CRIAR ═══ -->
+  <div class="view active" id="view-criar">
+    <div class="create-grid">
+
+      <div class="card">
+        <div class="card-label">Campanha</div>
+        <div class="field">
+          <label>Nome do template</label>
+          <span class="hint">Ex: Padrão LATAM · Tráfego</span>
+          <input type="text" placeholder="Digite o nome…">
+        </div>
+        <div class="field">
+          <label>Objetivo</label>
+          <select>
+            <option>OUTCOME_TRAFFIC</option>
+            <option>OUTCOME_LEADS</option>
+            <option>OUTCOME_AWARENESS</option>
+            <option>OUTCOME_ENGAGEMENT</option>
+            <option>OUTCOME_SALES</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Países do template</label>
+          <span class="hint">Códigos separados por vírgula — ex: BR, AR, CL</span>
+          <div class="countries-row">
+            <input type="text" value="BR" placeholder="BR, AR, CL…">
+            <button class="btn-profile">Usar perfil (2)</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">AdSet</div>
+        <div class="field">
+          <label>Orçamento diário</label>
+          <div class="input-unit">
+            <input type="number" value="1000">
+            <span class="unit">¢ BRL</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Billing event</label>
+          <select>
+            <option>IMPRESSIONS</option>
+            <option>LINK_CLICKS</option>
+            <option>APP_INSTALLS</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Optimization goal</label>
+          <select>
+            <option>LINK_CLICKS</option>
+            <option>REACH</option>
+            <option>IMPRESSIONS</option>
+            <option>LANDING_PAGE_VIEWS</option>
+            <option>LEAD_GENERATION</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Criativo</div>
+        <div class="field">
+          <label>Primary text</label>
+          <textarea placeholder="Ex: Teste controlado. Não ativar."></textarea>
+        </div>
+        <div class="field">
+          <label>Headline</label>
+          <input type="text" placeholder="—">
+        </div>
+        <div class="field">
+          <label>Description</label>
+          <input type="text" placeholder="—">
+        </div>
+        <div class="field">
+          <label>Destination URL <span style="color:var(--text-3);font-weight:400">· obrigatório para Creative REAL</span></label>
+          <input type="text" placeholder="https://example.com/?utm_source=…">
+        </div>
+        <div class="field">
+          <label>CTA type</label>
+          <select>
+            <option>LEARN_MORE</option>
+            <option>SHOP_NOW</option>
+            <option>SIGN_UP</option>
+            <option>GET_OFFER</option>
+            <option>CONTACT_US</option>
+            <option>DOWNLOAD</option>
+          </select>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="form-footer">
+      <span class="form-footer-label">Novo template</span>
+      <div class="btn-group">
+        <button class="btn-clear">Limpar</button>
+        <button class="btn-primary">Salvar template</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MEUS TEMPLATES ═══ -->
+  <div class="view" id="view-meus">
+    <div class="templates-layout">
+
+      <div class="list-panel">
+        <div class="list-header">
+          <h2>Meus templates</h2>
+          <p>Selecione para ver detalhes e operar.</p>
+        </div>
+        <div class="search-wrap">
+          <input type="text" placeholder="Buscar por nome…">
+        </div>
+        <button class="new-tpl-btn" onclick="switchTab('criar')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Novo template
+        </button>
+        <ul class="tpl-list">
+          <li class="tpl-item selected" onclick="sel(this)">
+            <div class="tpl-item-name">Receitas LATAM Teste 01</div>
+            <div class="tpl-item-meta"><span>2 país(es)</span><span class="tag-ok">Traduzido</span></div>
+          </li>
+          <li class="tpl-item" onclick="sel(this)">
+            <div class="tpl-item-name">Terça Feira</div>
+            <div class="tpl-item-meta"><span>2 país(es)</span><span class="tag-ok">Traduzido</span></div>
+          </li>
+          <li class="tpl-item" onclick="sel(this)">
+            <div class="tpl-item-name">Teste</div>
+            <div class="tpl-item-meta"><span>2 país(es)</span><span class="tag-ok">Traduzido</span></div>
+          </li>
+          <li class="tpl-item" onclick="sel(this)">
+            <div class="tpl-item-name">Padrao Alberto</div>
+            <div class="tpl-item-meta"><span>2 país(es)</span><span class="tag-ok">Traduzido</span></div>
+          </li>
+          <li class="tpl-item" onclick="sel(this)">
+            <div class="tpl-item-name">Teste</div>
+            <div class="tpl-item-meta"><span>2 país(es)</span><span class="tag-ok">Traduzido</span></div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="detail-panel">
+        <div class="detail-head">
+          <div>
+            <div class="detail-name">Receitas LATAM Teste 01</div>
+            <div class="detail-meta">
+              <span class="country-tag">AE</span>
+              <span class="country-tag">BR</span>
+              <span class="sep">·</span>
+              <span class="tag-ok">Traduzido</span>
+              <span class="sep">·</span>
+              <span class="var-badge">2 variações</span>
+            </div>
+          </div>
+          <div class="detail-actions">
+            <button class="btn-outline primary">Usar no /campaign-flow</button>
+            <button class="btn-outline">Editar</button>
+            <button class="btn-outline danger">Excluir</button>
+          </div>
+        </div>
+
+        <div class="detail-body">
+          <div class="detail-col">
+            <div class="col-title">Campaign</div>
+            <div class="kv"><span class="k">objective</span><span class="v">OUTCOME_TRAFFIC</span></div>
+          </div>
+          <div class="detail-col">
+            <div class="col-title">AdSet</div>
+            <div class="kv"><span class="k">dailyBudgetCents</span><span class="v">1000</span></div>
+            <div class="kv"><span class="k">billingEvent</span><span class="v">IMPRESSIONS</span></div>
+            <div class="kv"><span class="k">optimizationGoal</span><span class="v">LINK_CLICKS</span></div>
+          </div>
+        </div>
+
+        <div class="detail-creative">
+          <div class="col-title">Creative</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;">
+            <div class="kv"><span class="k">primaryText</span><span class="v">Confira agora essa oportunidade especial.</span></div>
+            <div class="kv"><span class="k">headline</span><span class="v">Saiba mais</span></div>
+            <div class="kv"><span class="k">description</span><span class="v">Acesse agora.</span></div>
+            <div class="kv"><span class="k">destinationUrl</span><span class="v">https://google.com</span></div>
+            <div class="kv"><span class="k">ctaType</span><span class="v">LEARN_MORE</span></div>
+          </div>
+        </div>
+
+        <div class="detail-translations">
+          <div>
+            <div class="tl-title">Traduções</div>
+            <div class="tl-hint">Gere via LibreTranslate e revise/edite por país antes de usar no lote.</div>
+          </div>
+          <div class="translations-right">
+            <button class="btn-action filled">Gerar traduções</button>
+            <button class="btn-action">Revisar traduções</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function switchTab(t) {
+    document.querySelectorAll('.tab-btn').forEach((b,i) =>
+      b.classList.toggle('active', (i===0&&t==='criar')||(i===1&&t==='meus')));
+    document.getElementById('view-criar').classList.toggle('active', t==='criar');
+    document.getElementById('view-meus').classList.toggle('active',  t==='meus');
+  }
+  function sel(el) {
+    document.querySelectorAll('.tpl-item').forEach(i => i.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+</script>
+</body>
+</html>

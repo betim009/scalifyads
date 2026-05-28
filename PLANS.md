@@ -1504,6 +1504,36 @@ Validação executada (local):
 
 - [2026-05-28 18:41] `cd frontend && npm run build` (OK) após redesign minimalista do `/templates` (P27).
 
+### P27.1 — Aplicar design premium em `/templates`
+
+Última atualização: [2026-05-28 20:20]
+
+Objetivo:
+aproximar o visual do `/templates` ao protótipo `templates-prototype.html` (referência visual), mantendo lógica, endpoints e fluxos existentes.
+
+Regras:
+
+- Não trocar lógica funcional por HTML estático.
+- Não quebrar endpoints atuais, traduções (LibreTranslate), CRUD de templates e deep-link para `/campaign-flow`.
+- Não quebrar `/campaign-flow` e não remover `/meta-test`.
+- Guardrails: REAL sempre `PAUSED`; nunca criar opção `ACTIVE`; token nunca no frontend.
+
+Backlog (executável):
+
+- [x] Ajustar layout do header (título + chips `/campaign-flow` e `/meta-test`) no padrão do protótipo.
+- [x] Refinar tabs (visual premium: menos pill, mais “segmented control” do protótipo + contador).
+- [x] `Criar template`: aplicar estilo premium nos 3 cards (labels, spacing, inputs, footer com “Limpar” discreto).
+- [x] `Meus templates`: ajustar lista lateral para o padrão do protótipo (header + search + botão “Novo template” + item selecionado com barra).
+- [x] `Meus templates`: ajustar painel de detalhes (header com status/tags + ações + seções Campaign/AdSet/Creative + barra de traduções).
+- [x] Manter todas ações funcionais (usar/editar/excluir/gerar traduções/revisar/salvar).
+- [x] Validação: `cd frontend && npm run build`.
+- [ ] Validação manual do fluxo completo do `/templates` (abas, CRUD, traduções e `Usar no /campaign-flow`).
+- [ ] Registrar conclusão no `PLANS.md` com timestamp e criar commit incremental.
+
+Validação executada (local):
+
+- [2026-05-28 20:20] `cd frontend && npm run build` (OK) após aplicar design premium no `/templates` (P27.1).
+
 ## Decision Log (Ativo)
 
 Última atualização: [2026-05-26 12:10]

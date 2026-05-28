@@ -68,15 +68,8 @@ function InputLike({ value, onChange, placeholder, type = "text" }) {
       value={value}
       onChange={onChange}
       placeholder={placeholder}
-      style={{
-        height: 46,
-        borderRadius: 12,
-        border: "1px solid #e5e7eb",
-        padding: "0 14px",
-        fontSize: 14,
-        fontWeight: 750,
-        width: "100%",
-      }}
+      className="templatesInput"
+      style={{ height: 40 }}
     />
   );
 }
@@ -88,15 +81,7 @@ function TextAreaLike({ value, onChange, placeholder, rows = 4 }) {
       onChange={onChange}
       placeholder={placeholder}
       rows={rows}
-      style={{
-        borderRadius: 12,
-        border: "1px solid #e5e7eb",
-        padding: "12px 14px",
-        fontSize: 14,
-        fontWeight: 750,
-        resize: "vertical",
-        width: "100%",
-      }}
+      className="templatesTextarea"
     />
   );
 }
@@ -106,16 +91,8 @@ function SelectLike({ value, onChange, options }) {
     <select
       value={value}
       onChange={onChange}
-      style={{
-        height: 46,
-        borderRadius: 12,
-        border: "1px solid #e5e7eb",
-        padding: "0 14px",
-        fontSize: 14,
-        fontWeight: 900,
-        background: "#ffffff",
-        width: "100%",
-      }}
+      className="templatesSelect"
+      style={{ height: 40 }}
     >
       {options.map((opt) => (
         <option key={opt.value} value={opt.value} disabled={opt.disabled}>
@@ -484,10 +461,10 @@ export default function Templates() {
       backFallbackTo="/"
       headerRight={
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button type="button" className="ghostButton" onClick={() => navigate("/campaign-flow")}>
+          <button type="button" className="templatesRouteChip" onClick={() => navigate("/campaign-flow")}>
             /campaign-flow
           </button>
-          <button type="button" className="ghostButton" onClick={() => navigate("/meta-test")}>
+          <button type="button" className="templatesRouteChip" onClick={() => navigate("/meta-test")}>
             /meta-test
           </button>
         </div>
@@ -509,10 +486,10 @@ export default function Templates() {
         )}
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-          <div className="tabsBar" aria-label="Tabs templates">
+          <div className="templatesTabs" aria-label="Tabs templates">
             <button
               type="button"
-              className={`tabButton ${activeTab === TAB_CREATE ? "tabButtonActive" : ""}`}
+              className={`templatesTabBtn ${activeTab === TAB_CREATE ? "templatesTabBtnActive" : ""}`}
               onClick={() => {
                 setActiveTab(TAB_CREATE);
                 if (!editingId) return;
@@ -523,22 +500,20 @@ export default function Templates() {
             </button>
             <button
               type="button"
-              className={`tabButton ${activeTab === TAB_MINE ? "tabButtonActive" : ""}`}
+              className={`templatesTabBtn ${activeTab === TAB_MINE ? "templatesTabBtnActive" : ""}`}
               onClick={() => setActiveTab(TAB_MINE)}
             >
               Meus templates
             </button>
           </div>
-          <div className="muted" style={{ fontWeight: 800, fontSize: 12 }}>
-            {loading ? "Carregando..." : `${templates.length} template(s)`}
-          </div>
+          <div className="templatesCountPill">{loading ? "Carregando..." : <><strong>{templates.length}</strong> template(s)</>}</div>
         </div>
 
         {activeTab === TAB_CREATE ? (
           <div style={{ marginTop: 16, display: "grid", gap: 14 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 14 }}>
-              <div className="minimalCard" style={{ padding: 16 }}>
-                <div style={{ fontWeight: 950, fontSize: 14, marginBottom: 12 }}>Campanha</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 10 }}>
+              <div className="templatesCard">
+                <div className="templatesCardLabel">Campanha</div>
                 <div style={{ display: "grid", gap: 12 }}>
                   <Field label="Nome do template" hint="Ex: Padrão LATAM • Tráfego">
                     <InputLike value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
@@ -555,29 +530,36 @@ export default function Templates() {
                     />
                   </Field>
                   <Field label="Países do template" hint="Códigos separados por vírgula (ex: BR,AR,CL).">
-                    <InputLike
-                      value={form.countryCodes}
-                      onChange={(e) => setForm((p) => ({ ...p, countryCodes: e.target.value }))}
-                      placeholder="BR,AR"
-                    />
-                    {profileCountryCodes.length ? (
-                      <div style={{ marginTop: 6, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <div style={{ flex: 1 }}>
+                        <InputLike
+                          value={form.countryCodes}
+                          onChange={(e) => setForm((p) => ({ ...p, countryCodes: e.target.value }))}
+                          placeholder="BR,AR"
+                        />
+                      </div>
+                      {profileCountryCodes.length ? (
                         <button
                           type="button"
-                          className="pillOutline"
+                          className="templatesBtnOutline"
                           disabled={busy}
                           onClick={() => setForm((p) => ({ ...p, countryCodes: profileCountryCodes.join(",") }))}
                         >
-                          Usar países do perfil ({profileCountryCodes.length})
+                          Usar perfil ({profileCountryCodes.length})
                         </button>
+                      ) : null}
+                    </div>
+                    {profileCountryCodes.length ? (
+                      <div className="muted" style={{ marginTop: 6, fontWeight: 750, fontSize: 12 }}>
+                        Dica: idiomas por país são configurados em `/profile`.
                       </div>
                     ) : null}
                   </Field>
                 </div>
               </div>
 
-              <div className="minimalCard" style={{ padding: 16 }}>
-                <div style={{ fontWeight: 950, fontSize: 14, marginBottom: 12 }}>AdSet</div>
+              <div className="templatesCard">
+                <div className="templatesCardLabel">AdSet</div>
                 <div style={{ display: "grid", gap: 12 }}>
                   <Field label="Orçamento diário (centavos)">
                     <InputLike
@@ -610,8 +592,8 @@ export default function Templates() {
                 </div>
               </div>
 
-              <div className="minimalCard" style={{ padding: 16 }}>
-                <div style={{ fontWeight: 950, fontSize: 14, marginBottom: 12 }}>Criativo</div>
+              <div className="templatesCard">
+                <div className="templatesCardLabel">Criativo</div>
                 <div style={{ display: "grid", gap: 12 }}>
                   <Field label="Primary text">
                     <TextAreaLike
@@ -627,7 +609,7 @@ export default function Templates() {
                   <Field label="Description">
                     <InputLike value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} />
                   </Field>
-                  <Field label="Destination URL" hint="Obrigatório (para Creative REAL).">
+                  <Field label="Destination URL" hint="Obrigatório para Creative REAL.">
                     <InputLike
                       value={form.destinationUrl}
                       onChange={(e) => setForm((p) => ({ ...p, destinationUrl: e.target.value }))}
@@ -649,97 +631,83 @@ export default function Templates() {
               </div>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-              <div className="muted" style={{ fontWeight: 800, fontSize: 12 }}>
-                {editingId ? "Editando template existente" : "Novo template"}
-              </div>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <button type="button" className="pillPrimary" disabled={busy} onClick={onSaveTemplate}>
-                  Salvar template
-                </button>
-                <button type="button" className="pillOutline" disabled={busy} onClick={() => resetForm({ useProfileCountries: true })}>
+            <div className="templatesFormFooter">
+              <div className="templatesFormFooterLabel">{editingId ? "Editando template" : "Novo template"}</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                <button type="button" className="templatesBtnClear" disabled={busy} onClick={() => resetForm({ useProfileCountries: true })}>
                   Limpar
+                </button>
+                <button type="button" className="templatesBtnPrimary" disabled={busy} onClick={onSaveTemplate}>
+                  Salvar template
                 </button>
               </div>
             </div>
           </div>
         ) : (
-          <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "360px 1fr", gap: 14 }}>
-            <div className="minimalCard" style={{ padding: 16, alignSelf: "start" }}>
-              <div style={{ fontWeight: 950, fontSize: 14 }}>Meus templates</div>
-              <div className="muted" style={{ fontWeight: 800, fontSize: 12, marginTop: 6 }}>
-                Selecione um template para ver detalhes e operar traduções.
+          <div className="templatesLayout" style={{ marginTop: 16 }}>
+            <div className="templatesListPanel">
+              <div className="templatesListHeader">
+                <h2 className="templatesListTitle">Meus templates</h2>
+                <div className="templatesListHint">Selecione para ver detalhes e operar.</div>
               </div>
-              <div style={{ marginTop: 12 }}>
+              <div className="templatesSearchWrap">
                 <InputLike value={listQuery} onChange={(e) => setListQuery(e.target.value)} placeholder="Buscar por nome..." />
               </div>
-              <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <button
-                  type="button"
-                  className="pillPrimary"
-                  disabled={busy}
-                  onClick={() => {
-                    resetForm({ useProfileCountries: true });
-                    setActiveTab(TAB_CREATE);
-                  }}
-                >
-                  Novo template
-                </button>
-              </div>
+              <button
+                type="button"
+                className="templatesNewBtn"
+                disabled={busy}
+                onClick={() => {
+                  resetForm({ useProfileCountries: true });
+                  setActiveTab(TAB_CREATE);
+                }}
+              >
+                + Novo template
+              </button>
 
-              <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
+              <div>
                 {(filteredTemplates || []).map((t) => {
                   const payload = t?.payload && typeof t.payload === "object" ? t.payload : {};
                   const status = computeTranslationsStatus(payload);
                   const countries = uniqueCountryCodes(payload.countryCodes);
                   const active = String(t.id) === String(selectedId);
+                  const tagTone =
+                    status.tone === "good"
+                      ? "templatesStatusTagGood"
+                      : status.tone === "info"
+                        ? "templatesStatusTagInfo"
+                        : "templatesStatusTagMuted";
                   return (
                     <button
                       key={t.id}
                       type="button"
+                      className={`templatesTplItem ${active ? "templatesTplItemActive" : ""}`}
                       onClick={() => {
                         setSelectedId(String(t.id));
                         setShowTranslationsEditor(false);
                         setTranslationsDraftByCountry(getTranslationsByCountryFromPayload(payload));
                       }}
-                      style={{
-                        textAlign: "left",
-                        border: active ? "1px solid #bfdbfe" : "1px solid #eef2f7",
-                        background: active ? "#eff6ff" : "#ffffff",
-                        borderRadius: 12,
-                        padding: 12,
-                      }}
                     >
-                      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline" }}>
-                        <div style={{ fontWeight: 950, fontSize: 14, color: "#111827" }}>{t.name}</div>
-                        <div
-                          style={{
-                            fontWeight: 900,
-                            fontSize: 11,
-                            color: status.tone === "muted" ? "#6b7280" : status.tone === "good" ? "#065f46" : "#1d4ed8",
-                          }}
-                        >
-                          {status.label}
-                        </div>
-                      </div>
-                      <div className="muted" style={{ fontWeight: 800, fontSize: 12, marginTop: 6 }}>
-                        {countries.length ? `${countries.length} país(es)` : "Sem países"}
+                      <div className="templatesTplName">{t.name}</div>
+                      <div className="templatesTplMetaRow">
+                        <div>{countries.length ? `${countries.length} país(es)` : "Sem países"}</div>
+                        <div className={`templatesStatusTag ${tagTone}`}>{status.label}</div>
                       </div>
                     </button>
                   );
                 })}
 
                 {!loading && !filteredTemplates.length ? (
-                  <div className="muted" style={{ fontWeight: 800, fontSize: 12 }}>
+                  <div className="muted" style={{ padding: 14, fontWeight: 800, fontSize: 12 }}>
                     Nenhum template encontrado.
                   </div>
                 ) : null}
               </div>
             </div>
 
-            <div className="minimalCard" style={{ padding: 16, minHeight: 220 }}>
+            <div className="templatesDetailPanel">
               {!selectedTemplate ? (
-                <div className="muted" style={{ fontWeight: 800 }}>
+                <div className="muted" style={{ fontWeight: 800, padding: 18 }}>
                   Selecione um template na lista.
                 </div>
               ) : (
@@ -752,25 +720,42 @@ export default function Templates() {
                   const primaryPreview = normalizeNonEmptyString(payload.primaryText)
                     ? `${String(payload.primaryText).slice(0, 70)}${String(payload.primaryText).length > 70 ? "…" : ""}`
                     : "—";
+                  const tagTone =
+                    status.tone === "good"
+                      ? "templatesStatusTagGood"
+                      : status.tone === "info"
+                        ? "templatesStatusTagInfo"
+                        : "templatesStatusTagMuted";
 
                   return (
                     <div style={{ display: "grid", gap: 14 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                      <div className="templatesDetailHead">
                         <div>
-                          <div style={{ fontWeight: 950, fontSize: 18 }}>{selectedTemplate.name}</div>
-                          <div className="muted" style={{ fontWeight: 800, marginTop: 6, fontSize: 12 }}>
-                            {countries.length ? `Países: ${countries.join(", ")}` : "Sem países definidos"} • {status.label}
-                            {translationCount ? ` • ${translationCount} variação(ões)` : ""}
+                          <div className="templatesDetailName">{selectedTemplate.name}</div>
+                          <div className="templatesDetailMeta">
+                            {countries.map((c) => (
+                              <span key={c} className="templatesCountryTag">
+                                {c}
+                              </span>
+                            ))}
+                            <span className="templatesSep">·</span>
+                            <span className={`templatesStatusTag ${tagTone}`}>{status.label}</span>
+                            {translationCount ? (
+                              <>
+                                <span className="templatesSep">·</span>
+                                <span className="templatesVarBadge">{translationCount} variação(ões)</span>
+                              </>
+                            ) : null}
                           </div>
                         </div>
 
-                        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                          <button type="button" className="pillPrimary" disabled={busy} onClick={useInCampaignFlowSelected}>
+                        <div className="templatesDetailActions">
+                          <button type="button" className="templatesBtnPrimary" disabled={busy} onClick={useInCampaignFlowSelected}>
                             Usar no /campaign-flow
                           </button>
                           <button
                             type="button"
-                            className="pillOutline"
+                            className="templatesBtnOutline"
                             disabled={busy}
                             onClick={() => {
                               fillFormFromTemplate(selectedTemplate);
@@ -779,82 +764,93 @@ export default function Templates() {
                           >
                             Editar
                           </button>
-                          <button type="button" className="pillOutline" disabled={busy} onClick={onDeleteSelected}>
+                          <button type="button" className="templatesBtnOutline templatesBtnDanger" disabled={busy} onClick={onDeleteSelected}>
                             Excluir
                           </button>
                         </div>
                       </div>
 
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 14 }}>
-                        <div className="minimalCard" style={{ padding: 14 }}>
-                          <div style={{ fontWeight: 950, fontSize: 13, marginBottom: 10 }}>Campaign</div>
-                          <div className="muted" style={{ fontWeight: 800, fontSize: 12 }}>
-                            objective: <span style={{ color: "#111827", fontWeight: 900 }}>{payload.objective ?? "—"}</span>
+                      <div className="templatesDetailBody">
+                        <div className="templatesDetailCol">
+                          <div className="templatesColTitle">Campaign</div>
+                          <div className="templatesKv">
+                            <div className="templatesK">objective</div>
+                            <div className="templatesV">{payload.objective ?? "—"}</div>
                           </div>
                         </div>
-                        <div className="minimalCard" style={{ padding: 14 }}>
-                          <div style={{ fontWeight: 950, fontSize: 13, marginBottom: 10 }}>AdSet</div>
-                          <div className="muted" style={{ fontWeight: 800, fontSize: 12 }}>
-                            dailyBudgetCents: <span style={{ color: "#111827", fontWeight: 900 }}>{payload.dailyBudgetCents ?? "—"}</span>
+                        <div className="templatesDetailCol templatesDetailColAlt">
+                          <div className="templatesColTitle">AdSet</div>
+                          <div className="templatesKv">
+                            <div className="templatesK">dailyBudgetCents</div>
+                            <div className="templatesV">{payload.dailyBudgetCents ?? "—"}</div>
                           </div>
-                          <div className="muted" style={{ fontWeight: 800, fontSize: 12, marginTop: 6 }}>
-                            billingEvent: <span style={{ color: "#111827", fontWeight: 900 }}>{payload.billingEvent ?? "—"}</span>
+                          <div className="templatesKv">
+                            <div className="templatesK">billingEvent</div>
+                            <div className="templatesV">{payload.billingEvent ?? "—"}</div>
                           </div>
-                          <div className="muted" style={{ fontWeight: 800, fontSize: 12, marginTop: 6 }}>
-                            optimizationGoal: <span style={{ color: "#111827", fontWeight: 900 }}>{payload.optimizationGoal ?? "—"}</span>
-                          </div>
-                        </div>
-                        <div className="minimalCard" style={{ padding: 14 }}>
-                          <div style={{ fontWeight: 950, fontSize: 13, marginBottom: 10 }}>Creative</div>
-                          <div className="muted" style={{ fontWeight: 800, fontSize: 12 }}>
-                            primaryText: <span style={{ color: "#111827", fontWeight: 900 }}>{primaryPreview}</span>
-                          </div>
-                          <div className="muted" style={{ fontWeight: 800, fontSize: 12, marginTop: 6 }}>
-                            headline: <span style={{ color: "#111827", fontWeight: 900 }}>{payload.headline || "—"}</span>
-                          </div>
-                          <div className="muted" style={{ fontWeight: 800, fontSize: 12, marginTop: 6 }}>
-                            description: <span style={{ color: "#111827", fontWeight: 900 }}>{payload.description || "—"}</span>
-                          </div>
-                          <div className="muted" style={{ fontWeight: 800, fontSize: 12, marginTop: 6 }}>
-                            destinationUrl:{" "}
-                            <span style={{ color: "#111827", fontWeight: 900 }}>
-                              {normalizeNonEmptyString(payload.destinationUrl) ? String(payload.destinationUrl) : "—"}
-                            </span>
-                          </div>
-                          <div className="muted" style={{ fontWeight: 800, fontSize: 12, marginTop: 6 }}>
-                            ctaType: <span style={{ color: "#111827", fontWeight: 900 }}>{payload.ctaType ?? "—"}</span>
+                          <div className="templatesKv">
+                            <div className="templatesK">optimizationGoal</div>
+                            <div className="templatesV">{payload.optimizationGoal ?? "—"}</div>
                           </div>
                         </div>
                       </div>
 
-                      <div className="minimalCard" style={{ padding: 14 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-                          <div>
-                            <div style={{ fontWeight: 950, fontSize: 13 }}>Traduções</div>
-                            <div className="muted" style={{ fontWeight: 800, fontSize: 12, marginTop: 6 }}>
-                              Gere via LibreTranslate e revise/edite por país antes de usar no lote.
-                            </div>
+                      <div className="templatesCreativeBlock">
+                        <div className="templatesColTitle">Creative</div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 24px" }}>
+                          <div className="templatesKv">
+                            <div className="templatesK">primaryText</div>
+                            <div className="templatesV">{primaryPreview}</div>
                           </div>
-                          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                            <button type="button" className="pillOutline" disabled={busy} onClick={onGenerateTranslationsSelected}>
-                              Gerar traduções
-                            </button>
-                            <button
-                              type="button"
-                              className="pillOutline"
-                              disabled={busy}
-                              onClick={() => {
-                                setShowTranslationsEditor((v) => !v);
-                                setTranslationsDraftByCountry(getTranslationsByCountryFromPayload(payload));
-                              }}
-                            >
-                              {showTranslationsEditor ? "Ocultar revisão" : "Revisar traduções"}
-                            </button>
+                          <div className="templatesKv">
+                            <div className="templatesK">headline</div>
+                            <div className="templatesV">{payload.headline || "—"}</div>
+                          </div>
+                          <div className="templatesKv">
+                            <div className="templatesK">description</div>
+                            <div className="templatesV">{payload.description || "—"}</div>
+                          </div>
+                          <div className="templatesKv">
+                            <div className="templatesK">destinationUrl</div>
+                            <div className="templatesV">{normalizeNonEmptyString(payload.destinationUrl) ? String(payload.destinationUrl) : "—"}</div>
+                          </div>
+                          <div className="templatesKv">
+                            <div className="templatesK">ctaType</div>
+                            <div className="templatesV">{payload.ctaType ?? "—"}</div>
                           </div>
                         </div>
+                      </div>
 
-                        {showTranslationsEditor ? (
-                          <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
+                      <div className="templatesTranslationsBar">
+                        <div>
+                          <div className="templatesTranslationsTitle">Traduções</div>
+                          <div className="templatesTranslationsHint">Gere via LibreTranslate e revise/edite por país antes de usar no lote.</div>
+                        </div>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                          <button
+                            type="button"
+                            className="templatesBtnAction templatesBtnActionFilled"
+                            disabled={busy}
+                            onClick={onGenerateTranslationsSelected}
+                          >
+                            Gerar traduções
+                          </button>
+                          <button
+                            type="button"
+                            className="templatesBtnAction"
+                            disabled={busy}
+                            onClick={() => {
+                              setShowTranslationsEditor((v) => !v);
+                              setTranslationsDraftByCountry(getTranslationsByCountryFromPayload(payload));
+                            }}
+                          >
+                            {showTranslationsEditor ? "Ocultar revisão" : "Revisar traduções"}
+                          </button>
+                        </div>
+                      </div>
+
+                      {showTranslationsEditor ? (
+                        <div style={{ padding: 18, display: "grid", gap: 12 }}>
                             {countries.length ? (
                               countries.map((code) => {
                                 const c = String(code || "").toUpperCase();
@@ -864,7 +860,7 @@ export default function Templates() {
                                     ? translationsDraftByCountry[c]
                                     : null;
                                 return (
-                                  <div key={c} className="minimalCard" style={{ padding: 12 }}>
+                                  <div key={c} className="templatesCard" style={{ padding: 16 }}>
                                     <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
                                       <div style={{ fontWeight: 950 }}>{c}</div>
                                       <div className="muted" style={{ fontWeight: 900, fontSize: 12 }}>
@@ -925,7 +921,7 @@ export default function Templates() {
                             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                               <button
                                 type="button"
-                                className="pillPrimary"
+                                className="templatesBtnPrimary"
                                 disabled={busy}
                                 onClick={() => onSaveTranslationsSelected({ markReviewed: false })}
                               >
@@ -933,16 +929,15 @@ export default function Templates() {
                               </button>
                               <button
                                 type="button"
-                                className="pillOutline"
+                                className="templatesBtnOutline"
                                 disabled={busy}
                                 onClick={() => onSaveTranslationsSelected({ markReviewed: true })}
                               >
                                 Marcar como revisado
                               </button>
                             </div>
-                          </div>
-                        ) : null}
-                      </div>
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })()
