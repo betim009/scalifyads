@@ -1007,6 +1007,38 @@ button {
   color: var(--muted);
 }
 
+.minimalCard {
+  background: var(--surface);
+  border: 1px solid #eef2f7;
+  border-radius: var(--radius-md);
+  box-shadow: 0 1px 1px rgba(17, 24, 39, 0.03);
+}
+
+.tabsBar {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-muted);
+}
+
+.tabButton {
+  border: 0;
+  background: transparent;
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-weight: 900;
+  color: #374151;
+  font-size: 13px;
+}
+
+.tabButtonActive {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 1px rgba(17, 24, 39, 0.06);
+}
+
 @media (max-width: 720px) {
   .container {
     width: calc(100% - 32px);

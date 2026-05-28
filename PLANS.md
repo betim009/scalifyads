@@ -1443,6 +1443,67 @@ Não precisa traduzir:
 - `optimizationGoal`
 - IDs técnicos
 
+### P27 — Redesign minimalista da tela `/templates`
+
+Última atualização: [2026-05-28 18:41]
+
+Objetivo:
+transformar `/templates` em uma tela **operacional, simples, bonita e minimalista** (pronta para cliente), mantendo compatibilidade com endpoints e sem refactor massivo.
+
+Regras (escopo):
+
+- Foco em UX operacional (layout/hierarquia/leitura). Evitar refactors grandes.
+- Não quebrar `/campaign-flow`, `/profile` e `/meta-test`.
+- Não quebrar uso de países/idiomas do perfil.
+- Não quebrar traduções via LibreTranslate (backend).
+- Não expor payload técnico por padrão.
+- Guardrails: toda criação REAL continua obrigatoriamente `PAUSED` e **nunca** criar opção `ACTIVE`.
+
+Backlog (executável):
+
+- [x] UI: adicionar tabs no topo da área principal:
+  - `Criar template`
+  - `Meus templates`
+- [x] Tab `Criar template`: reorganizar formulário em 3 blocos visuais leves (cards):
+  - Campaign: nome/objetivo/países
+  - AdSet: orçamento diário/billing event/optimization goal
+  - Creative: primary text/headline/description/destination URL/CTA type
+- [x] Tab `Criar template`: reduzir peso visual (menos bordas/menos caixas aninhadas), melhorar espaçamento e tipografia.
+- [x] Tab `Criar template`: botões claros e consistentes:
+  - `Salvar template` (criar ou atualizar conforme seleção)
+  - `Limpar`
+- [x] Tab `Meus templates`: lista/card de templates com navegação funcionando (selecionar item abre detalhes).
+- [x] Tab `Meus templates`: ações por template:
+  - visualizar detalhes
+  - editar
+  - excluir
+  - gerar traduções
+  - salvar/revisar traduções
+  - usar no `/campaign-flow` (deep-link funcional ou comportamento atual)
+- [x] Tab `Meus templates`: detalhe limpo por template (Campaign/AdSet/Creative/países + traduções existentes).
+- [x] Tab `Meus templates`: status simples:
+  - `Sem traduções`
+  - `Traduções geradas`
+  - `Revisado`
+- [x] Manter compatibilidade com templates existentes (DB) e campos atuais (payload).
+- [x] Validação: rodar `cd frontend && npm run build`.
+- [ ] Validação manual (obrigatória):
+  - abrir `/templates`
+  - trocar entre abas
+  - criar template
+  - listar template em `Meus templates`
+  - visualizar template
+  - editar template
+  - excluir template
+  - gerar traduções
+  - salvar/revisar traduções
+  - usar template no `/campaign-flow`
+- [ ] Registrar conclusão + evidências no `PLANS.md` com timestamp e criar commit incremental.
+
+Validação executada (local):
+
+- [2026-05-28 18:41] `cd frontend && npm run build` (OK) após redesign minimalista do `/templates` (P27).
+
 ## Decision Log (Ativo)
 
 Última atualização: [2026-05-26 12:10]
