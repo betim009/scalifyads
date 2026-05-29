@@ -1841,6 +1841,69 @@ Evidências:
 
 - [2026-05-29 12:21] `cd frontend && npm run build` (OK) após P27.5.4 (revisão editável: texto + vídeo por país/Ad).
 
+### P27.6 — Polimento visual global
+
+Última atualização: [2026-05-29 15:06]
+
+Objetivo:
+Melhorar a experiência visual do sistema inteiro sem alterar regras de negócio.
+
+Tarefas:
+
+- [x] Auditar telas principais:
+  - /templates
+  - /campaign-flow
+  - /profile
+  - /roi-operacional
+  - dashboard/home
+- [x] Reduzir bordas duplicadas.
+- [x] Evitar card dentro de card dentro de card.
+- [x] Substituir bordas internas por:
+  - espaçamento
+  - divisores leves
+  - background sutil
+  - tipografia
+- [x] Padronizar cards principais.
+- [x] Padronizar seções internas sem bordas fortes.
+- [x] Reduzir preview de vídeo em pelo menos 80%.
+- [x] Definir altura máxima para previews de vídeo.
+- [x] Evitar vídeos gigantes ocupando a tela.
+- [x] Garantir que previews continuam funcionais.
+- [x] Não alterar fluxo REAL.
+- [x] Não alterar templates.
+- [x] Não alterar upload.
+- [x] Não alterar tradução.
+- [x] Não alterar criação Meta.
+- [x] Rodar build.
+
+Regras visuais:
+
+- Card principal pode ter borda.
+- Elementos internos devem evitar borda.
+- Dentro do card, usar divisores simples ou spacing.
+- Evitar excesso de sombra.
+- Evitar excesso de radius.
+- Preview de vídeo deve ser compacto.
+
+Sugestão:
+
+- video preview max-height: 120px
+- object-fit: cover
+- width: 100%
+- em listas/revisão, usar max-height menor, entre 80px e 120px
+
+Validação:
+`cd frontend && npm run build`
+
+Depois:
+
+- Atualizar PLANS.md com timestamp.
+- Criar commit incremental.
+
+Evidências:
+
+- [2026-05-29 15:06] `cd frontend && npm run build` (OK) após P27.6 (polimento visual global: cards/bordas + previews de vídeo compactos).
+
 ## Decision Log (Ativo)
 
 Última atualização: [2026-05-26 12:10]

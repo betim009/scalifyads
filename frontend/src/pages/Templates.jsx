@@ -1352,12 +1352,9 @@ export default function Templates() {
                                           <video
                                             src={previewUrl}
                                             controls
+                                            className="videoPreview"
                                             style={{
-                                              width: "100%",
                                               maxWidth: 520,
-                                              borderRadius: 12,
-                                              border: "1px solid #e5e7eb",
-                                              display: "block",
                                             }}
                                           />
                                         ) : entry?.creativeAssetId ? (
@@ -1631,12 +1628,9 @@ export default function Templates() {
                                               <video
                                                 src={previewUrl}
                                                 controls
+                                                className="videoPreview"
                                                 style={{
-                                                  width: "100%",
                                                   maxWidth: 520,
-                                                  borderRadius: 12,
-                                                  border: "1px solid #e5e7eb",
-                                                  display: "block",
                                                 }}
                                               />
                                             </div>
@@ -1725,12 +1719,9 @@ export default function Templates() {
                                               <video
                                                 src={previewUrl}
                                                 controls
+                                                className="videoPreview videoPreviewSm"
                                                 style={{
-                                                  width: "100%",
                                                   maxWidth: 520,
-                                                  borderRadius: 12,
-                                                  border: "1px solid #e5e7eb",
-                                                  display: "block",
                                                 }}
                                               />
                                             ) : (

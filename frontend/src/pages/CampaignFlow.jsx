@@ -2304,12 +2304,9 @@ export default function CampaignFlow() {
                                     <video
                                       src={previewUrl}
                                       controls
+                                      className="videoPreview"
                                       style={{
-                                        width: "100%",
                                         maxWidth: 640,
-                                        borderRadius: 12,
-                                        border: "1px solid #e5e7eb",
-                                        display: "block",
                                       }}
                                     />
                                   </div>
