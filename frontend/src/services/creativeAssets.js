@@ -1,4 +1,5 @@
 import { apiGet, apiPostFormData } from "./http.js";
+import { apiPost } from "./http.js";
 
 export async function listCreativeAssets({ limit = 50 } = {}) {
   const query = new URLSearchParams();
@@ -12,6 +13,16 @@ export async function uploadCreativeAsset(file) {
   const form = new FormData();
   form.append("file", file);
   const data = await apiPostFormData("/api/creative-assets/upload", form);
-  return { ok: true, creativeAsset: data?.creative_asset ?? null };
+  return {
+    ok: true,
+    creativeAsset: data?.creative_asset ?? null,
+    autoThumbnailAsset: data?.auto_thumbnail_asset ?? null,
+  };
 }
 
+export async function generateCreativeAssetThumbnail(creativeAssetId) {
+  const id = String(creativeAssetId || "").trim();
+  if (!id) throw new Error("Missing creativeAssetId");
+  const data = await apiPost(`/api/creative-assets/${encodeURIComponent(id)}/generate-thumbnail`, {});
+  return { ok: true, creativeThumbnailAsset: data?.creative_thumbnail_asset ?? null };
+}

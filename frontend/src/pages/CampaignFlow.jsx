@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { getCountries } from "../services/reference.js";
 import { getAuthMe } from "../services/auth.js";
 import { getBackendBaseUrl, HttpError } from "../services/http.js";
+import { generateCreativeAssetThumbnail } from "../services/creativeAssets.js";
 import { createMetaCampaignSimple } from "../services/metaCampaigns.js";
 import { createMetaAdSet } from "../services/metaAdSets.js";
 import { createCreativeDraft } from "../services/creativeDrafts.js";
@@ -757,6 +758,41 @@ export default function CampaignFlow() {
         const skipCountries = new Set();
         if (campaign.mode === "REAL") {
           const missingMedia = [];
+
+          // Best-effort: auto-generate thumbnails for videos missing thumbnail.
+          for (const raw of codes) {
+            const cc = String(raw || "").trim().toUpperCase();
+            for (const k of AD_KEYS) {
+              const media = resolveMediaForCountryAd(cc, k);
+              if (media.kind === "video" && media.status === "ok" && !media.thumbnailOk && media.creativeAssetId) {
+                try {
+                  const res = await generateCreativeAssetThumbnail(media.creativeAssetId);
+                  const asset = res?.creativeThumbnailAsset ?? null;
+                  if (asset?.id && asset?.mime_type && String(asset.mime_type).startsWith("image/")) {
+                    setCreative((p) => {
+                      const next = p?.mediaByCountry && typeof p.mediaByCountry === "object" ? { ...p.mediaByCountry } : {};
+                      const countryEntry = next?.[cc] && typeof next[cc] === "object" ? { ...next[cc] } : {};
+                      const adEntry = countryEntry?.[k] && typeof countryEntry[k] === "object" ? { ...countryEntry[k] } : {};
+                      adEntry.thumbnail = {
+                        creativeAssetId: String(asset.id),
+                        mimeType: asset.mime_type ?? null,
+                        originalName: asset.original_name ?? null,
+                        url: asset.url ?? null,
+                        kind: "image",
+                        updatedAt: new Date().toISOString(),
+                      };
+                      countryEntry[k] = adEntry;
+                      next[cc] = countryEntry;
+                      return { ...p, mediaByCountry: next };
+                    });
+                  }
+                } catch {
+                  // keep missing; will be reported below
+                }
+              }
+            }
+          }
+
           for (const raw of codes) {
             const cc = String(raw || "").trim().toUpperCase();
             for (const k of AD_KEYS) {
@@ -942,6 +978,37 @@ export default function CampaignFlow() {
       } else {
         if (campaign.mode === "REAL") {
           const cc = String(campaign.countryCode || "").trim().toUpperCase();
+          // Best-effort: auto-generate missing thumbnails for videos.
+          for (const k of AD_KEYS) {
+            const media = resolveMediaForCountryAd(cc, k);
+            if (media.kind === "video" && media.status === "ok" && !media.thumbnailOk && media.creativeAssetId) {
+              try {
+                const res = await generateCreativeAssetThumbnail(media.creativeAssetId);
+                const asset = res?.creativeThumbnailAsset ?? null;
+                if (asset?.id && asset?.mime_type && String(asset.mime_type).startsWith("image/")) {
+                  setCreative((p) => {
+                    const next = p?.mediaByCountry && typeof p.mediaByCountry === "object" ? { ...p.mediaByCountry } : {};
+                    const countryEntry = next?.[cc] && typeof next[cc] === "object" ? { ...next[cc] } : {};
+                    const adEntry = countryEntry?.[k] && typeof countryEntry[k] === "object" ? { ...countryEntry[k] } : {};
+                    adEntry.thumbnail = {
+                      creativeAssetId: String(asset.id),
+                      mimeType: asset.mime_type ?? null,
+                      originalName: asset.original_name ?? null,
+                      url: asset.url ?? null,
+                      kind: "image",
+                      updatedAt: new Date().toISOString(),
+                    };
+                    countryEntry[k] = adEntry;
+                    next[cc] = countryEntry;
+                    return { ...p, mediaByCountry: next };
+                  });
+                }
+              } catch {
+                // ignore
+              }
+            }
+          }
+
           const missing = [];
           for (const k of AD_KEYS) {
             const media = resolveMediaForCountryAd(cc, k);

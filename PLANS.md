@@ -1700,7 +1700,7 @@ Validação executada (local):
 
 ### P27.4 — Corrigir Creative de vídeo com thumbnail obrigatória
 
-Última atualização: [2026-05-29 11:09]
+Última atualização: [2026-05-29 11:20]
 
 Contexto:
 Ao publicar Creative com vídeo (REAL), o Meta retorna erro exigindo thumbnail:
@@ -1716,17 +1716,20 @@ Tarefas:
 - [x] Auditar onde `object_story_spec.video_data` é montado.
 - [x] Para vídeos, enviar `image_hash` junto com `video_id`.
 - [x] Solução simples:
-  - [x] Permitir thumbnail (asset imagem) por vídeo no template.
-  - [x] Bloquear criação REAL se faltar thumbnail, antes de chamar a Meta.
+  - [x] Gerar thumbnail automaticamente a partir do vídeo (ffmpeg/ffmpeg-static).
+  - [x] Salvar thumbnail gerada como `creative_asset` interno e vincular automaticamente ao vídeo.
+  - [x] Manter upload manual de thumbnail como fallback avançado.
+  - [x] Bloquear REAL apenas se a geração automática falhar.
 - [x] Atualizar `/templates` para permitir thumbnail por vídeo.
-- [x] Atualizar `/campaign-flow` para validar thumbnail antes da execução REAL.
+- [x] Atualizar `/templates` para exibir thumbnail gerada e permitir substituir.
+- [x] Atualizar `/campaign-flow` para tentar gerar thumbnail automaticamente e só bloquear REAL se falhar.
 - [x] Rodar `cd frontend && npm run build`.
 - [ ] Validar manualmente execução REAL (1 país / 1 ad) com vídeo+thumbnail.
 - [ ] Criar commit incremental claro.
 
 Validação executada (local):
 
-- [2026-05-29 11:09] `cd frontend && npm run build` (OK) após P27.4 (thumbnail obrigatória em vídeo).
+- [2026-05-29 11:20] `cd frontend && npm run build` (OK) após P27.4 (thumbnail automática de vídeo).
 
 ## Decision Log (Ativo)
 

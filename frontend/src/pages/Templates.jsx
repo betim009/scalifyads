@@ -9,7 +9,7 @@ import {
   updateFlowTemplate,
 } from "../services/flowTemplates.js";
 import { getAuthMe } from "../services/auth.js";
-import { listCreativeAssets, uploadCreativeAsset } from "../services/creativeAssets.js";
+import { generateCreativeAssetThumbnail, listCreativeAssets, uploadCreativeAsset } from "../services/creativeAssets.js";
 import { getBackendBaseUrl } from "../services/http.js";
 
 const STORAGE_LAST_EXECUTION_KEY = "campaignFlow:lastExecution:v1";
@@ -447,15 +447,24 @@ export default function Templates() {
       const asset = res?.creativeAsset ?? null;
       const entry = normalizeMediaEntry(asset);
       if (!entry) throw new Error("Falha ao obter asset após upload.");
+      const autoThumb = normalizeMediaEntry(res?.autoThumbnailAsset ?? null);
       setForm((p) => ({
         ...p,
         mediaByCountry: {
           ...(p.mediaByCountry || {}),
-          [cc]: { ...((p.mediaByCountry || {})[cc] || {}), [k]: entry },
+          [cc]: {
+            ...((p.mediaByCountry || {})[cc] || {}),
+            [k]: autoThumb && autoThumb.kind === "image" ? { ...entry, thumbnail: autoThumb } : entry,
+          },
         },
       }));
       setCreativeAssets((p) => [asset, ...(Array.isArray(p) ? p : [])].filter(Boolean).slice(0, 200));
-      setNotice(`Mídia definida para ${cc} (Ad ${k}).`);
+      if (autoThumb && autoThumb.kind === "image") {
+        setCreativeAssets((p) => [res.autoThumbnailAsset, ...(Array.isArray(p) ? p : [])].filter(Boolean).slice(0, 200));
+        setNotice(`Vídeo definido para ${cc} (Ad ${k}) + thumbnail gerada automaticamente.`);
+      } else {
+        setNotice(`Vídeo definido para ${cc} (Ad ${k}).`);
+      }
     } catch (err) {
       setError(err?.message ? String(err.message) : "Falha ao enviar mídia.");
     } finally {
@@ -483,6 +492,38 @@ export default function Templates() {
         [cc]: { ...((p.mediaByCountry || {})[cc] || {}), [k]: entry },
       },
     }));
+  }
+
+  async function onAutoGenerateThumbnailForCountryAd(countryCode, adKey, creativeAssetId) {
+    const cc = String(countryCode || "").trim().toUpperCase();
+    const k = String(adKey || "").trim().toUpperCase();
+    const id = normalizeNonEmptyString(creativeAssetId);
+    if (!cc || !AD_KEYS.includes(k) || !id) return;
+    setNotice("");
+    setError("");
+    setBusy(true);
+    try {
+      const res = await generateCreativeAssetThumbnail(id);
+      const thumb = normalizeMediaEntry(res?.creativeThumbnailAsset ?? null);
+      if (!thumb || thumb.kind !== "image") throw new Error("Falha ao gerar thumbnail.");
+      setForm((p) => {
+        const prevCountry = p.mediaByCountry?.[cc] && typeof p.mediaByCountry[cc] === "object" ? p.mediaByCountry[cc] : {};
+        const prevAd = prevCountry?.[k] && typeof prevCountry[k] === "object" ? prevCountry[k] : {};
+        return {
+          ...p,
+          mediaByCountry: {
+            ...(p.mediaByCountry || {}),
+            [cc]: { ...prevCountry, [k]: { ...prevAd, thumbnail: thumb } },
+          },
+        };
+      });
+      setCreativeAssets((p) => [res?.creativeThumbnailAsset, ...(Array.isArray(p) ? p : [])].filter(Boolean).slice(0, 200));
+      setNotice(`Thumbnail gerada automaticamente para ${cc} (Ad ${k}).`);
+    } catch (err) {
+      setError(err?.message ? String(err.message) : "Falha ao gerar thumbnail automaticamente.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function onUploadThumbnailForCountryAd(countryCode, adKey, file) {
@@ -1069,6 +1110,14 @@ export default function Templates() {
                                         </div>
                                         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
                                           <div style={{ fontWeight: 900, fontSize: 12, color: "#374151" }}>Thumbnail</div>
+                                          <button
+                                            type="button"
+                                            className="templatesBtnOutline"
+                                            disabled={busy || !entry?.creativeAssetId || Boolean(entry?.thumbnail?.creativeAssetId)}
+                                            onClick={() => onAutoGenerateThumbnailForCountryAd(cc, k, entry?.creativeAssetId)}
+                                          >
+                                            Gerar automaticamente
+                                          </button>
                                           <input
                                             type="file"
                                             accept="image/*"
