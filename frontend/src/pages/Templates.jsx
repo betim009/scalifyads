@@ -287,6 +287,25 @@ function buildPayloadFromForm(form) {
   };
 }
 
+function parseVideoSlotFromFilename(filename, { allowedCountryCodes } = {}) {
+  const name = normalizeNonEmptyString(String(filename || ""));
+  if (!name) return null;
+  const base = name.replace(/\.[a-z0-9]+$/i, "").toUpperCase();
+
+  const allowed = Array.isArray(allowedCountryCodes) ? allowedCountryCodes.map((c) => String(c || "").toUpperCase()).filter(Boolean) : [];
+  const cc =
+    allowed.find((code) => new RegExp(`\\b${code}\\b`).test(base)) ??
+    allowed.find((code) => base.includes(code)) ??
+    null;
+  if (!cc) return null;
+
+  const m = base.match(/(?:^|[^0-9])([1-5])(?:[^0-9]|$)/);
+  if (!m) return { countryCode: cc, adKey: null };
+  const idx = Number(m[1]) - 1;
+  const adKey = AD_KEYS[idx] ?? null;
+  return { countryCode: cc, adKey };
+}
+
 export default function Templates() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -311,6 +330,7 @@ export default function Templates() {
 
   const [creativeAssets, setCreativeAssets] = useState([]);
   const [openAdKey, setOpenAdKey] = useState("A");
+  const [bulkUploadSummary, setBulkUploadSummary] = useState(null);
 
   const [form, setForm] = useState({
     name: "",
@@ -626,6 +646,54 @@ export default function Templates() {
       else delete next[cc];
       return { ...p, mediaByCountry: next };
     });
+  }
+
+  async function onBulkUploadVideos(files) {
+    const list = Array.from(files || []).filter(Boolean);
+    if (!list.length) return;
+    setNotice("");
+    setError("");
+    setBulkUploadSummary(null);
+
+    const allowedCountryCodes = uniqueCountryCodes(form.countryCodes);
+    const identified = [];
+    const unknown = [];
+
+    for (const f of list) {
+      const slot = parseVideoSlotFromFilename(f?.name, { allowedCountryCodes });
+      if (!slot || !slot.countryCode || !slot.adKey) {
+        unknown.push({ file: f, name: f?.name ?? "file" });
+      } else {
+        identified.push({ file: f, name: f?.name ?? "file", countryCode: slot.countryCode, adKey: slot.adKey });
+      }
+    }
+
+    const mapped = [];
+    const unmapped = unknown.map((u) => ({ name: u.name }));
+    setBulkUploadSummary({ mapped: identified.map((i) => ({ name: i.name, countryCode: i.countryCode, adKey: i.adKey })), unmapped });
+
+    setBusy(true);
+    try {
+      for (const item of identified) {
+        const cc = item.countryCode;
+        const k = item.adKey;
+        const existing =
+          form?.mediaByCountry?.[cc] && typeof form.mediaByCountry[cc] === "object"
+            ? form.mediaByCountry[cc]?.[k] ?? null
+            : null;
+        if (existing?.creativeAssetId) {
+          const ok = window.confirm(`${item.name} → ${cc} / Ad ${k}\n\nJá existe um vídeo nesse slot. Substituir?`);
+          if (!ok) continue;
+        }
+        await onUploadMediaForCountryAd(cc, k, item.file);
+        mapped.push(item);
+      }
+      setNotice(`Upload concluído: ${mapped.length} mapeado(s), ${unknown.length} não identificado(s).`);
+    } catch (err) {
+      setError(err?.message ? String(err.message) : "Falha no upload múltiplo.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function onSaveTemplate() {
@@ -1093,11 +1161,69 @@ export default function Templates() {
 
                 <Field
                   label="Vídeos por país (A–E)"
-                  hint="Upload/seleção de vídeo por país e por anúncio (A–E). Reaproveita `creative_assets`."
+                  hint="Upload/seleção de vídeo por país e por anúncio (A–E). Dica: use upload múltiplo com nomes tipo BR1.mp4, AE2.mp4."
                 >
                   <div style={{ display: "grid", gap: 10 }}>
-                      {uniqueCountryCodes(form.countryCodes).length ? (
-                        uniqueCountryCodes(form.countryCodes).map((code) => {
+                    <div className="card" style={{ padding: 12, borderStyle: "dashed" }}>
+                      <div style={{ fontWeight: 950, marginBottom: 6 }}>Upload múltiplo (drag & drop)</div>
+                      <div style={{ color: "#6b7280", fontWeight: 750, fontSize: 12 }}>
+                        Mapeia automaticamente pelo nome do arquivo: <code>BR1</code>…<code>BR5</code> → Ads A–E.
+                      </div>
+                      <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                        <input
+                          type="file"
+                          multiple
+                          accept="video/*"
+                          disabled={busy}
+                          onChange={(e) => onBulkUploadVideos(e.target.files)}
+                        />
+                        <div
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            onBulkUploadVideos(e.dataTransfer?.files);
+                          }}
+                          style={{
+                            flex: 1,
+                            minWidth: 220,
+                            padding: "10px 12px",
+                            borderRadius: 12,
+                            border: "1px dashed #cbd5e1",
+                            background: "#f8fafc",
+                            color: "#475569",
+                            fontWeight: 800,
+                            fontSize: 12,
+                          }}
+                        >
+                          Solte os arquivos aqui
+                        </div>
+                      </div>
+                      {bulkUploadSummary ? (
+                        <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
+                          {bulkUploadSummary.mapped?.length ? (
+                            <div style={{ color: "#065f46", fontWeight: 900, fontSize: 12 }}>
+                              Mapeados:{" "}
+                              {bulkUploadSummary.mapped
+                                .slice(0, 8)
+                                .map((m) => `${m.name} → ${m.countryCode} / Ad ${m.adKey}`)
+                                .join(" • ")}
+                              {bulkUploadSummary.mapped.length > 8 ? " …" : ""}
+                            </div>
+                          ) : null}
+                          {bulkUploadSummary.unmapped?.length ? (
+                            <div style={{ color: "#92400e", fontWeight: 900, fontSize: 12 }}>
+                              Não identificados: {bulkUploadSummary.unmapped.slice(0, 8).map((u) => u.name).join(" • ")}
+                              {bulkUploadSummary.unmapped.length > 8 ? " …" : ""}
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {uniqueCountryCodes(form.countryCodes).length ? (
+                      uniqueCountryCodes(form.countryCodes).map((code) => {
                           const cc = String(code || "").trim().toUpperCase();
                           const byAd = form?.mediaByCountry?.[cc] && typeof form.mediaByCountry[cc] === "object" ? form.mediaByCountry[cc] : {};
                           return (
