@@ -16,6 +16,7 @@ import {
   listCampaignTemplates,
 } from "../services/campaignTemplates.js";
 import { listCreativeTemplates } from "../services/creativeTemplates.js";
+import { listCreativeAssets, uploadCreativeAsset } from "../services/creativeAssets.js";
 
 const DEFAULTS = {
   campaign: {
@@ -270,6 +271,8 @@ export default function CampaignFlow() {
   const [quickPresets, setQuickPresets] = useState([]);
   const [selectedQuickPresetId, setSelectedQuickPresetId] = useState("");
   const [autoApplied, setAutoApplied] = useState(false);
+  const [creativeAssets, setCreativeAssets] = useState([]);
+  const [reviewOverrides, setReviewOverrides] = useState({});
 
   useEffect(() => {
     let alive = true;
@@ -281,6 +284,22 @@ export default function CampaignFlow() {
       .catch(() => {
         if (!alive) return;
         setCountries([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    listCreativeAssets({ limit: 200 })
+      .then((res) => {
+        if (!alive) return;
+        setCreativeAssets(Array.isArray(res?.creativeAssets) ? res.creativeAssets : []);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setCreativeAssets([]);
       });
     return () => {
       alive = false;
@@ -480,6 +499,20 @@ export default function CampaignFlow() {
     }));
     return [{ value: "", label: "Nenhum (opcional)", disabled: false }, ...opts];
   }, [creativeTemplates]);
+
+  const videoCreativeAssetOptions = useMemo(() => {
+    const list = (creativeAssets || [])
+      .filter((a) => typeof a?.mime_type === "string" && a.mime_type.startsWith("video/"))
+      .map((a) => ({
+        value: String(a.id),
+        label: a.original_name ? `${a.original_name}` : `Video • ${String(a.id).slice(0, 8)}…`,
+      }));
+    return [
+      { value: "", label: "Usar vídeo do template", disabled: false },
+      { value: "__divider__", label: "— Vídeos enviados —", disabled: true },
+      ...list,
+    ];
+  }, [creativeAssets]);
 
   function openMetaTest({ generatedCampaignId, countryCode, mode } = {}) {
     const params = new URLSearchParams();
@@ -785,28 +818,50 @@ export default function CampaignFlow() {
           for (const raw of codes) {
             const cc = String(raw || "").trim().toUpperCase();
             for (const k of AD_KEYS) {
-              const media = resolveMediaForCountryAd(cc, k);
+              const media = resolveFinalMedia(cc, k);
               if (media.kind === "video" && media.status === "ok" && !media.thumbnailOk && media.creativeAssetId) {
                 try {
                   const res = await generateCreativeAssetThumbnail(media.creativeAssetId);
                   const asset = res?.creativeThumbnailAsset ?? null;
                   if (asset?.id && asset?.mime_type && String(asset.mime_type).startsWith("image/")) {
-                    setCreative((p) => {
-                      const next = p?.mediaByCountry && typeof p.mediaByCountry === "object" ? { ...p.mediaByCountry } : {};
-                      const countryEntry = next?.[cc] && typeof next[cc] === "object" ? { ...next[cc] } : {};
-                      const adEntry = countryEntry?.[k] && typeof countryEntry[k] === "object" ? { ...countryEntry[k] } : {};
-                      adEntry.thumbnail = {
-                        creativeAssetId: String(asset.id),
-                        mimeType: asset.mime_type ?? null,
-                        originalName: asset.original_name ?? null,
-                        url: asset.url ?? null,
-                        kind: "image",
-                        updatedAt: new Date().toISOString(),
-                      };
-                      countryEntry[k] = adEntry;
-                      next[cc] = countryEntry;
-                      return { ...p, mediaByCountry: next };
-                    });
+                    const ov = getOverride(cc, k);
+                    if (ov?.creativeAssetId && String(ov.creativeAssetId) === String(media.creativeAssetId)) {
+                      setReviewOverrides((p) => {
+                        const next = p && typeof p === "object" ? { ...p } : {};
+                        const byCountry = next[cc] && typeof next[cc] === "object" ? { ...next[cc] } : {};
+                        const byAd = byCountry[k] && typeof byCountry[k] === "object" ? { ...byCountry[k] } : {};
+                        byCountry[k] = {
+                          ...byAd,
+                          thumbnail: {
+                            creativeAssetId: String(asset.id),
+                            mimeType: asset.mime_type ?? null,
+                            originalName: asset.original_name ?? null,
+                            url: asset.url ?? null,
+                            kind: "image",
+                            updatedAt: new Date().toISOString(),
+                          },
+                        };
+                        next[cc] = byCountry;
+                        return next;
+                      });
+                    } else {
+                      setCreative((p) => {
+                        const next = p?.mediaByCountry && typeof p.mediaByCountry === "object" ? { ...p.mediaByCountry } : {};
+                        const countryEntry = next?.[cc] && typeof next[cc] === "object" ? { ...next[cc] } : {};
+                        const adEntry = countryEntry?.[k] && typeof countryEntry[k] === "object" ? { ...countryEntry[k] } : {};
+                        adEntry.thumbnail = {
+                          creativeAssetId: String(asset.id),
+                          mimeType: asset.mime_type ?? null,
+                          originalName: asset.original_name ?? null,
+                          url: asset.url ?? null,
+                          kind: "image",
+                          updatedAt: new Date().toISOString(),
+                        };
+                        countryEntry[k] = adEntry;
+                        next[cc] = countryEntry;
+                        return { ...p, mediaByCountry: next };
+                      });
+                    }
                   }
                 } catch {
                   // keep missing; will be reported below
@@ -818,7 +873,7 @@ export default function CampaignFlow() {
           for (const raw of codes) {
             const cc = String(raw || "").trim().toUpperCase();
             for (const k of AD_KEYS) {
-              const media = resolveMediaForCountryAd(cc, k);
+              const media = resolveFinalMedia(cc, k);
               if (media.status !== "ok" || media.kind !== "video" || !media.thumbnailOk) {
                 const reason = formatMediaRejection(media);
                 missingMedia.push({ cc, k, reason, media });
@@ -911,8 +966,8 @@ export default function CampaignFlow() {
                 adKey: k,
               });
 
-              const copy = resolveCopyForCountryAd(cc, k);
-              const media = resolveMediaForCountryAd(cc, k);
+              const copy = resolveFinalCopy(cc, k);
+              const media = resolveFinalMedia(cc, k);
 
               if (!normalizeNonEmptyString(copy?.primaryText)) {
                 perAds.push({ ok: false, key: k, error: "Texto faltando (primaryText)." });
@@ -1022,28 +1077,50 @@ export default function CampaignFlow() {
           const cc = String(campaign.countryCode || "").trim().toUpperCase();
           // Best-effort: auto-generate missing thumbnails for videos.
           for (const k of AD_KEYS) {
-            const media = resolveMediaForCountryAd(cc, k);
+            const media = resolveFinalMedia(cc, k);
             if (media.kind === "video" && media.status === "ok" && !media.thumbnailOk && media.creativeAssetId) {
               try {
                 const res = await generateCreativeAssetThumbnail(media.creativeAssetId);
                 const asset = res?.creativeThumbnailAsset ?? null;
                 if (asset?.id && asset?.mime_type && String(asset.mime_type).startsWith("image/")) {
-                  setCreative((p) => {
-                    const next = p?.mediaByCountry && typeof p.mediaByCountry === "object" ? { ...p.mediaByCountry } : {};
-                    const countryEntry = next?.[cc] && typeof next[cc] === "object" ? { ...next[cc] } : {};
-                    const adEntry = countryEntry?.[k] && typeof countryEntry[k] === "object" ? { ...countryEntry[k] } : {};
-                    adEntry.thumbnail = {
-                      creativeAssetId: String(asset.id),
-                      mimeType: asset.mime_type ?? null,
-                      originalName: asset.original_name ?? null,
-                      url: asset.url ?? null,
-                      kind: "image",
-                      updatedAt: new Date().toISOString(),
-                    };
-                    countryEntry[k] = adEntry;
-                    next[cc] = countryEntry;
-                    return { ...p, mediaByCountry: next };
-                  });
+                  const ov = getOverride(cc, k);
+                  if (ov?.creativeAssetId && String(ov.creativeAssetId) === String(media.creativeAssetId)) {
+                    setReviewOverrides((p) => {
+                      const next = p && typeof p === "object" ? { ...p } : {};
+                      const byCountry = next[cc] && typeof next[cc] === "object" ? { ...next[cc] } : {};
+                      const byAd = byCountry[k] && typeof byCountry[k] === "object" ? { ...byCountry[k] } : {};
+                      byCountry[k] = {
+                        ...byAd,
+                        thumbnail: {
+                          creativeAssetId: String(asset.id),
+                          mimeType: asset.mime_type ?? null,
+                          originalName: asset.original_name ?? null,
+                          url: asset.url ?? null,
+                          kind: "image",
+                          updatedAt: new Date().toISOString(),
+                        },
+                      };
+                      next[cc] = byCountry;
+                      return next;
+                    });
+                  } else {
+                    setCreative((p) => {
+                      const next = p?.mediaByCountry && typeof p.mediaByCountry === "object" ? { ...p.mediaByCountry } : {};
+                      const countryEntry = next?.[cc] && typeof next[cc] === "object" ? { ...next[cc] } : {};
+                      const adEntry = countryEntry?.[k] && typeof countryEntry[k] === "object" ? { ...countryEntry[k] } : {};
+                      adEntry.thumbnail = {
+                        creativeAssetId: String(asset.id),
+                        mimeType: asset.mime_type ?? null,
+                        originalName: asset.original_name ?? null,
+                        url: asset.url ?? null,
+                        kind: "image",
+                        updatedAt: new Date().toISOString(),
+                      };
+                      countryEntry[k] = adEntry;
+                      next[cc] = countryEntry;
+                      return { ...p, mediaByCountry: next };
+                    });
+                  }
                 }
               } catch {
                 // ignore
@@ -1053,7 +1130,7 @@ export default function CampaignFlow() {
 
           const missing = [];
           for (const k of AD_KEYS) {
-            const media = resolveMediaForCountryAd(cc, k);
+            const media = resolveFinalMedia(cc, k);
             if (media.status !== "ok" || media.kind !== "video" || !media.thumbnailOk) missing.push(k);
           }
           if (missing.length) {
@@ -1093,8 +1170,8 @@ export default function CampaignFlow() {
         const cc = String(campaign.countryCode || "").trim().toUpperCase();
         const perAds = [];
         for (const k of AD_KEYS) {
-          const copy = resolveCopyForCountryAd(cc, k);
-          const media = resolveMediaForCountryAd(cc, k);
+          const copy = resolveFinalCopy(cc, k);
+          const media = resolveFinalMedia(cc, k);
           if (!normalizeNonEmptyString(copy?.primaryText)) {
             perAds.push({ ok: false, key: k, error: "Texto faltando (primaryText)." });
             continue;
@@ -1315,6 +1392,92 @@ export default function CampaignFlow() {
       thumbnailOk,
       status:
         !creativeAssetId ? "missing" : supported ? "ok" : "unsupported",
+    };
+  }
+
+  async function onUploadOverrideVideo(countryCode, adKey, file) {
+    const cc = String(countryCode || "").trim().toUpperCase();
+    const k = String(adKey || "").trim().toUpperCase();
+    if (!cc || !AD_KEYS.includes(k) || !file) return;
+    setNotice("");
+    setError("");
+    setSubmitting(true);
+    try {
+      const res = await uploadCreativeAsset(file);
+      const asset = res?.creativeAsset ?? null;
+      if (!asset?.id) throw new Error("Upload falhou (asset id ausente).");
+      setCreativeAssets((p) => [asset, ...(Array.isArray(p) ? p : [])].filter(Boolean).slice(0, 200));
+      setReviewOverrides((p) => {
+        const next = p && typeof p === "object" ? { ...p } : {};
+        const byCountry = next[cc] && typeof next[cc] === "object" ? { ...next[cc] } : {};
+        const byAd = byCountry[k] && typeof byCountry[k] === "object" ? { ...byCountry[k] } : {};
+        byCountry[k] = { ...byAd, creativeAssetId: String(asset.id), thumbnail: null };
+        next[cc] = byCountry;
+        return next;
+      });
+      setNotice(`Vídeo substituído em revisão: ${cc} / Ad ${k}.`);
+    } catch (err) {
+      setError(err?.message ? String(err.message) : "Falha ao enviar vídeo.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function getOverride(countryCode, adKey) {
+    const cc = String(countryCode || "").trim().toUpperCase();
+    const k = String(adKey || "").trim().toUpperCase();
+    const byCountry = reviewOverrides?.[cc] && typeof reviewOverrides[cc] === "object" ? reviewOverrides[cc] : null;
+    const byAd = byCountry?.[k] && typeof byCountry[k] === "object" ? byCountry[k] : null;
+    return byAd ?? null;
+  }
+
+  function resolveFinalCopy(countryCode, adKey) {
+    const base = resolveCopyForCountryAd(countryCode, adKey);
+    const ov = getOverride(countryCode, adKey);
+    if (!ov) return base;
+    return {
+      ...base,
+      primaryText: typeof ov.primaryText === "string" ? ov.primaryText : base.primaryText,
+      headline: typeof ov.headline === "string" ? ov.headline : base.headline,
+      description: typeof ov.description === "string" ? ov.description : base.description,
+      source: "override",
+    };
+  }
+
+  function resolveFinalMedia(countryCode, adKey) {
+    const base = resolveMediaForCountryAd(countryCode, adKey);
+    const ov = getOverride(countryCode, adKey);
+    if (!ov?.creativeAssetId) return base;
+    const id = String(ov.creativeAssetId);
+    const asset = (creativeAssets || []).find((a) => String(a?.id) === id) ?? null;
+    const mimeType = asset?.mime_type ?? base.mimeType ?? null;
+    const url = asset?.url ?? base.url ?? null;
+    const originalName = asset?.original_name ?? base.originalName ?? null;
+    const kind =
+      mimeType && String(mimeType).startsWith("video/")
+        ? "video"
+        : mimeType && String(mimeType).startsWith("image/")
+          ? "image"
+          : "unknown";
+    const ovThumb = ov?.thumbnail && typeof ov.thumbnail === "object" ? ov.thumbnail : null;
+    const thumbnailCreativeAssetId = normalizeNonEmptyString(ovThumb?.creativeAssetId) || null;
+    const thumbnailMimeType = normalizeNonEmptyString(ovThumb?.mimeType) || null;
+    const thumbnailOriginalName = normalizeNonEmptyString(ovThumb?.originalName) || null;
+    const thumbnailUrl = normalizeNonEmptyString(ovThumb?.url) || null;
+    const thumbnailOk = kind !== "video" ? true : Boolean(thumbnailCreativeAssetId && thumbnailMimeType?.startsWith("image/"));
+    return {
+      ...base,
+      creativeAssetId: id,
+      mimeType,
+      url,
+      originalName,
+      kind,
+      thumbnailCreativeAssetId,
+      thumbnailMimeType,
+      thumbnailOriginalName,
+      thumbnailUrl,
+      thumbnailOk,
+      status: id ? "ok" : "missing",
     };
   }
 
@@ -1900,18 +2063,73 @@ export default function CampaignFlow() {
                         </div>
                         <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
                           {AD_KEYS.map((k) => {
-                            const info = resolveCopyForCountryAd(cc, k);
+                            const info = resolveFinalCopy(cc, k);
                             const primaryPreview = String(info.primaryText || "").slice(0, 90);
                             const headlinePreview = String(info.headline || "").slice(0, 90);
                             const descriptionPreview = String(info.description || "").slice(0, 90);
+                            const ov = getOverride(cc, k);
                             return (
                               <div key={k} className="card" style={{ padding: 12 }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
                                   <div style={{ fontWeight: 950 }}>{`Ad ${k}`}</div>
                                   <div style={{ color: "#6b7280", fontWeight: 850, fontSize: 12 }}>
-                                    idioma: {info.language || "—"} • fonte: {info.source === "translation" ? "tradução" : "base"}
+                                    idioma: {info.language || "—"} • fonte:{" "}
+                                    {info.source === "override" ? "revisão" : info.source === "translation" ? "tradução" : "base"}
                                   </div>
                                 </div>
+                                <details style={{ marginTop: 10 }}>
+                                  <summary style={{ cursor: "pointer", fontWeight: 900, color: "#374151" }}>Editar texto (revisão)</summary>
+                                  <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+                                    <TextAreaLike
+                                      placeholder="primaryText"
+                                      value={typeof ov?.primaryText === "string" ? ov.primaryText : info.primaryText || ""}
+                                      onChange={(e) =>
+                                        setReviewOverrides((p) => {
+                                          const next = p && typeof p === "object" ? { ...p } : {};
+                                          const byCountry = next[cc] && typeof next[cc] === "object" ? { ...next[cc] } : {};
+                                          const byAd = byCountry[k] && typeof byCountry[k] === "object" ? { ...byCountry[k] } : {};
+                                          byCountry[k] = { ...byAd, primaryText: e.target.value };
+                                          next[cc] = byCountry;
+                                          return next;
+                                        })
+                                      }
+                                      rows={3}
+                                      disabled={submitting}
+                                    />
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                                      <InputLike
+                                        placeholder="headline"
+                                        value={typeof ov?.headline === "string" ? ov.headline : info.headline || ""}
+                                        onChange={(e) =>
+                                          setReviewOverrides((p) => {
+                                            const next = p && typeof p === "object" ? { ...p } : {};
+                                            const byCountry = next[cc] && typeof next[cc] === "object" ? { ...next[cc] } : {};
+                                            const byAd = byCountry[k] && typeof byCountry[k] === "object" ? { ...byCountry[k] } : {};
+                                            byCountry[k] = { ...byAd, headline: e.target.value };
+                                            next[cc] = byCountry;
+                                            return next;
+                                          })
+                                        }
+                                        disabled={submitting}
+                                      />
+                                      <InputLike
+                                        placeholder="description"
+                                        value={typeof ov?.description === "string" ? ov.description : info.description || ""}
+                                        onChange={(e) =>
+                                          setReviewOverrides((p) => {
+                                            const next = p && typeof p === "object" ? { ...p } : {};
+                                            const byCountry = next[cc] && typeof next[cc] === "object" ? { ...next[cc] } : {};
+                                            const byAd = byCountry[k] && typeof byCountry[k] === "object" ? { ...byCountry[k] } : {};
+                                            byCountry[k] = { ...byAd, description: e.target.value };
+                                            next[cc] = byCountry;
+                                            return next;
+                                          })
+                                        }
+                                        disabled={submitting}
+                                      />
+                                    </div>
+                                  </div>
+                                </details>
                                 <div style={{ marginTop: 8, display: "grid", gap: 6 }}>
                                   <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                                     <div style={{ color: "#6b7280", fontWeight: 800, fontSize: 12 }}>primaryText</div>
@@ -1958,9 +2176,10 @@ export default function CampaignFlow() {
                         </div>
                         <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
                           {AD_KEYS.map((k) => {
-                            const info = resolveMediaForCountryAd(cc, k);
+                            const info = resolveFinalMedia(cc, k);
                             const previewUrl = info?.url ? `${getBackendBaseUrl()}${info.url}` : null;
                             const ok = info.status === "ok" && info.kind === "video" && info.thumbnailOk;
+                            const ov = getOverride(cc, k);
                             const statusLabel = ok
                               ? "OK"
                               : info.status !== "ok"
@@ -1979,6 +2198,96 @@ export default function CampaignFlow() {
                                   <div style={{ fontWeight: 950 }}>{`Ad ${k}`}</div>
                                   <div style={{ color: tone, fontWeight: 900, fontSize: 12 }}>{statusLabel}</div>
                                 </div>
+                                <details style={{ marginTop: 10 }}>
+                                  <summary style={{ cursor: "pointer", fontWeight: 900, color: "#374151" }}>Editar vídeo (revisão)</summary>
+                                  <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+                                    <SelectLike
+                                      value={typeof ov?.creativeAssetId === "string" ? ov.creativeAssetId : ""}
+                                      onChange={(e) => {
+                                        const nextId = String(e.target.value || "");
+                                        if (nextId === "__divider__") return;
+                                        setReviewOverrides((p) => {
+                                          const next = p && typeof p === "object" ? { ...p } : {};
+                                          const byCountry = next[cc] && typeof next[cc] === "object" ? { ...next[cc] } : {};
+                                          const byAd = byCountry[k] && typeof byCountry[k] === "object" ? { ...byCountry[k] } : {};
+                                          if (!nextId) {
+                                            const { creativeAssetId, thumbnail, ...rest } = byAd;
+                                            byCountry[k] = rest;
+                                          } else {
+                                            byCountry[k] = { ...byAd, creativeAssetId: nextId, thumbnail: null };
+                                          }
+                                          next[cc] = byCountry;
+                                          return next;
+                                        });
+                                      }}
+                                      disabled={submitting}
+                                      options={videoCreativeAssetOptions}
+                                    />
+                                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                                      <label className="pillOutline" style={{ cursor: submitting ? "not-allowed" : "pointer" }}>
+                                        Enviar vídeo…
+                                        <input
+                                          type="file"
+                                          accept="video/*"
+                                          disabled={submitting}
+                                          style={{ display: "none" }}
+                                          onChange={(e) => {
+                                            const file = e?.target?.files?.[0] ?? null;
+                                            if (!file) return;
+                                            onUploadOverrideVideo(cc, k, file);
+                                            e.target.value = "";
+                                          }}
+                                        />
+                                      </label>
+                                      <button
+                                        type="button"
+                                        className="pillOutline"
+                                        disabled={submitting || !(typeof ov?.creativeAssetId === "string" && ov.creativeAssetId)}
+                                        onClick={() =>
+                                          setReviewOverrides((p) => {
+                                            const next = p && typeof p === "object" ? { ...p } : {};
+                                            const byCountry = next[cc] && typeof next[cc] === "object" ? { ...next[cc] } : {};
+                                            const byAd = byCountry[k] && typeof byCountry[k] === "object" ? { ...byCountry[k] } : {};
+                                            const { creativeAssetId, thumbnail, ...rest } = byAd;
+                                            byCountry[k] = rest;
+                                            next[cc] = byCountry;
+                                            return next;
+                                          })
+                                        }
+                                      >
+                                        Restaurar vídeo do template
+                                      </button>
+                                    </div>
+                                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                                      <div style={{ color: "#6b7280", fontWeight: 900, fontSize: 12 }}>Trocar rápido:</div>
+                                      {AD_KEYS.filter((x) => x !== k).map((fromKey) => (
+                                        <button
+                                          key={fromKey}
+                                          type="button"
+                                          className="pillOutline"
+                                          disabled={submitting}
+                                          onClick={() => {
+                                            const from = resolveFinalMedia(cc, fromKey);
+                                            if (!from?.creativeAssetId) return;
+                                            setReviewOverrides((p) => {
+                                              const next = p && typeof p === "object" ? { ...p } : {};
+                                              const byCountry = next[cc] && typeof next[cc] === "object" ? { ...next[cc] } : {};
+                                              const byAd = byCountry[k] && typeof byCountry[k] === "object" ? { ...byCountry[k] } : {};
+                                              byCountry[k] = { ...byAd, creativeAssetId: String(from.creativeAssetId), thumbnail: null };
+                                              next[cc] = byCountry;
+                                              return next;
+                                            });
+                                          }}
+                                        >
+                                          {`Usar Ad ${fromKey}`}
+                                        </button>
+                                      ))}
+                                    </div>
+                                    <div style={{ color: "#6b7280", fontWeight: 850, fontSize: 12 }}>
+                                      Dica: ao trocar o vídeo, a thumbnail pode ser gerada automaticamente no momento da execução REAL.
+                                    </div>
+                                  </div>
+                                </details>
                                 <div style={{ marginTop: 8, color: "#6b7280", fontWeight: 800, fontSize: 12 }}>
                                   vídeo: {info?.originalName ? info.originalName : info?.creativeAssetId ? "Asset selecionado" : "—"}
                                 </div>

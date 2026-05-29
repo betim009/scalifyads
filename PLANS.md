@@ -1781,7 +1781,7 @@ Validação executada (local):
 
 ### P27.5 — Ajustes operacionais finais do fluxo de Templates
 
-Última atualização: [2026-05-29 12:08]
+Última atualização: [2026-05-29 12:21]
 
 Objetivo:
 Melhorias de UX operacional (menos cliques/erros), aproximando o sistema do fluxo real do cliente, sem adicionar complexidade desnecessária e sem alterar o fluxo REAL validado.
@@ -1790,52 +1790,56 @@ Melhorias de UX operacional (menos cliques/erros), aproximando o sistema do flux
 
 Checklist:
 
-- [ ] Remover qualquer conceito de tradução para BR.
-- [ ] BR nunca deve aparecer na lista de traduções.
-- [ ] Se BR estiver configurado no perfil do usuário:
-  - [ ] incluir automaticamente BR na execução.
-- [ ] BR utiliza sempre os textos originais do template.
-- [ ] Traduções devem ser geradas apenas para países diferentes de BR.
-- [ ] Atualizar textos e labels da interface para refletir isso.
+- [x] Remover qualquer conceito de tradução para BR.
+- [x] BR nunca deve aparecer na lista de traduções.
+- [x] Se BR estiver configurado no perfil do usuário:
+  - [x] incluir automaticamente BR na execução.
+- [x] BR utiliza sempre os textos originais do template.
+- [x] Traduções devem ser geradas apenas para países diferentes de BR.
+- [x] Atualizar textos e labels da interface para refletir isso.
 
 #### P27.5.2 — Redesign operacional do /templates
 
 Checklist:
 
-- [ ] Reduzir profundidade visual (menos card→card→card).
-- [ ] Reduzir bordas desnecessárias.
-- [ ] Melhorar hierarquia visual.
-- [ ] Nova estrutura:
-  - [ ] Linha 1: `[ Campanha ] [ AdSet ]`
-  - [ ] Linha 2: `[ Criativo ]` (full width)
-- [ ] Criativo com accordion simples (A–E), apenas um aberto por vez.
+- [x] Reduzir profundidade visual (menos card→card→card).
+- [x] Reduzir bordas desnecessárias.
+- [x] Melhorar hierarquia visual.
+- [x] Nova estrutura:
+  - [x] Linha 1: `[ Campanha ] [ AdSet ]`
+  - [x] Linha 2: `[ Criativo ]` (full width)
+- [x] Criativo com accordion simples (A–E), apenas um aberto por vez.
 
 #### P27.5.3 — Upload múltiplo inteligente de vídeos
 
 Checklist:
 
-- [ ] Upload múltiplo (seleção múltipla + drag&drop).
-- [ ] Mapeamento automático por nome:
-  - [ ] `BR1 → BR / Ad A`, …, `BR5 → BR / Ad E`
-  - [ ] Aceitar padrões: `videoBR1.mp4`, `video_BR_1.mp4`, `BR-1.mp4`, `BR1.mp4`.
-- [ ] Exibir resumo (mapeados vs não identificados) e permitir associação manual.
-- [ ] Duplicados: se slot já existir, pedir confirmação para substituir.
+- [x] Upload múltiplo (seleção múltipla + drag&drop).
+- [x] Mapeamento automático por nome:
+  - [x] `BR1 → BR / Ad A`, …, `BR5 → BR / Ad E`
+  - [x] Aceitar padrões: `videoBR1.mp4`, `video_BR_1.mp4`, `BR-1.mp4`, `BR1.mp4`.
+- [x] Exibir resumo (mapeados vs não identificados) e permitir associação manual.
+- [x] Duplicados: se slot já existir, pedir confirmação para substituir.
 
 #### P27.5.4 — Revisão operacional editável
 
 Checklist:
 
-- [ ] Na etapa de revisão do `/campaign-flow`, permitir editar por país e por Ad:
-  - [ ] vídeo
-  - [ ] primaryText
-  - [ ] headline
-  - [ ] description
-- [ ] Permitir substituir/trocar vídeo entre Ads (mínimo: selecionar outro asset).
-- [ ] Automação nunca impede revisão (overrides locais antes de executar).
+- [x] Na etapa de revisão do `/campaign-flow`, permitir editar por país e por Ad:
+  - [x] vídeo
+  - [x] primaryText
+  - [x] headline
+  - [x] description
+- [x] Permitir substituir/trocar vídeo entre Ads (mínimo: selecionar outro asset).
+- [x] Automação nunca impede revisão (overrides locais antes de executar).
 
 Validação obrigatória:
 
-- [ ] `cd frontend && npm run build`
+- [x] `cd frontend && npm run build`
+
+Evidências:
+
+- [2026-05-29 12:21] `cd frontend && npm run build` (OK) após P27.5.4 (revisão editável: texto + vídeo por país/Ad).
 
 ## Decision Log (Ativo)
 
