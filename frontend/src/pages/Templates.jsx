@@ -310,6 +310,7 @@ export default function Templates() {
   const [showTranslationsEditor, setShowTranslationsEditor] = useState(false);
 
   const [creativeAssets, setCreativeAssets] = useState([]);
+  const [openAdKey, setOpenAdKey] = useState("A");
 
   const [form, setForm] = useState({
     name: "",
@@ -894,10 +895,12 @@ export default function Templates() {
         </div>
 
         {activeTab === TAB_CREATE ? (
-          <div style={{ marginTop: 16, display: "grid", gap: 14 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 10 }}>
-              <div className="templatesCard">
-                <div className="templatesCardLabel">Campanha</div>
+          <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div className="templatesCard" style={{ paddingBottom: 16 }}>
+                <div className="templatesCardLabel" style={{ marginBottom: 12 }}>
+                  Campanha
+                </div>
                 <div style={{ display: "grid", gap: 12 }}>
                   <Field label="Nome do template" hint="Ex: Padrão LATAM • Tráfego">
                     <InputLike value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
@@ -942,8 +945,10 @@ export default function Templates() {
                 </div>
               </div>
 
-              <div className="templatesCard">
-                <div className="templatesCardLabel">AdSet</div>
+              <div className="templatesCard" style={{ paddingBottom: 16 }}>
+                <div className="templatesCardLabel" style={{ marginBottom: 12 }}>
+                  AdSet
+                </div>
                 <div style={{ display: "grid", gap: 12 }}>
                   <Field label="Orçamento diário (centavos)">
                     <InputLike
@@ -976,91 +981,121 @@ export default function Templates() {
                 </div>
               </div>
 
-              <div className="templatesCard">
-                <div className="templatesCardLabel">Criativo</div>
-                <div style={{ display: "grid", gap: 12 }}>
-                  <Field
-                    label="Variações (PT-BR)"
-                    hint="O cliente opera com 5 anúncios (A–E). O texto base é PT-BR (Brasil não é traduzido)."
-                  >
-                    <div style={{ display: "grid", gap: 10 }}>
-                      {(form.adVariants || AD_KEYS.map((key) => ({ key }))).map((ad, idx) => {
-                        const key = AD_KEYS[idx] ?? ad?.key ?? `${idx + 1}`;
-                        const item = ad && typeof ad === "object" ? ad : {};
-                        return (
-                          <div key={key} className="card" style={{ padding: 12 }}>
-                            <div style={{ fontWeight: 950, marginBottom: 10 }}>{`Ad ${key}`}</div>
-                            <div style={{ display: "grid", gap: 10 }}>
-                              <TextAreaLike
-                                value={item.primaryText ?? ""}
-                                onChange={(e) =>
-                                  setForm((p) => {
-                                    const next = Array.isArray(p.adVariants) ? [...p.adVariants] : [];
-                                    while (next.length < AD_KEYS.length) next.push({ key: AD_KEYS[next.length], primaryText: "", headline: "", description: "" });
-                                    const cur = next[idx] && typeof next[idx] === "object" ? next[idx] : {};
-                                    next[idx] = { ...cur, key, primaryText: e.target.value };
-                                    return { ...p, adVariants: next };
-                                  })
-                                }
-                                placeholder="Texto principal"
-                                rows={3}
-                              />
-                              <InputLike
-                                value={item.headline ?? ""}
-                                onChange={(e) =>
-                                  setForm((p) => {
-                                    const next = Array.isArray(p.adVariants) ? [...p.adVariants] : [];
-                                    while (next.length < AD_KEYS.length) next.push({ key: AD_KEYS[next.length], primaryText: "", headline: "", description: "" });
-                                    const cur = next[idx] && typeof next[idx] === "object" ? next[idx] : {};
-                                    next[idx] = { ...cur, key, headline: e.target.value };
-                                    return { ...p, adVariants: next };
-                                  })
-                                }
-                                placeholder="Headline"
-                              />
-                              <InputLike
-                                value={item.description ?? ""}
-                                onChange={(e) =>
-                                  setForm((p) => {
-                                    const next = Array.isArray(p.adVariants) ? [...p.adVariants] : [];
-                                    while (next.length < AD_KEYS.length) next.push({ key: AD_KEYS[next.length], primaryText: "", headline: "", description: "" });
-                                    const cur = next[idx] && typeof next[idx] === "object" ? next[idx] : {};
-                                    next[idx] = { ...cur, key, description: e.target.value };
-                                    return { ...p, adVariants: next };
-                                  })
-                                }
-                                placeholder="Description"
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </Field>
-                  <Field label="Destination URL" hint="Obrigatório para Creative REAL.">
-                    <InputLike
-                      value={form.destinationUrl}
-                      onChange={(e) => setForm((p) => ({ ...p, destinationUrl: e.target.value }))}
-                      placeholder="https://example.com/?utm_source=template"
-                    />
-                  </Field>
-                  <Field label="CTA type">
-                    <SelectLike
-                      value={form.ctaType}
-                      onChange={(e) => setForm((p) => ({ ...p, ctaType: e.target.value }))}
-                      options={[
-                        { value: "LEARN_MORE", label: "LEARN_MORE" },
-                        { value: "SHOP_NOW", label: "SHOP_NOW" },
-                        { value: "SIGN_UP", label: "SIGN_UP" },
-                      ]}
-                    />
-                  </Field>
+            </div>
 
-                  <Field
-                    label="Vídeos por país (A–E)"
-                    hint="Upload/seleção de vídeo por país e por anúncio (A–E). Reaproveita `creative_assets`."
-                  >
-                    <div style={{ display: "grid", gap: 10 }}>
+            <div className="templatesCard" style={{ paddingBottom: 16 }}>
+              <div className="templatesCardLabel" style={{ marginBottom: 12 }}>
+                Criativo (PT-BR)
+              </div>
+              <div style={{ display: "grid", gap: 12 }}>
+                <Field
+                  label="Variações (Ads A–E)"
+                  hint="PT-BR é a origem fixa. BR sempre usa o texto do template; traduções são apenas para países ≠ BR."
+                >
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                    {AD_KEYS.map((k) => (
+                      <button
+                        key={k}
+                        type="button"
+                        className={openAdKey === k ? "templatesBtnPrimary" : "templatesBtnOutline"}
+                        disabled={busy}
+                        onClick={() => setOpenAdKey(k)}
+                        style={{ padding: "8px 12px" }}
+                      >
+                        {`Ad ${k}`}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={{ marginTop: 10, borderTop: "1px solid #eef2f7", paddingTop: 12 }}>
+                    {(() => {
+                      const idx = AD_KEYS.indexOf(String(openAdKey || "A"));
+                      const currentIdx = idx >= 0 ? idx : 0;
+                      const item =
+                        Array.isArray(form.adVariants) && form.adVariants[currentIdx] && typeof form.adVariants[currentIdx] === "object"
+                          ? form.adVariants[currentIdx]
+                          : {};
+                      const key = AD_KEYS[currentIdx] ?? "A";
+                      return (
+                        <div style={{ display: "grid", gap: 10 }}>
+                          <TextAreaLike
+                            value={item.primaryText ?? ""}
+                            onChange={(e) =>
+                              setForm((p) => {
+                                const next = Array.isArray(p.adVariants)
+                                  ? [...p.adVariants]
+                                  : AD_KEYS.map((k) => ({ key: k, primaryText: "", headline: "", description: "" }));
+                                while (next.length < AD_KEYS.length) next.push({ key: AD_KEYS[next.length], primaryText: "", headline: "", description: "" });
+                                const cur = next[currentIdx] && typeof next[currentIdx] === "object" ? next[currentIdx] : {};
+                                next[currentIdx] = { ...cur, key, primaryText: e.target.value };
+                                return { ...p, adVariants: next };
+                              })
+                            }
+                            placeholder="Texto principal"
+                            rows={3}
+                          />
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                            <InputLike
+                              value={item.headline ?? ""}
+                              onChange={(e) =>
+                                setForm((p) => {
+                                  const next = Array.isArray(p.adVariants)
+                                    ? [...p.adVariants]
+                                    : AD_KEYS.map((k) => ({ key: k, primaryText: "", headline: "", description: "" }));
+                                  while (next.length < AD_KEYS.length) next.push({ key: AD_KEYS[next.length], primaryText: "", headline: "", description: "" });
+                                  const cur = next[currentIdx] && typeof next[currentIdx] === "object" ? next[currentIdx] : {};
+                                  next[currentIdx] = { ...cur, key, headline: e.target.value };
+                                  return { ...p, adVariants: next };
+                                })
+                              }
+                              placeholder="Headline"
+                            />
+                            <InputLike
+                              value={item.description ?? ""}
+                              onChange={(e) =>
+                                setForm((p) => {
+                                  const next = Array.isArray(p.adVariants)
+                                    ? [...p.adVariants]
+                                    : AD_KEYS.map((k) => ({ key: k, primaryText: "", headline: "", description: "" }));
+                                  while (next.length < AD_KEYS.length) next.push({ key: AD_KEYS[next.length], primaryText: "", headline: "", description: "" });
+                                  const cur = next[currentIdx] && typeof next[currentIdx] === "object" ? next[currentIdx] : {};
+                                  next[currentIdx] = { ...cur, key, description: e.target.value };
+                                  return { ...p, adVariants: next };
+                                })
+                              }
+                              placeholder="Description"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </Field>
+
+                <Field label="Destination URL" hint="Obrigatório para Creative REAL.">
+                  <InputLike
+                    value={form.destinationUrl}
+                    onChange={(e) => setForm((p) => ({ ...p, destinationUrl: e.target.value }))}
+                    placeholder="https://example.com/?utm_source=template"
+                  />
+                </Field>
+                <Field label="CTA type">
+                  <SelectLike
+                    value={form.ctaType}
+                    onChange={(e) => setForm((p) => ({ ...p, ctaType: e.target.value }))}
+                    options={[
+                      { value: "LEARN_MORE", label: "LEARN_MORE" },
+                      { value: "SHOP_NOW", label: "SHOP_NOW" },
+                      { value: "SIGN_UP", label: "SIGN_UP" },
+                    ]}
+                  />
+                </Field>
+
+                <Field
+                  label="Vídeos por país (A–E)"
+                  hint="Upload/seleção de vídeo por país e por anúncio (A–E). Reaproveita `creative_assets`."
+                >
+                  <div style={{ display: "grid", gap: 10 }}>
                       {uniqueCountryCodes(form.countryCodes).length ? (
                         uniqueCountryCodes(form.countryCodes).map((code) => {
                           const cc = String(code || "").trim().toUpperCase();
@@ -1217,12 +1252,10 @@ export default function Templates() {
                           Defina países para adicionar mídias.
                         </div>
                       )}
-                    </div>
-                  </Field>
+                  </div>
+                </Field>
                 </div>
               </div>
-            </div>
-
             <div className="templatesFormFooter">
               <div className="templatesFormFooterLabel">{editingId ? "Editando template" : "Novo template"}</div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
