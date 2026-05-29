@@ -1,6 +1,9 @@
 import PageShell from "../components/PageShell.jsx";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import StatusPill from "../components/StatusPill.jsx";
+import AdvancedDisclosure from "../components/AdvancedDisclosure.jsx";
+import CompactVideoPreview from "../components/CompactVideoPreview.jsx";
 import { getCountries } from "../services/reference.js";
 import { getAuthMe } from "../services/auth.js";
 import { getBackendBaseUrl, HttpError } from "../services/http.js";
@@ -1995,30 +1998,30 @@ export default function CampaignFlow() {
 
             <div style={{ marginTop: 18, display: "grid", gap: 16 }}>
               <div className="card" style={{ padding: 18 }}>
-                <div style={{ fontWeight: 950, marginBottom: 10 }}>Campaign</div>
+                <div style={{ fontWeight: 950, marginBottom: 10 }}>Campanha</div>
                 <div style={{ display: "grid", gap: 10 }}>
-                  <SummaryRow label="name" value={campaign.name || "—"} />
-                  <SummaryRow label="metaAdAccountId" value={campaign.metaAdAccountId || "—"} />
-                  <SummaryRow label="objective" value={campaign.objective || "—"} />
+                  <SummaryRow label="Nome" value={campaign.name || "—"} />
+                  <SummaryRow label="Conta de anúncios" value={campaign.metaAdAccountId || "—"} />
+                  <SummaryRow label="Objetivo" value={campaign.objective || "—"} />
                   <SummaryRow
-                    label="countries"
+                    label="Países"
                     value={
                       batchEnabled
                         ? `${selectedCountryCodes.length} selecionados`
                         : campaign.countryCode || "—"
                     }
                   />
-                  <SummaryRow label="mode" value={campaign.mode || "—"} />
+                  <SummaryRow label="Modo" value={campaign.mode || "—"} />
                 </div>
               </div>
 
               <div className="card" style={{ padding: 18 }}>
                 <div style={{ fontWeight: 950, marginBottom: 10 }}>AdSet</div>
                 <div style={{ display: "grid", gap: 10 }}>
-                  <SummaryRow label="name" value={adSet.name || "—"} />
-                  <SummaryRow label="dailyBudgetCents" value={String(adSet.dailyBudgetCents)} />
-                  <SummaryRow label="billingEvent" value={adSet.billingEvent || "—"} />
-                  <SummaryRow label="optimizationGoal" value={adSet.optimizationGoal || "—"} />
+                  <SummaryRow label="Nome" value={adSet.name || "—"} />
+                  <SummaryRow label="Orçamento diário (centavos)" value={String(adSet.dailyBudgetCents)} />
+                  <SummaryRow label="Cobrança" value={adSet.billingEvent || "—"} />
+                  <SummaryRow label="Otimização" value={adSet.optimizationGoal || "—"} />
                 </div>
               </div>
 
@@ -2026,24 +2029,24 @@ export default function CampaignFlow() {
                 <div style={{ fontWeight: 950, marginBottom: 10 }}>Creative</div>
                 <div style={{ display: "grid", gap: 10 }}>
                   <SummaryRow
-                    label="ads"
+                    label="Ads"
                     value={(() => {
                       const variants = getCreativeAdVariants();
                       const missing = variants.filter((v) => !normalizeNonEmptyString(v?.primaryText)).length;
                       return missing ? `5 (faltando texto em ${missing})` : "5 (ok)";
                     })()}
                   />
-                  <SummaryRow label="destinationUrl" value={creative.destinationUrl || "—"} />
-                  <SummaryRow label="ctaType" value={creative.ctaType || "—"} />
-                  <SummaryRow label="translations" value={creative?.translationsRequired ? "ativas (revisar antes)" : "—"} />
+                  <SummaryRow label="URL de destino" value={creative.destinationUrl || "—"} />
+                  <SummaryRow label="Chamada (CTA)" value={creative.ctaType || "—"} />
+                  <SummaryRow label="Traduções" value={creative?.translationsRequired ? "ativas (revisar antes)" : "—"} />
                 </div>
               </div>
 
               <div className="card" style={{ padding: 18 }}>
                 <div style={{ fontWeight: 950, marginBottom: 10 }}>Ad</div>
                 <div style={{ display: "grid", gap: 10 }}>
-                  <SummaryRow label="name" value={ad.name || "—"} />
-                  <SummaryRow label="creativeDraftId" value="será criado automaticamente" />
+                  <SummaryRow label="Nome" value={ad.name || "—"} />
+                  <SummaryRow label="Criativo" value="será criado automaticamente" />
                 </div>
               </div>
 
@@ -2169,12 +2172,12 @@ export default function CampaignFlow() {
                   {(batchEnabled ? selectedCountryCodes : [campaign.countryCode || "BR"]).map((code) => {
                     const cc = String(code || "").trim().toUpperCase();
                     return (
-                      <div key={cc} className="card" style={{ padding: 12 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                          <div style={{ fontWeight: 950 }}>{cc}</div>
+                      <div key={cc} className="opsMediaCountry">
+                        <div className="opsMediaCountryHead">
+                          <div className="opsMediaCountryCode">{cc}</div>
                           <div style={{ color: "#6b7280", fontWeight: 900, fontSize: 12 }}>Ads A–E</div>
                         </div>
-                        <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+                        <div className="opsMediaRows">
                           {AD_KEYS.map((k) => {
                             const info = resolveFinalMedia(cc, k);
                             const previewUrl = info?.url ? `${getBackendBaseUrl()}${info.url}` : null;
@@ -2189,17 +2192,31 @@ export default function CampaignFlow() {
                                   : !info.thumbnailOk
                                     ? "FAIL — thumbnail ausente"
                                     : "FAIL";
-                            const tone = ok ? "#065f46" : "#92400e";
                             const bg = ok ? "#ecfdf5" : "#fffbeb";
                             const border = ok ? "#a7f3d0" : "#fde68a";
+                            const filename = info?.originalName ? info.originalName : info?.creativeAssetId ? "Asset selecionado" : "—";
+                            const statusTone = ok ? "good" : info.status !== "ok" ? "bad" : !info.thumbnailOk ? "warn" : "bad";
+                            const statusShort = ok ? "Pronto" : info.status !== "ok" ? "Sem vídeo" : info.kind !== "video" ? "Erro" : !info.thumbnailOk ? "Thumbnail pendente" : "Erro";
                             return (
-                              <div key={k} className="card" style={{ padding: 12, borderColor: border, background: bg }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                                  <div style={{ fontWeight: 950 }}>{`Ad ${k}`}</div>
-                                  <div style={{ color: tone, fontWeight: 900, fontSize: 12 }}>{statusLabel}</div>
+                              <div key={k} className="opsMediaRow" style={{ borderColor: border, background: bg }}>
+                                <div className="opsMediaRowTitle">{`Ad ${k}`}</div>
+                                <div>
+                                  {previewUrl ? (
+                                    <CompactVideoPreview src={previewUrl} label={`${cc} Ad ${k}`} size="sm" />
+                                  ) : (
+                                    <div className="videoThumb videoThumbSm" style={{ display: "grid", placeItems: "center", color: "#94a3b8" }}>
+                                      —
+                                    </div>
+                                  )}
                                 </div>
-                                <details style={{ marginTop: 10 }}>
-                                  <summary style={{ cursor: "pointer", fontWeight: 900, color: "#374151" }}>Editar vídeo (revisão)</summary>
+                                <div className="opsMediaFilename" title={filename}>
+                                  {filename}
+                                </div>
+                                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                                  <StatusPill tone={statusTone} title={statusLabel}>
+                                    {statusShort}
+                                  </StatusPill>
+                                  <AdvancedDisclosure summary="Editar (avançado)">
                                   <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
                                     <SelectLike
                                       value={typeof ov?.creativeAssetId === "string" ? ov.creativeAssetId : ""}
@@ -2287,34 +2304,8 @@ export default function CampaignFlow() {
                                       Dica: ao trocar o vídeo, a thumbnail pode ser gerada automaticamente no momento da execução REAL.
                                     </div>
                                   </div>
-                                </details>
-                                <div style={{ marginTop: 8, color: "#6b7280", fontWeight: 800, fontSize: 12 }}>
-                                  vídeo: {info?.originalName ? info.originalName : info?.creativeAssetId ? "Asset selecionado" : "—"}
+                                  </AdvancedDisclosure>
                                 </div>
-                                <div style={{ marginTop: 4, color: "#6b7280", fontWeight: 800, fontSize: 12 }}>
-                                  thumbnail:{" "}
-                                  {info?.thumbnailOriginalName
-                                    ? info.thumbnailOriginalName
-                                    : info?.thumbnailCreativeAssetId
-                                      ? "Asset selecionado"
-                                      : "—"}
-                                </div>
-                                {ok && previewUrl ? (
-                                  <div style={{ marginTop: 10 }}>
-                                    <video
-                                      src={previewUrl}
-                                      controls
-                                      className="videoPreview"
-                                      style={{
-                                        maxWidth: 640,
-                                      }}
-                                    />
-                                  </div>
-                                ) : (
-                                  <div style={{ marginTop: 10, color: "#6b7280", fontWeight: 800, fontSize: 12 }}>
-                                    {info?.mimeType ? `Tipo: ${info.mimeType}` : "—"}
-                                  </div>
-                                )}
                               </div>
                             );
                           })}
@@ -2355,7 +2346,7 @@ export default function CampaignFlow() {
                     : "Criar tudo (PAUSED)"}
               </button>
               <button type="button" className="pillOutline" disabled={submitting} onClick={() => openMetaTest()}>
-                Abrir /meta-test (debug)
+                Abrir diagnóstico técnico
               </button>
             </div>
           </section>

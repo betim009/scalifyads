@@ -1,6 +1,9 @@
 import PageShell from "../components/PageShell.jsx";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import StatusPill from "../components/StatusPill.jsx";
+import AdvancedDisclosure from "../components/AdvancedDisclosure.jsx";
+import CompactVideoPreview from "../components/CompactVideoPreview.jsx";
 import {
   createFlowTemplate,
   deleteFlowTemplate,
@@ -16,6 +19,28 @@ const STORAGE_LAST_EXECUTION_KEY = "campaignFlow:lastExecution:v1";
 const TAB_CREATE = "create";
 const TAB_MINE = "mine";
 const AD_KEYS = ["A", "B", "C", "D", "E"];
+
+const OBJECTIVE_LABEL_BY_VALUE = {
+  OUTCOME_TRAFFIC: "Tráfego",
+  OUTCOME_LEADS: "Leads",
+  OUTCOME_SALES: "Vendas",
+};
+
+const BILLING_EVENT_LABEL_BY_VALUE = {
+  IMPRESSIONS: "Impressões",
+  LINK_CLICKS: "Cliques no link",
+};
+
+const OPTIMIZATION_GOAL_LABEL_BY_VALUE = {
+  LINK_CLICKS: "Cliques no link",
+  OFFSITE_CONVERSIONS: "Conversões (site)",
+};
+
+const CTA_LABEL_BY_VALUE = {
+  LEARN_MORE: "Saiba mais",
+  SHOP_NOW: "Comprar agora",
+  SIGN_UP: "Inscrever-se",
+};
 
 function normalizeNonEmptyString(value) {
   if (typeof value !== "string") return "";
@@ -331,6 +356,8 @@ export default function Templates() {
   const [creativeAssets, setCreativeAssets] = useState([]);
   const [openAdKey, setOpenAdKey] = useState("A");
   const [bulkUploadSummary, setBulkUploadSummary] = useState(null);
+  const [bulkUploadUnknown, setBulkUploadUnknown] = useState([]);
+  const [bulkUploadUnknownDraft, setBulkUploadUnknownDraft] = useState({});
 
   const [form, setForm] = useState({
     name: "",
@@ -654,6 +681,8 @@ export default function Templates() {
     setNotice("");
     setError("");
     setBulkUploadSummary(null);
+    setBulkUploadUnknown([]);
+    setBulkUploadUnknownDraft({});
 
     const allowedCountryCodes = uniqueCountryCodes(form.countryCodes);
     const identified = [];
@@ -671,6 +700,13 @@ export default function Templates() {
     const mapped = [];
     const unmapped = unknown.map((u) => ({ name: u.name }));
     setBulkUploadSummary({ mapped: identified.map((i) => ({ name: i.name, countryCode: i.countryCode, adKey: i.adKey })), unmapped });
+    setBulkUploadUnknown(
+      unknown.map((u, idx) => ({
+        id: `${idx}:${u.name}`,
+        name: u.name,
+        file: u.file,
+      })),
+    );
 
     setBusy(true);
     try {
@@ -706,7 +742,7 @@ export default function Templates() {
     }
     const payload = buildPayloadFromForm(form);
     if (!normalizeNonEmptyString(payload.destinationUrl)) {
-      setError("Destination URL é obrigatório (para Creative REAL).");
+      setError("URL de destino é obrigatória (para Creative REAL).");
       return;
     }
 
@@ -909,16 +945,16 @@ export default function Templates() {
   return (
     <PageShell
       title="Templates"
-      subtitle="Crie templates operacionais, gere traduções e aplique no /campaign-flow (REAL sempre PAUSED)."
+      subtitle="Crie templates operacionais, traduções e mídia por país. No modo REAL, tudo é criado como PAUSED."
       align="left"
       backFallbackTo="/"
       headerRight={
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button type="button" className="templatesRouteChip" onClick={() => navigate("/campaign-flow")}>
-            /campaign-flow
+            Fluxo de campanha
           </button>
           <button type="button" className="templatesRouteChip" onClick={() => navigate("/meta-test")}>
-            /meta-test
+            Diagnóstico técnico
           </button>
         </div>
       }
@@ -978,9 +1014,9 @@ export default function Templates() {
                       value={form.objective}
                       onChange={(e) => setForm((p) => ({ ...p, objective: e.target.value }))}
                       options={[
-                        { value: "OUTCOME_TRAFFIC", label: "OUTCOME_TRAFFIC" },
-                        { value: "OUTCOME_LEADS", label: "OUTCOME_LEADS" },
-                        { value: "OUTCOME_SALES", label: "OUTCOME_SALES" },
+                        { value: "OUTCOME_TRAFFIC", label: "Tráfego" },
+                        { value: "OUTCOME_LEADS", label: "Leads" },
+                        { value: "OUTCOME_SALES", label: "Vendas" },
                       ]}
                     />
                   </Field>
@@ -1006,9 +1042,12 @@ export default function Templates() {
                     </div>
                     {profileCountryCodes.length ? (
                       <div className="muted" style={{ marginTop: 6, fontWeight: 750, fontSize: 12 }}>
-                        Dica: idiomas por país são configurados em `/profile`.
+                        Dica: idiomas por país são configurados no Perfil.
                       </div>
                     ) : null}
+                    <div className="templatesHintBox">
+                      Os textos base são sempre em PT-BR. O Brasil usa o texto original. Os demais países recebem tradução.
+                    </div>
                   </Field>
                 </div>
               </div>
@@ -1018,7 +1057,7 @@ export default function Templates() {
                   AdSet
                 </div>
                 <div style={{ display: "grid", gap: 12 }}>
-                  <Field label="Orçamento diário (centavos)">
+                  <Field label="Orçamento diário" hint="Valor em centavos (ex.: 1000 = R$10,00).">
                     <InputLike
                       type="number"
                       value={String(form.dailyBudgetCents)}
@@ -1026,23 +1065,23 @@ export default function Templates() {
                       placeholder="1000"
                     />
                   </Field>
-                  <Field label="Billing event">
+                  <Field label="Tipo de cobrança">
                     <SelectLike
                       value={form.billingEvent}
                       onChange={(e) => setForm((p) => ({ ...p, billingEvent: e.target.value }))}
                       options={[
-                        { value: "IMPRESSIONS", label: "IMPRESSIONS" },
-                        { value: "LINK_CLICKS", label: "LINK_CLICKS" },
+                        { value: "IMPRESSIONS", label: "Impressões" },
+                        { value: "LINK_CLICKS", label: "Cliques no link" },
                       ]}
                     />
                   </Field>
-                  <Field label="Optimization goal">
+                  <Field label="Otimização">
                     <SelectLike
                       value={form.optimizationGoal}
                       onChange={(e) => setForm((p) => ({ ...p, optimizationGoal: e.target.value }))}
                       options={[
-                        { value: "LINK_CLICKS", label: "LINK_CLICKS" },
-                        { value: "OFFSITE_CONVERSIONS", label: "OFFSITE_CONVERSIONS" },
+                        { value: "LINK_CLICKS", label: "Cliques no link" },
+                        { value: "OFFSITE_CONVERSIONS", label: "Conversões (site)" },
                       ]}
                     />
                   </Field>
@@ -1060,325 +1099,387 @@ export default function Templates() {
                   label="Variações (Ads A–E)"
                   hint="PT-BR é a origem fixa. BR sempre usa o texto do template; traduções são apenas para países ≠ BR."
                 >
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-                    {AD_KEYS.map((k) => (
-                      <button
-                        key={k}
-                        type="button"
-                        className={openAdKey === k ? "templatesBtnPrimary" : "templatesBtnOutline"}
-                        disabled={busy}
-                        onClick={() => setOpenAdKey(k)}
-                        style={{ padding: "8px 12px" }}
-                      >
-                        {`Ad ${k}`}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div style={{ marginTop: 10, borderTop: "1px solid #eef2f7", paddingTop: 12 }}>
-                    {(() => {
-                      const idx = AD_KEYS.indexOf(String(openAdKey || "A"));
-                      const currentIdx = idx >= 0 ? idx : 0;
+                  <div className="templatesAccordion">
+                    {AD_KEYS.map((adKey, idx) => {
                       const item =
-                        Array.isArray(form.adVariants) && form.adVariants[currentIdx] && typeof form.adVariants[currentIdx] === "object"
-                          ? form.adVariants[currentIdx]
-                          : {};
-                      const key = AD_KEYS[currentIdx] ?? "A";
+                        Array.isArray(form.adVariants) && form.adVariants[idx] && typeof form.adVariants[idx] === "object" ? form.adVariants[idx] : {};
+                      const previewPrimary = normalizeNonEmptyString(item?.primaryText) ? String(item.primaryText).slice(0, 64) : "—";
+                      const isOpen = openAdKey === adKey;
                       return (
-                        <div style={{ display: "grid", gap: 10 }}>
-                          <TextAreaLike
-                            value={item.primaryText ?? ""}
-                            onChange={(e) =>
-                              setForm((p) => {
-                                const next = Array.isArray(p.adVariants)
-                                  ? [...p.adVariants]
-                                  : AD_KEYS.map((k) => ({ key: k, primaryText: "", headline: "", description: "" }));
-                                while (next.length < AD_KEYS.length) next.push({ key: AD_KEYS[next.length], primaryText: "", headline: "", description: "" });
-                                const cur = next[currentIdx] && typeof next[currentIdx] === "object" ? next[currentIdx] : {};
-                                next[currentIdx] = { ...cur, key, primaryText: e.target.value };
-                                return { ...p, adVariants: next };
-                              })
-                            }
-                            placeholder="Texto principal"
-                            rows={3}
-                          />
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                            <InputLike
-                              value={item.headline ?? ""}
-                              onChange={(e) =>
-                                setForm((p) => {
-                                  const next = Array.isArray(p.adVariants)
-                                    ? [...p.adVariants]
-                                    : AD_KEYS.map((k) => ({ key: k, primaryText: "", headline: "", description: "" }));
-                                  while (next.length < AD_KEYS.length) next.push({ key: AD_KEYS[next.length], primaryText: "", headline: "", description: "" });
-                                  const cur = next[currentIdx] && typeof next[currentIdx] === "object" ? next[currentIdx] : {};
-                                  next[currentIdx] = { ...cur, key, headline: e.target.value };
-                                  return { ...p, adVariants: next };
-                                })
-                              }
-                              placeholder="Headline"
-                            />
-                            <InputLike
-                              value={item.description ?? ""}
-                              onChange={(e) =>
-                                setForm((p) => {
-                                  const next = Array.isArray(p.adVariants)
-                                    ? [...p.adVariants]
-                                    : AD_KEYS.map((k) => ({ key: k, primaryText: "", headline: "", description: "" }));
-                                  while (next.length < AD_KEYS.length) next.push({ key: AD_KEYS[next.length], primaryText: "", headline: "", description: "" });
-                                  const cur = next[currentIdx] && typeof next[currentIdx] === "object" ? next[currentIdx] : {};
-                                  next[currentIdx] = { ...cur, key, description: e.target.value };
-                                  return { ...p, adVariants: next };
-                                })
-                              }
-                              placeholder="Description"
-                            />
+                        <details
+                          key={adKey}
+                          className="templatesAccordionItem"
+                          open={isOpen}
+                          onToggle={(e) => {
+                            if (e.currentTarget.open) setOpenAdKey(adKey);
+                          }}
+                        >
+                          <summary className="templatesAccordionSummary">
+                            <div className="templatesAccordionSummaryTitle">{`Ad ${adKey}`}</div>
+                            <div className="templatesAccordionSummaryMeta">{previewPrimary}</div>
+                          </summary>
+                          <div className="templatesAccordionBody">
+                            <div style={{ display: "grid", gap: 10 }}>
+                              <Field label="Texto principal">
+                                <TextAreaLike
+                                  value={item.primaryText ?? ""}
+                                  onChange={(e) =>
+                                    setForm((p) => {
+                                      const next = Array.isArray(p.adVariants)
+                                        ? [...p.adVariants]
+                                        : AD_KEYS.map((k) => ({ key: k, primaryText: "", headline: "", description: "" }));
+                                      while (next.length < AD_KEYS.length)
+                                        next.push({ key: AD_KEYS[next.length], primaryText: "", headline: "", description: "" });
+                                      const cur = next[idx] && typeof next[idx] === "object" ? next[idx] : {};
+                                      next[idx] = { ...cur, key: adKey, primaryText: e.target.value };
+                                      return { ...p, adVariants: next };
+                                    })
+                                  }
+                                  placeholder="Escreva o texto principal…"
+                                  rows={3}
+                                />
+                              </Field>
+
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                                <Field label="Título">
+                                  <InputLike
+                                    value={item.headline ?? ""}
+                                    onChange={(e) =>
+                                      setForm((p) => {
+                                        const next = Array.isArray(p.adVariants)
+                                          ? [...p.adVariants]
+                                          : AD_KEYS.map((k) => ({ key: k, primaryText: "", headline: "", description: "" }));
+                                        while (next.length < AD_KEYS.length)
+                                          next.push({ key: AD_KEYS[next.length], primaryText: "", headline: "", description: "" });
+                                        const cur = next[idx] && typeof next[idx] === "object" ? next[idx] : {};
+                                        next[idx] = { ...cur, key: adKey, headline: e.target.value };
+                                        return { ...p, adVariants: next };
+                                      })
+                                    }
+                                    placeholder="Título…"
+                                  />
+                                </Field>
+                                <Field label="Descrição">
+                                  <InputLike
+                                    value={item.description ?? ""}
+                                    onChange={(e) =>
+                                      setForm((p) => {
+                                        const next = Array.isArray(p.adVariants)
+                                          ? [...p.adVariants]
+                                          : AD_KEYS.map((k) => ({ key: k, primaryText: "", headline: "", description: "" }));
+                                        while (next.length < AD_KEYS.length)
+                                          next.push({ key: AD_KEYS[next.length], primaryText: "", headline: "", description: "" });
+                                        const cur = next[idx] && typeof next[idx] === "object" ? next[idx] : {};
+                                        next[idx] = { ...cur, key: adKey, description: e.target.value };
+                                        return { ...p, adVariants: next };
+                                      })
+                                    }
+                                    placeholder="Descrição…"
+                                  />
+                                </Field>
+                              </div>
+                            </div>
                           </div>
-                        </div>
+                        </details>
                       );
-                    })()}
+                    })}
                   </div>
                 </Field>
 
-                <Field label="Destination URL" hint="Obrigatório para Creative REAL.">
+                <Field label="URL de destino" hint="Obrigatório para Creative REAL.">
                   <InputLike
                     value={form.destinationUrl}
                     onChange={(e) => setForm((p) => ({ ...p, destinationUrl: e.target.value }))}
                     placeholder="https://example.com/?utm_source=template"
                   />
                 </Field>
-                <Field label="CTA type">
+                <Field label="Chamada (CTA)">
                   <SelectLike
                     value={form.ctaType}
                     onChange={(e) => setForm((p) => ({ ...p, ctaType: e.target.value }))}
                     options={[
-                      { value: "LEARN_MORE", label: "LEARN_MORE" },
-                      { value: "SHOP_NOW", label: "SHOP_NOW" },
-                      { value: "SIGN_UP", label: "SIGN_UP" },
+                      { value: "LEARN_MORE", label: "Saiba mais" },
+                      { value: "SHOP_NOW", label: "Comprar agora" },
+                      { value: "SIGN_UP", label: "Inscrever-se" },
                     ]}
                   />
                 </Field>
 
-                <Field
-                  label="Vídeos por país (A–E)"
-                  hint="Upload/seleção de vídeo por país e por anúncio (A–E). Dica: use upload múltiplo com nomes tipo BR1.mp4, AE2.mp4."
-                >
-                  <div style={{ display: "grid", gap: 10 }}>
-                    <div className="card" style={{ padding: 12, borderStyle: "dashed" }}>
-                      <div style={{ fontWeight: 950, marginBottom: 6 }}>Upload múltiplo (drag & drop)</div>
-                      <div style={{ color: "#6b7280", fontWeight: 750, fontSize: 12 }}>
-                        Mapeia automaticamente pelo nome do arquivo: <code>BR1</code>…<code>BR5</code> → Ads A–E.
-                      </div>
-                      <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                        <input
-                          type="file"
-                          multiple
-                          accept="video/*"
-                          disabled={busy}
-                          onChange={(e) => onBulkUploadVideos(e.target.files)}
-                        />
-                        <div
-                          onDragOver={(e) => {
-                            e.preventDefault();
-                          }}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            onBulkUploadVideos(e.dataTransfer?.files);
-                          }}
-                          style={{
-                            flex: 1,
-                            minWidth: 220,
-                            padding: "10px 12px",
-                            borderRadius: 12,
-                            border: "1px dashed #cbd5e1",
-                            background: "#f8fafc",
-                            color: "#475569",
-                            fontWeight: 800,
-                            fontSize: 12,
-                          }}
-                        >
-                          Solte os arquivos aqui
-                        </div>
-                      </div>
-                      {bulkUploadSummary ? (
-                        <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
-                          {bulkUploadSummary.mapped?.length ? (
-                            <div style={{ color: "#065f46", fontWeight: 900, fontSize: 12 }}>
-                              Mapeados:{" "}
-                              {bulkUploadSummary.mapped
-                                .slice(0, 8)
-                                .map((m) => `${m.name} → ${m.countryCode} / Ad ${m.adKey}`)
-                                .join(" • ")}
-                              {bulkUploadSummary.mapped.length > 8 ? " …" : ""}
-                            </div>
-                          ) : null}
-                          {bulkUploadSummary.unmapped?.length ? (
-                            <div style={{ color: "#92400e", fontWeight: 900, fontSize: 12 }}>
-                              Não identificados: {bulkUploadSummary.unmapped.slice(0, 8).map((u) => u.name).join(" • ")}
-                              {bulkUploadSummary.unmapped.length > 8 ? " …" : ""}
-                            </div>
-                          ) : null}
-                        </div>
-                      ) : null}
-                    </div>
-
-                    {uniqueCountryCodes(form.countryCodes).length ? (
-                      uniqueCountryCodes(form.countryCodes).map((code) => {
-                          const cc = String(code || "").trim().toUpperCase();
-                          const byAd = form?.mediaByCountry?.[cc] && typeof form.mediaByCountry[cc] === "object" ? form.mediaByCountry[cc] : {};
-                          return (
-                            <div key={cc} className="card" style={{ padding: 12 }}>
-                              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                                <div style={{ fontWeight: 950 }}>{cc}</div>
-                                <div style={{ color: "#6b7280", fontWeight: 850, fontSize: 12 }}>5 vídeos (A–E)</div>
-                              </div>
-                              <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
-                                {AD_KEYS.map((k) => {
-                                  const entry = byAd?.[k] ?? null;
-                                  const isVideo = entry?.mimeType ? String(entry.mimeType).startsWith("video/") : false;
-                                  const previewUrl = entry?.url ? `${getBackendBaseUrl()}${entry.url}` : null;
-                                  return (
-                                    <div key={k} className="card" style={{ padding: 12 }}>
-                                      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                                        <div style={{ fontWeight: 950 }}>{`Ad ${k}`}</div>
-                                        <div style={{ color: "#6b7280", fontWeight: 850, fontSize: 12 }}>
-                                          {entry?.originalName ? entry.originalName : entry?.creativeAssetId ? "Asset selecionado" : "Sem vídeo"}
-                                        </div>
-                                      </div>
-                                  <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
-                                        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                                          <input
-                                            type="file"
-                                            accept="video/*"
-                                            disabled={busy}
-                                            onChange={(e) => onUploadMediaForCountryAd(cc, k, e.target.files?.[0] ?? null)}
-                                          />
-                                          <select
-                                            className="templatesSelect"
-                                            style={{ height: 40, minWidth: 260 }}
-                                            disabled={busy}
-                                            value=""
-                                            onChange={(e) => {
-                                              const id = e.target.value;
-                                              if (!id) return;
-                                              onSelectExistingMediaForCountryAd(cc, k, id);
-                                            }}
-                                          >
-                                            <option value="" disabled>
-                                              Selecionar asset existente…
-                                            </option>
-                                            {(creativeAssets || []).map((a) => (
-                                              <option key={a.id} value={String(a.id)}>
-                                                {a?.original_name
-                                                  ? `${a.original_name} (${String(a.id).slice(0, 8)})`
-                                                  : String(a.id).slice(0, 12)}
-                                              </option>
-                                            ))}
-                                          </select>
-                                          <button
-                                            type="button"
-                                            className="templatesBtnOutline"
-                                            disabled={busy || !entry?.creativeAssetId}
-                                            onClick={() => onRemoveMediaForCountryAd(cc, k)}
-                                          >
-                                            Remover
-                                          </button>
-                                        </div>
-                                        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                                          <div style={{ fontWeight: 900, fontSize: 12, color: "#374151" }}>Thumbnail</div>
-                                          <button
-                                            type="button"
-                                            className="templatesBtnOutline"
-                                            disabled={busy || !entry?.creativeAssetId || Boolean(entry?.thumbnail?.creativeAssetId)}
-                                            onClick={() => onAutoGenerateThumbnailForCountryAd(cc, k, entry?.creativeAssetId)}
-                                          >
-                                            Gerar automaticamente
-                                          </button>
-                                          <input
-                                            type="file"
-                                            accept="image/*"
-                                            disabled={busy}
-                                            onChange={(e) => onUploadThumbnailForCountryAd(cc, k, e.target.files?.[0] ?? null)}
-                                          />
-                                          <select
-                                            className="templatesSelect"
-                                            style={{ height: 40, minWidth: 260 }}
-                                            disabled={busy}
-                                            value=""
-                                            onChange={(e) => {
-                                              const id = e.target.value;
-                                              if (!id) return;
-                                              onSelectExistingThumbnailForCountryAd(cc, k, id);
-                                            }}
-                                          >
-                                            <option value="" disabled>
-                                              Selecionar thumbnail existente…
-                                            </option>
-                                            {(creativeAssets || []).map((a) => (
-                                              <option key={a.id} value={String(a.id)}>
-                                                {a?.original_name
-                                                  ? `${a.original_name} (${String(a.id).slice(0, 8)})`
-                                                  : String(a.id).slice(0, 12)}
-                                              </option>
-                                            ))}
-                                          </select>
-                                          <button
-                                            type="button"
-                                            className="templatesBtnOutline"
-                                            disabled={busy || !entry?.thumbnail?.creativeAssetId}
-                                            onClick={() => onRemoveThumbnailForCountryAd(cc, k)}
-                                          >
-                                            Remover thumbnail
-                                          </button>
-                                        </div>
-                                        {entry?.thumbnail?.mimeType?.startsWith("image/") && entry?.thumbnail?.url ? (
-                                          <img
-                                            src={`${getBackendBaseUrl()}${entry.thumbnail.url}`}
-                                            alt={`Thumbnail ${cc} Ad ${k}`}
-                                            style={{
-                                              width: "100%",
-                                              maxWidth: 520,
-                                              borderRadius: 12,
-                                              border: "1px solid #e5e7eb",
-                                              display: "block",
-                                            }}
-                                          />
-                                        ) : entry?.thumbnail?.creativeAssetId ? (
-                                          <div style={{ color: "#6b7280", fontWeight: 800, fontSize: 12 }}>
-                                            Thumbnail: {entry?.thumbnail?.mimeType || "desconhecido"}
-                                          </div>
-                                        ) : null}
-                                        {isVideo && previewUrl ? (
-                                          <video
-                                            src={previewUrl}
-                                            controls
-                                            className="videoPreview"
-                                            style={{
-                                              maxWidth: 520,
-                                            }}
-                                          />
-                                        ) : entry?.creativeAssetId ? (
-                                          <div style={{ color: "#6b7280", fontWeight: 800, fontSize: 12 }}>
-                                            Tipo: {entry?.mimeType || "desconhecido"}
-                                          </div>
-                                        ) : null}
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          );
-                        })
-                      ) : (
-                        <div className="muted" style={{ fontWeight: 800, fontSize: 12 }}>
-                          Defina países para adicionar mídias.
-                        </div>
-                      )}
-                  </div>
-                </Field>
                 </div>
               </div>
+
+            <div className="templatesCard" style={{ paddingBottom: 16 }}>
+              <div className="templatesCardLabel" style={{ marginBottom: 12 }}>
+                Vídeos por país (A–E)
+              </div>
+              <div className="templatesMediaSection">
+                <div className="templatesDropzone">
+                  <div>
+                    <div className="templatesDropzoneTitle">Enviar vídeos em lote</div>
+                    <div className="templatesDropzoneHint">
+                      Use nomes como <code>BR1.mp4</code>, <code>BR2.mp4</code>, <code>AE1.mp4</code>. O sistema associa automaticamente país e Ad.
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                    <input type="file" multiple accept="video/*" disabled={busy} onChange={(e) => onBulkUploadVideos(e.target.files)} />
+                    <div
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        onBulkUploadVideos(e.dataTransfer?.files);
+                      }}
+                      className="templatesHintBox"
+                      style={{ minWidth: 220 }}
+                    >
+                      Arraste e solte aqui
+                    </div>
+                  </div>
+                </div>
+
+                {bulkUploadSummary ? (
+                  <div style={{ display: "grid", gap: 8 }}>
+                    {bulkUploadSummary.mapped?.length ? (
+                      <div style={{ color: "#065f46", fontWeight: 900, fontSize: 12 }}>
+                        Mapeados:{" "}
+                        {bulkUploadSummary.mapped
+                          .slice(0, 8)
+                          .map((m) => `${m.name} → ${m.countryCode} / Ad ${m.adKey}`)
+                          .join(" • ")}
+                        {bulkUploadSummary.mapped.length > 8 ? " …" : ""}
+                      </div>
+                    ) : null}
+                    {bulkUploadSummary.unmapped?.length ? (
+                      <div style={{ color: "#92400e", fontWeight: 900, fontSize: 12 }}>
+                        Não identificados: {bulkUploadSummary.unmapped.slice(0, 8).map((u) => u.name).join(" • ")}
+                        {bulkUploadSummary.unmapped.length > 8 ? " …" : ""}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {bulkUploadUnknown.length ? (
+                  <div className="templatesHintBox">
+                    <div style={{ fontWeight: 950, marginBottom: 8 }}>Não identificados</div>
+                    <div style={{ display: "grid", gap: 10 }}>
+                      {bulkUploadUnknown.map((u) => {
+                        const draft = bulkUploadUnknownDraft?.[u.id] ?? {};
+                        return (
+                          <div key={u.id} style={{ display: "grid", gridTemplateColumns: "1fr 140px 110px auto", gap: 8, alignItems: "center" }}>
+                            <div style={{ fontWeight: 850, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {u.name}
+                            </div>
+                            <select
+                              className="templatesSelect"
+                              disabled={busy}
+                              value={draft.countryCode || ""}
+                              onChange={(e) =>
+                                setBulkUploadUnknownDraft((p) => ({ ...(p || {}), [u.id]: { ...(p?.[u.id] || {}), countryCode: e.target.value } }))
+                              }
+                            >
+                              <option value="" disabled>
+                                País…
+                              </option>
+                              {uniqueCountryCodes(form.countryCodes).map((cc) => (
+                                <option key={cc} value={cc}>
+                                  {cc}
+                                </option>
+                              ))}
+                            </select>
+                            <select
+                              className="templatesSelect"
+                              disabled={busy}
+                              value={draft.adKey || ""}
+                              onChange={(e) =>
+                                setBulkUploadUnknownDraft((p) => ({ ...(p || {}), [u.id]: { ...(p?.[u.id] || {}), adKey: e.target.value } }))
+                              }
+                            >
+                              <option value="" disabled>
+                                Ad…
+                              </option>
+                              {AD_KEYS.map((k) => (
+                                <option key={k} value={k}>
+                                  {`Ad ${k}`}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              className="templatesBtnOutline"
+                              disabled={busy || !draft.countryCode || !draft.adKey}
+                              onClick={() => onUploadMediaForCountryAd(draft.countryCode, draft.adKey, u.file)}
+                            >
+                              Enviar
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+
+                {uniqueCountryCodes(form.countryCodes).length ? (
+                  uniqueCountryCodes(form.countryCodes).map((code) => {
+                    const cc = String(code || "").trim().toUpperCase();
+                    const byAd = form?.mediaByCountry?.[cc] && typeof form.mediaByCountry[cc] === "object" ? form.mediaByCountry[cc] : {};
+                    const rows = AD_KEYS.map((k) => {
+                      const entry = byAd?.[k] ?? null;
+                      const isVideo = entry?.mimeType ? String(entry.mimeType).startsWith("video/") : false;
+                      const previewUrl = entry?.url ? `${getBackendBaseUrl()}${entry.url}` : null;
+                      const hasVideo = Boolean(entry?.creativeAssetId);
+                      const hasThumb = Boolean(entry?.thumbnail?.creativeAssetId);
+                      let status = { tone: "muted", label: "Sem vídeo" };
+                      if (hasVideo && !isVideo) status = { tone: "bad", label: "Erro" };
+                      else if (hasVideo && hasThumb) status = { tone: "good", label: "Pronto" };
+                      else if (hasVideo && !hasThumb) status = { tone: "warn", label: "Thumbnail pendente" };
+                      return { adKey: k, entry, isVideo, previewUrl, status };
+                    });
+                    const readyCount = rows.filter((r) => r.entry?.creativeAssetId).length;
+                    return (
+                      <div key={cc} className="templatesMediaCountry">
+                        <div className="templatesMediaCountryHead">
+                          <div className="templatesMediaCountryCode">{cc}</div>
+                          <StatusPill tone={readyCount === AD_KEYS.length ? "good" : readyCount > 0 ? "info" : "muted"}>
+                            {`${readyCount}/${AD_KEYS.length} vídeos`}
+                          </StatusPill>
+                        </div>
+
+                        <div className="templatesMediaRows">
+                          {rows.map((r) => {
+                            const filename = r.entry?.originalName || (r.entry?.creativeAssetId ? "Asset selecionado" : "—");
+                            return (
+                              <div key={r.adKey} className="templatesMediaRow">
+                                <div className="templatesMediaRowTitle">{`Ad ${r.adKey}`}</div>
+                                <div>
+                                  {r.isVideo && r.previewUrl ? (
+                                    <CompactVideoPreview src={r.previewUrl} label={`${cc} Ad ${r.adKey}`} size="sm" />
+                                  ) : (
+                                    <div className="videoThumb videoThumbSm" style={{ display: "grid", placeItems: "center", color: "#94a3b8" }}>
+                                      —
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="templatesMediaFilename" title={filename}>
+                                  {filename}
+                                </div>
+                                <StatusPill tone={r.status.tone}>{r.status.label}</StatusPill>
+                                <div className="templatesMediaRowActions">
+                                  <AdvancedDisclosure summary="Trocar / editar">
+                                    <div style={{ display: "grid", gap: 10 }}>
+                                      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                                        <input
+                                          type="file"
+                                          accept="video/*"
+                                          disabled={busy}
+                                          onChange={(e) => onUploadMediaForCountryAd(cc, r.adKey, e.target.files?.[0] ?? null)}
+                                        />
+                                        <select
+                                          className="templatesSelect"
+                                          style={{ height: 40, minWidth: 260 }}
+                                          disabled={busy}
+                                          value=""
+                                          onChange={(e) => {
+                                            const id = e.target.value;
+                                            if (!id) return;
+                                            onSelectExistingMediaForCountryAd(cc, r.adKey, id);
+                                          }}
+                                        >
+                                          <option value="" disabled>
+                                            Selecionar asset existente…
+                                          </option>
+                                          {(creativeAssets || []).map((a) => (
+                                            <option key={a.id} value={String(a.id)}>
+                                              {a?.original_name ? `${a.original_name} (${String(a.id).slice(0, 8)})` : String(a.id).slice(0, 12)}
+                                            </option>
+                                          ))}
+                                        </select>
+                                        <button
+                                          type="button"
+                                          className="templatesBtnOutline"
+                                          disabled={busy || !r.entry?.creativeAssetId}
+                                          onClick={() => onRemoveMediaForCountryAd(cc, r.adKey)}
+                                        >
+                                          Remover vídeo
+                                        </button>
+                                      </div>
+
+                                      <AdvancedDisclosure summary="Editar thumbnail">
+                                        <div style={{ display: "grid", gap: 10 }}>
+                                          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                                            <button
+                                              type="button"
+                                              className="templatesBtnOutline"
+                                              disabled={busy || !r.entry?.creativeAssetId}
+                                              onClick={() => onAutoGenerateThumbnailForCountryAd(cc, r.adKey, r.entry.creativeAssetId)}
+                                            >
+                                              Gerar automática
+                                            </button>
+                                            <input
+                                              type="file"
+                                              accept="image/*"
+                                              disabled={busy}
+                                              onChange={(e) => onUploadThumbnailForCountryAd(cc, r.adKey, e.target.files?.[0] ?? null)}
+                                            />
+                                            <select
+                                              className="templatesSelect"
+                                              style={{ height: 40, minWidth: 260 }}
+                                              disabled={busy}
+                                              value=""
+                                              onChange={(e) => {
+                                                const id = e.target.value;
+                                                if (!id) return;
+                                                onSelectExistingThumbnailForCountryAd(cc, r.adKey, id);
+                                              }}
+                                            >
+                                              <option value="" disabled>
+                                                Selecionar thumbnail existente…
+                                              </option>
+                                              {(creativeAssets || []).map((a) => (
+                                                <option key={a.id} value={String(a.id)}>
+                                                  {a?.original_name ? `${a.original_name} (${String(a.id).slice(0, 8)})` : String(a.id).slice(0, 12)}
+                                                </option>
+                                              ))}
+                                            </select>
+                                            <button
+                                              type="button"
+                                              className="templatesBtnOutline"
+                                              disabled={busy || !r.entry?.thumbnail?.creativeAssetId}
+                                              onClick={() => onRemoveThumbnailForCountryAd(cc, r.adKey)}
+                                            >
+                                              Remover thumbnail
+                                            </button>
+                                          </div>
+                                          {r.entry?.thumbnail?.mimeType?.startsWith("image/") && r.entry?.thumbnail?.url ? (
+                                            <img
+                                              src={`${getBackendBaseUrl()}${r.entry.thumbnail.url}`}
+                                              alt={`Thumbnail ${cc} Ad ${r.adKey}`}
+                                              style={{
+                                                width: "100%",
+                                                maxWidth: 360,
+                                                borderRadius: 12,
+                                                border: "1px solid #e5e7eb",
+                                                display: "block",
+                                              }}
+                                            />
+                                          ) : null}
+                                        </div>
+                                      </AdvancedDisclosure>
+                                    </div>
+                                  </AdvancedDisclosure>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="muted" style={{ fontWeight: 800, fontSize: 12 }}>
+                    Defina países para adicionar vídeos.
+                  </div>
+                )}
+              </div>
+            </div>
             <div className="templatesFormFooter">
               <div className="templatesFormFooterLabel">{editingId ? "Editando template" : "Novo template"}</div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
@@ -1421,18 +1522,6 @@ export default function Templates() {
                   const adCount = computeAdCount(payload);
                   const countries = uniqueCountryCodes(payload.countryCodes);
                   const active = String(t.id) === String(selectedId);
-                  const tagTone =
-                    status.tone === "good"
-                      ? "templatesStatusTagGood"
-                      : status.tone === "info"
-                        ? "templatesStatusTagInfo"
-                        : "templatesStatusTagMuted";
-                  const mediaTone =
-                    mediaStatus.tone === "good"
-                      ? "templatesStatusTagGood"
-                      : mediaStatus.tone === "info"
-                        ? "templatesStatusTagInfo"
-                        : "templatesStatusTagMuted";
                   return (
                     <button
                       key={t.id}
@@ -1446,10 +1535,16 @@ export default function Templates() {
                     >
                       <div className="templatesTplName">{t.name}</div>
                       <div className="templatesTplMetaRow">
-                        <div>{countries.length ? `${countries.length} país(es)` : "Sem países"}</div>
-                        <div>{`${adCount} ad(s)`}</div>
-                        <div className={`templatesStatusTag ${tagTone}`}>{status.label}</div>
-                        <div className={`templatesStatusTag ${mediaTone}`}>{mediaStatus.label}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", minWidth: 0 }}>
+                          <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {countries.length ? `${countries.length} países` : "Sem países"}
+                          </div>
+                          <span className="templatesSep">·</span>
+                          <div>{`${adCount} ads`}</div>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                          <div className="templatesTplStatusLine">{`${status.label} · ${mediaStatus.label}`}</div>
+                        </div>
                       </div>
                     </button>
                   );
@@ -1479,10 +1574,10 @@ export default function Templates() {
                   const mediaByCountry = normalizeMediaByCountry(getMediaByCountryFromPayload(payload));
                   const backendBase = getBackendBaseUrl();
                   const adCount = computeAdCount(payload);
-                  const primaryPreview = normalizeNonEmptyString(payload.primaryText)
-                    ? `${String(payload.primaryText).slice(0, 70)}${String(payload.primaryText).length > 70 ? "…" : ""}`
-                    : "—";
                   const adVariants = getAdVariantsFromPayload(payload);
+                  const primaryPreview = normalizeNonEmptyString(adVariants?.[0]?.primaryText)
+                    ? `${String(adVariants[0].primaryText).slice(0, 70)}${String(adVariants[0].primaryText).length > 70 ? "…" : ""}`
+                    : "—";
                   const tagTone =
                     status.tone === "good"
                       ? "templatesStatusTagGood"
@@ -1524,7 +1619,7 @@ export default function Templates() {
 
                         <div className="templatesDetailActions">
                           <button type="button" className="templatesBtnPrimary" disabled={busy} onClick={useInCampaignFlowSelected}>
-                            Usar no /campaign-flow
+                            Usar no fluxo de campanha
                           </button>
                           <button
                             type="button"
@@ -1545,100 +1640,174 @@ export default function Templates() {
 
                       <div className="templatesDetailBody">
                         <div className="templatesDetailCol">
-                          <div className="templatesColTitle">Campaign</div>
+                          <div className="templatesColTitle">Campanha</div>
                           <div className="templatesKv">
-                            <div className="templatesK">objective</div>
-                            <div className="templatesV">{payload.objective ?? "—"}</div>
+                            <div className="templatesK">Objetivo</div>
+                            <div className="templatesV">{OBJECTIVE_LABEL_BY_VALUE[payload.objective] ?? payload.objective ?? "—"}</div>
                           </div>
                         </div>
                         <div className="templatesDetailCol templatesDetailColAlt">
                           <div className="templatesColTitle">AdSet</div>
                           <div className="templatesKv">
-                            <div className="templatesK">dailyBudgetCents</div>
-                            <div className="templatesV">{payload.dailyBudgetCents ?? "—"}</div>
+                            <div className="templatesK">Orçamento diário</div>
+                            <div className="templatesV">
+                              {payload.dailyBudgetCents !== null && payload.dailyBudgetCents !== undefined ? `${payload.dailyBudgetCents} centavos` : "—"}
+                            </div>
                           </div>
                           <div className="templatesKv">
-                            <div className="templatesK">billingEvent</div>
-                            <div className="templatesV">{payload.billingEvent ?? "—"}</div>
+                            <div className="templatesK">Cobrança</div>
+                            <div className="templatesV">{BILLING_EVENT_LABEL_BY_VALUE[payload.billingEvent] ?? payload.billingEvent ?? "—"}</div>
                           </div>
                           <div className="templatesKv">
-                            <div className="templatesK">optimizationGoal</div>
-                            <div className="templatesV">{payload.optimizationGoal ?? "—"}</div>
+                            <div className="templatesK">Otimização</div>
+                            <div className="templatesV">
+                              {OPTIMIZATION_GOAL_LABEL_BY_VALUE[payload.optimizationGoal] ?? payload.optimizationGoal ?? "—"}
+                            </div>
                           </div>
                         </div>
                       </div>
 
                       <div className="templatesCreativeBlock">
-                        <div className="templatesColTitle">Creative</div>
+                        <div className="templatesColTitle">Criativo</div>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 24px" }}>
                           <div className="templatesKv">
-                            <div className="templatesK">primaryText</div>
+                            <div className="templatesK">Texto principal (Ad A)</div>
                             <div className="templatesV">{primaryPreview}</div>
                           </div>
                           <div className="templatesKv">
-                            <div className="templatesK">headline</div>
-                            <div className="templatesV">{payload.headline || "—"}</div>
+                            <div className="templatesK">Título (Ad A)</div>
+                            <div className="templatesV">{normalizeNonEmptyString(adVariants?.[0]?.headline) ? adVariants[0].headline : "—"}</div>
                           </div>
                           <div className="templatesKv">
-                            <div className="templatesK">description</div>
-                            <div className="templatesV">{payload.description || "—"}</div>
+                            <div className="templatesK">Descrição (Ad A)</div>
+                            <div className="templatesV">{normalizeNonEmptyString(adVariants?.[0]?.description) ? adVariants[0].description : "—"}</div>
                           </div>
                           <div className="templatesKv">
-                            <div className="templatesK">destinationUrl</div>
+                            <div className="templatesK">URL de destino</div>
                             <div className="templatesV">{normalizeNonEmptyString(payload.destinationUrl) ? String(payload.destinationUrl) : "—"}</div>
                           </div>
                           <div className="templatesKv">
-                            <div className="templatesK">ctaType</div>
-                            <div className="templatesV">{payload.ctaType ?? "—"}</div>
+                            <div className="templatesK">Chamada (CTA)</div>
+                            <div className="templatesV">{CTA_LABEL_BY_VALUE[payload.ctaType] ?? payload.ctaType ?? "—"}</div>
                           </div>
                         </div>
+                        <AdvancedDisclosure summary="Ver variações (Ads A–E)">
+                          <div style={{ display: "grid", gap: 10 }}>
+                            {(adVariants || []).slice(0, AD_KEYS.length).map((v, idx) => {
+                              const k = AD_KEYS[idx] ?? String(v?.key || "");
+                              const primary = normalizeNonEmptyString(v?.primaryText) ? String(v.primaryText) : "—";
+                              const headline = normalizeNonEmptyString(v?.headline) ? String(v.headline) : "—";
+                              const description = normalizeNonEmptyString(v?.description) ? String(v.description) : "—";
+                              return (
+                                <div key={k} className="templatesHintBox" style={{ background: "#ffffff" }}>
+                                  <div style={{ fontWeight: 950, marginBottom: 8 }}>{`Ad ${k}`}</div>
+                                  <div style={{ display: "grid", gap: 6 }}>
+                                    <div style={{ fontWeight: 900, color: "#6b7280", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                                      Texto principal
+                                    </div>
+                                    <div style={{ fontWeight: 800, fontSize: 12, whiteSpace: "pre-wrap" }}>{primary}</div>
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                                      <div>
+                                        <div
+                                          style={{
+                                            fontWeight: 900,
+                                            color: "#6b7280",
+                                            fontSize: 11,
+                                            textTransform: "uppercase",
+                                            letterSpacing: "0.08em",
+                                          }}
+                                        >
+                                          Título
+                                        </div>
+                                        <div style={{ fontWeight: 800, fontSize: 12, whiteSpace: "pre-wrap" }}>{headline}</div>
+                                      </div>
+                                      <div>
+                                        <div
+                                          style={{
+                                            fontWeight: 900,
+                                            color: "#6b7280",
+                                            fontSize: 11,
+                                            textTransform: "uppercase",
+                                            letterSpacing: "0.08em",
+                                          }}
+                                        >
+                                          Descrição
+                                        </div>
+                                        <div style={{ fontWeight: 800, fontSize: 12, whiteSpace: "pre-wrap" }}>{description}</div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </AdvancedDisclosure>
                       </div>
 
                       <div className="templatesCreativeBlock" style={{ marginTop: 12 }}>
                         <div className="templatesColTitle">Vídeos por país (A–E)</div>
-                        <div style={{ color: "#6b7280", fontWeight: 750, fontSize: 12 }}>
-                          Cada país deve ter 5 vídeos (A–E) vinculados via `creative_assets`.
-                        </div>
                         <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
                           {countries.length ? (
                             countries.map((code) => {
                               const cc = String(code || "").trim().toUpperCase();
                               const byAd = mediaByCountry?.[cc] && typeof mediaByCountry[cc] === "object" ? mediaByCountry[cc] : {};
+                              const rows = AD_KEYS.map((k) => {
+                                const entry = byAd?.[k] ?? null;
+                                const isVideo = entry?.mimeType ? String(entry.mimeType).startsWith("video/") : false;
+                                const previewUrl = entry?.url ? `${backendBase}${entry.url}` : null;
+                                const hasVideo = Boolean(entry?.creativeAssetId);
+                                const hasThumb = Boolean(entry?.thumbnail?.creativeAssetId);
+                                let status = { tone: "muted", label: "Sem vídeo" };
+                                if (hasVideo && !isVideo) status = { tone: "bad", label: "Erro" };
+                                else if (hasVideo && hasThumb) status = { tone: "good", label: "Pronto" };
+                                else if (hasVideo && !hasThumb) status = { tone: "warn", label: "Thumbnail pendente" };
+                                return { adKey: k, entry, isVideo, previewUrl, status };
+                              });
+                              const readyCount = rows.filter((r) => r.entry?.creativeAssetId).length;
                               return (
-                                <div key={cc} className="card" style={{ padding: 12 }}>
-                                  <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                                    <div style={{ fontWeight: 950 }}>{cc}</div>
-                                    <div style={{ color: "#6b7280", fontWeight: 850, fontSize: 12 }}>Ads A–E</div>
+                                <div key={cc} className="templatesMediaCountry">
+                                  <div className="templatesMediaCountryHead">
+                                    <div className="templatesMediaCountryCode">{cc}</div>
+                                    <StatusPill tone={readyCount === AD_KEYS.length ? "good" : readyCount > 0 ? "info" : "muted"}>
+                                      {`${readyCount}/${AD_KEYS.length} vídeos`}
+                                    </StatusPill>
                                   </div>
-                                  <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
-                                    {AD_KEYS.map((k) => {
-                                      const entry = byAd?.[k] ?? null;
-                                      const isVideo = entry?.mimeType ? String(entry.mimeType).startsWith("video/") : false;
-                                      const previewUrl = entry?.url ? `${backendBase}${entry.url}` : null;
+
+                                  <div className="templatesMediaRows">
+                                    {rows.map((r) => {
+                                      const filename = r.entry?.originalName || (r.entry?.creativeAssetId ? "Asset selecionado" : "—");
                                       return (
-                                        <div key={k} className="card" style={{ padding: 12 }}>
-                                          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                                            <div style={{ fontWeight: 950 }}>{`Ad ${k}`}</div>
-                                            <div style={{ color: "#6b7280", fontWeight: 850, fontSize: 12 }}>
-                                              {entry?.originalName ? entry.originalName : entry?.creativeAssetId ? "Asset selecionado" : "Sem vídeo"}
-                                            </div>
+                                        <div key={r.adKey} className="templatesMediaRow">
+                                          <div className="templatesMediaRowTitle">{`Ad ${r.adKey}`}</div>
+                                          <div>
+                                            {r.isVideo && r.previewUrl ? (
+                                              <CompactVideoPreview src={r.previewUrl} label={`${cc} Ad ${r.adKey}`} size="sm" />
+                                            ) : (
+                                              <div
+                                                className="videoThumb videoThumbSm"
+                                                style={{ display: "grid", placeItems: "center", color: "#94a3b8" }}
+                                              >
+                                                —
+                                              </div>
+                                            )}
                                           </div>
-                                          {isVideo && previewUrl ? (
-                                            <div style={{ marginTop: 10 }}>
-                                              <video
-                                                src={previewUrl}
-                                                controls
-                                                className="videoPreview"
-                                                style={{
-                                                  maxWidth: 520,
-                                                }}
-                                              />
-                                            </div>
-                                          ) : (
-                                            <div style={{ marginTop: 10, color: "#6b7280", fontWeight: 800, fontSize: 12 }}>
-                                              {entry?.creativeAssetId ? `Tipo: ${entry?.mimeType || "desconhecido"}` : "—"}
-                                            </div>
-                                          )}
+                                          <div className="templatesMediaFilename" title={filename}>
+                                            {filename}
+                                          </div>
+                                          <StatusPill tone={r.status.tone}>{r.status.label}</StatusPill>
+                                          <div style={{ justifySelf: "end" }}>
+                                            {r.previewUrl ? (
+                                              <button
+                                                type="button"
+                                                className="templatesLinkButton"
+                                                onClick={() => window.open(r.previewUrl, "_blank", "noopener,noreferrer")}
+                                              >
+                                                Abrir
+                                              </button>
+                                            ) : (
+                                              <div style={{ color: "#6b7280", fontWeight: 850, fontSize: 12 }}>—</div>
+                                            )}
+                                          </div>
                                         </div>
                                       );
                                     })}
@@ -1659,6 +1828,7 @@ export default function Templates() {
                         <div style={{ color: "#6b7280", fontWeight: 750, fontSize: 12 }}>
                           Mostra o que será usado por país: tradução quando existir (exceto BR); caso contrário, texto base (PT-BR).
                         </div>
+                        <AdvancedDisclosure summary="Ver revisão por país (avançado)">
                         <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
                           {countries.length ? (
                             countries.map((code) => {
@@ -1743,6 +1913,7 @@ export default function Templates() {
                             </div>
                           )}
                         </div>
+                        </AdvancedDisclosure>
                       </div>
 
                       <div className="templatesTranslationsBar">
@@ -1799,7 +1970,7 @@ export default function Templates() {
                                     <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
                                       <div style={{ fontWeight: 950 }}>{c}</div>
                                       <div className="muted" style={{ fontWeight: 900, fontSize: 12 }}>
-                                        idioma: {lang || "— (defina no /profile)"}
+                                        idioma: {lang || "— (defina no Perfil)"}
                                       </div>
                                     </div>
 
@@ -1810,7 +1981,7 @@ export default function Templates() {
                                             <div key={k} className="card" style={{ padding: 12 }}>
                                               <div style={{ fontWeight: 950, marginBottom: 10 }}>{`Ad ${k}`}</div>
                                               <div style={{ display: "grid", gap: 10 }}>
-                                                <Field label="primary text">
+                                                <Field label="Texto principal">
                                                   <TextAreaLike
                                                     value={ad?.primaryText ?? ""}
                                                     onChange={(e) =>
@@ -1828,11 +1999,11 @@ export default function Templates() {
                                                       })
                                                     }
                                                     rows={3}
-                                                    placeholder="Tradução do primaryText"
+                                                    placeholder="Tradução do texto principal…"
                                                   />
                                                 </Field>
                                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                                                  <Field label="headline">
+                                                  <Field label="Título">
                                                     <InputLike
                                                       value={ad?.headline ?? ""}
                                                       onChange={(e) =>
@@ -1849,10 +2020,10 @@ export default function Templates() {
                                                           };
                                                         })
                                                       }
-                                                      placeholder="Tradução do headline"
+                                                      placeholder="Tradução do título…"
                                                     />
                                                   </Field>
-                                                  <Field label="description">
+                                                  <Field label="Descrição">
                                                     <InputLike
                                                       value={ad?.description ?? ""}
                                                       onChange={(e) =>
@@ -1869,7 +2040,7 @@ export default function Templates() {
                                                           };
                                                         })
                                                       }
-                                                      placeholder="Tradução do description"
+                                                      placeholder="Tradução da descrição…"
                                                     />
                                                   </Field>
                                                 </div>

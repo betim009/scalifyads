@@ -1841,40 +1841,68 @@ Evidências:
 
 - [2026-05-29 12:21] `cd frontend && npm run build` (OK) após P27.5.4 (revisão editável: texto + vídeo por país/Ad).
 
-### P27.6 — Polimento visual global
+### P27.6 — Redesign visual operacional completo do sistema
 
-Última atualização: [2026-05-29 15:06]
+Última atualização: [2026-05-29 15:30]
 
 Objetivo:
-Melhorar a experiência visual do sistema inteiro sem alterar regras de negócio.
+Transformar o sistema em uma interface mais limpa, minimalista e operacional (cliente-ready), sem alterar regras de negócio.
 
-Tarefas:
+Regras obrigatórias (escopo):
 
-- [x] Auditar telas principais:
-  - /templates
-  - /campaign-flow
-  - /profile
-  - /roi-operacional
-  - dashboard/home
-- [x] Reduzir bordas duplicadas.
-- [x] Evitar card dentro de card dentro de card.
-- [x] Substituir bordas internas por:
-  - espaçamento
-  - divisores leves
-  - background sutil
-  - tipografia
-- [x] Padronizar cards principais.
-- [x] Padronizar seções internas sem bordas fortes.
-- [x] Reduzir preview de vídeo em pelo menos 80%.
-- [x] Definir altura máxima para previews de vídeo.
-- [x] Evitar vídeos gigantes ocupando a tela.
-- [x] Garantir que previews continuam funcionais.
-- [x] Não alterar fluxo REAL.
-- [x] Não alterar templates.
-- [x] Não alterar upload.
-- [x] Não alterar tradução.
-- [x] Não alterar criação Meta.
+- Não alterar regra de negócio.
+- Não quebrar: templates, traduções, upload múltiplo, thumbnails automáticas, /campaign-flow, execução REAL, /profile, /meta-test.
+- Guardrails: tudo REAL continua obrigatoriamente `PAUSED` (nunca `ACTIVE`) e token nunca vai ao frontend.
+
+Telas obrigatórias:
+
+- /templates (prioridade máxima)
+- /campaign-flow (prioridade máxima)
+- /profile
+- /roi-operacional
+- dashboard/home (se aplicável)
+
+Checklist (P27.6.x):
+
+#### P27.6.0 — Passo inicial (polimento rápido)
+
+- [x] Reduzir bordas duplicadas (baseline).
+- [x] Reduzir nesting de cards via estilos globais (baseline).
+- [x] Reduzir previews de vídeo e definir altura máxima (baseline).
 - [x] Rodar build.
+
+#### P27.6.1 — Layout da página Templates
+
+- [x] Topo: textos menos técnicos (evitar “/campaign-flow” e “/meta-test”).
+- [x] “Criar template”: estrutura em 3 linhas (Campanha/AdSet, Criativo, Vídeos por país).
+- [x] Labels mais humanos (Texto principal, Título, Descrição, etc).
+- [x] Esconder opções avançadas por padrão (ex.: ações técnicas).
+
+#### P27.6.2 — Seção de vídeos compacta (Templates)
+
+- [x] Substituir card→card→card por lista operacional compacta (por país, Ads A–E).
+- [x] Preview compacto (thumbnail-like): max-width ~140px, max-height ~80px, `object-fit: cover`.
+- [x] Status simples por Ad: Pronto / Sem vídeo / Thumbnail pendente / Erro.
+- [x] Thumbnail manual escondida por padrão (Opções avançadas).
+- [x] Upload múltiplo destacado + mapa de associação + “Não identificados” com associação manual.
+
+#### P27.6.3 — “Meus templates” (lista + detalhe)
+
+- [x] Lista lateral mais legível (menos badges, sem quebra visual).
+- [x] Item: nome + resumo (ex.: “2 países · 5 ads”) + status compacto.
+- [x] Painel de detalhe: labels humanos e texto longo com expand/line-clamp sem cortar feio.
+
+#### P27.6.4 — Redesign do /campaign-flow (revisão + resultado)
+
+- [x] Revisão por país mais compacta (lista/tabela visual; evitar cards grandes por Ad).
+- [x] Preview de vídeo compacta na revisão.
+- [ ] Resultado: resumo operacional (IDs + status) e JSON completo apenas sob ação explícita.
+
+#### P27.6.5 — Polimento visual global
+
+- [x] Padronizar status/badges e hierarquia visual.
+- [x] Reduzir radius/sombras onde estiver excessivo.
+- [x] Reduzir bordas internas (preferir divisores/spacing).
 
 Regras visuais:
 
@@ -1895,14 +1923,10 @@ Sugestão:
 Validação:
 `cd frontend && npm run build`
 
-Depois:
-
-- Atualizar PLANS.md com timestamp.
-- Criar commit incremental.
-
 Evidências:
 
 - [2026-05-29 15:06] `cd frontend && npm run build` (OK) após P27.6 (polimento visual global: cards/bordas + previews de vídeo compactos).
+- [2026-05-29 15:30] `cd frontend && npm run build` (OK) após redesign operacional completo do `/templates` + revisão do `/campaign-flow` (P27.6.1–P27.6.5 parcial).
 
 ## Decision Log (Ativo)
 
