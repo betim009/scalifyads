@@ -1534,6 +1534,83 @@ Validação executada (local):
 
 - [2026-05-28 20:20] `cd frontend && npm run build` (OK) após aplicar design premium no `/templates` (P27.1).
 
+### P27.2 — Mídias por país no template
+
+Última atualização: [2026-05-29 09:43]
+
+Objetivo:
+Permitir que um template tenha mídias específicas por país e que o `/campaign-flow` use automaticamente a mídia correta ao criar a campanha/anúncio daquele país.
+
+Regra operacional (obrigatória):
+Texto/copy e mídia seguem a mesma lógica por país:
+
+- BR usa copy BR + mídia BR
+- AE usa copy AE + mídia AE
+- US usa copy US + mídia US
+
+Escopo inicial:
+
+- Priorizar **imagem** (fluxo REAL atual já suporta upload de imagem via `creative_assets` → publish do Creative).
+- Vídeo: **item futuro** (publicação de vídeo no Meta Creative pode exigir fluxo/endpoint diferente do upload de imagem).
+
+Regras obrigatórias (guardrails):
+
+- Não quebrar `/templates`.
+- Não quebrar `/campaign-flow`.
+- Não quebrar `/meta-test`.
+- Não criar opção `ACTIVE`.
+- Toda criação REAL continua `PAUSED`.
+- Token nunca vai para o frontend.
+- Não criar upload paralelo: reaproveitar `creative_assets`.
+- Não fazer refactor massivo.
+
+Tarefas:
+
+- [x] Auditar suporte atual a upload de imagem/vídeo. (Upload genérico existe; publish REAL atual operacionaliza **imagem**.)
+- [x] Identificar se `creative_assets` já suporta tipo de arquivo, path/url e `mime_type`. (Sim: `stored_name`, `original_name`, `mime_type`, `url` via `/uploads/...`.)
+- [x] Criar/ajustar persistência para vincular mídia ao template por país. (Via `payload.mediaByCountry` no `flow_templates`.)
+- [x] Em `/templates`, adicionar seção `Mídias por país`.
+- [x] Para cada país do template, permitir selecionar/enviar uma mídia. (Imagem.)
+- [x] Exibir preview por país:
+  - imagem quando for imagem;
+  - nome do arquivo quando preview não for possível.
+- [x] Permitir substituir mídia por país.
+- [x] Permitir remover mídia por país.
+- [x] Em `Meus templates`, exibir status de mídia:
+  - `Sem mídia`
+  - `Mídia parcial`
+  - `Mídias completas`
+- [x] Na visualização do template, mostrar copy + mídia por país.
+- [x] Ao clicar `Usar no /campaign-flow`, carregar também as mídias por país.
+- [x] Na etapa de revisão do `/campaign-flow`, exibir para cada país:
+  - copy final;
+  - mídia final;
+  - status da mídia.
+- [x] Na execução em lote, criar/publicar o Creative usando a mídia correta daquele país.
+- [x] Se um país não tiver mídia:
+  - bloquear execução REAL desse país (com confirmação para continuar o lote pulando o país);
+- [x] Em caso de erro de mídia em um país, continuar os próximos países.
+- [x] Registrar erro de mídia por país de forma clara.
+- [x] Validar build do frontend.
+
+Critérios de aceite:
+
+- [x] Um template pode ter mídia diferente por país.
+- [x] O usuário consegue revisar copy + mídia por país antes de executar.
+- [x] O `/campaign-flow` usa automaticamente a mídia correta por país.
+- [x] Execução em lote não usa a mídia errada em país errado.
+- [x] Erro em uma mídia não quebra o lote inteiro.
+- [x] Tudo REAL continua `PAUSED`.
+- [x] Build passa.
+
+Validação obrigatória:
+
+- [x] `cd frontend && npm run build`
+
+Validação executada (local):
+
+- [2026-05-29 09:43] `cd frontend && npm run build` (OK) após P27.2 (mídias por país no template + uso no lote).
+
 ## Decision Log (Ativo)
 
 Última atualização: [2026-05-26 12:10]

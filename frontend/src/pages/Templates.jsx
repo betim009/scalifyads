@@ -9,6 +9,8 @@ import {
   updateFlowTemplate,
 } from "../services/flowTemplates.js";
 import { getAuthMe } from "../services/auth.js";
+import { listCreativeAssets, uploadCreativeAsset } from "../services/creativeAssets.js";
+import { getBackendBaseUrl } from "../services/http.js";
 
 const STORAGE_LAST_EXECUTION_KEY = "campaignFlow:lastExecution:v1";
 const TAB_CREATE = "create";
@@ -41,12 +43,71 @@ function getTranslationsByCountryFromPayload(payload) {
   return payload?.translationsByCountry && typeof payload.translationsByCountry === "object" ? payload.translationsByCountry : {};
 }
 
+function getMediaByCountryFromPayload(payload) {
+  return payload?.mediaByCountry && typeof payload.mediaByCountry === "object" ? payload.mediaByCountry : {};
+}
+
 function computeTranslationsStatus(payload) {
   const translations = getTranslationsByCountryFromPayload(payload);
   const count = Object.keys(translations || {}).length;
   if (!count) return { label: "Sem traduções", tone: "muted" };
   const reviewed = payload?.translationsReviewStatus === "reviewed" || Boolean(payload?.translationsReviewedAt);
   return { label: reviewed ? "Revisado" : "Traduções geradas", tone: reviewed ? "good" : "info" };
+}
+
+function computeMediaStatus(payload) {
+  const media = getMediaByCountryFromPayload(payload);
+  const countries = uniqueCountryCodes(payload?.countryCodes);
+  if (!countries.length) return { label: "Sem mídia", tone: "muted" };
+
+  let withMedia = 0;
+  for (const c of countries) {
+    const cc = String(c || "").trim().toUpperCase();
+    const entry = media?.[cc] && typeof media[cc] === "object" ? media[cc] : null;
+    if (entry?.creativeAssetId) withMedia += 1;
+  }
+
+  if (withMedia === 0) return { label: "Sem mídia", tone: "muted" };
+  if (withMedia < countries.length) return { label: "Mídia parcial", tone: "info" };
+  return { label: "Mídias completas", tone: "good" };
+}
+
+function normalizeMediaEntry(asset) {
+  const id = normalizeNonEmptyString(asset?.id);
+  if (!id) return null;
+  const mimeType = normalizeNonEmptyString(asset?.mime_type) || null;
+  const originalName = normalizeNonEmptyString(asset?.original_name) || null;
+  const url = normalizeNonEmptyString(asset?.url) || null;
+  return {
+    creativeAssetId: id,
+    mimeType,
+    originalName,
+    url,
+    kind: mimeType && mimeType.startsWith("image/") ? "image" : mimeType && mimeType.startsWith("video/") ? "video" : "unknown",
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function normalizeMediaByCountry(value) {
+  if (!value || typeof value !== "object") return {};
+  const out = {};
+  for (const [rawKey, rawEntry] of Object.entries(value)) {
+    const cc = String(rawKey || "").trim().toUpperCase();
+    if (!cc) continue;
+    const entry = rawEntry && typeof rawEntry === "object" ? rawEntry : null;
+    if (!entry) continue;
+    const creativeAssetId = normalizeNonEmptyString(entry?.creativeAssetId);
+    if (!creativeAssetId) continue;
+    out[cc] = {
+      creativeAssetId,
+      mimeType: normalizeNonEmptyString(entry?.mimeType) || null,
+      originalName: normalizeNonEmptyString(entry?.originalName) || null,
+      url: normalizeNonEmptyString(entry?.url) || null,
+      kind: normalizeNonEmptyString(entry?.kind) || null,
+      updatedAt: normalizeNonEmptyString(entry?.updatedAt) || null,
+    };
+  }
+  return out;
 }
 
 function Field({ label, hint, children }) {
@@ -115,6 +176,7 @@ function buildPayloadFromForm(form) {
     description: normalizeNonEmptyString(form.description) || "",
     destinationUrl: normalizeNonEmptyString(form.destinationUrl) || "",
     ctaType: normalizeNonEmptyString(form.ctaType) || "LEARN_MORE",
+    mediaByCountry: normalizeMediaByCountry(form?.mediaByCountry),
   };
 }
 
@@ -138,6 +200,8 @@ export default function Templates() {
   const [translationsDraftByCountry, setTranslationsDraftByCountry] = useState({});
   const [showTranslationsEditor, setShowTranslationsEditor] = useState(false);
 
+  const [creativeAssets, setCreativeAssets] = useState([]);
+
   const [form, setForm] = useState({
     name: "",
     objective: "OUTCOME_TRAFFIC",
@@ -150,6 +214,7 @@ export default function Templates() {
     description: "",
     destinationUrl: "",
     ctaType: "LEARN_MORE",
+    mediaByCountry: {},
   });
 
   const selectedTemplate = useMemo(() => templates.find((t) => String(t.id) === String(selectedId)), [templates, selectedId]);
@@ -176,6 +241,22 @@ export default function Templates() {
       .finally(() => {
         if (!alive) return;
         setLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    listCreativeAssets({ limit: 200 })
+      .then((res) => {
+        if (!alive) return;
+        setCreativeAssets(Array.isArray(res?.creativeAssets) ? res.creativeAssets : []);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setCreativeAssets([]);
       });
     return () => {
       alive = false;
@@ -228,6 +309,7 @@ export default function Templates() {
       description: "",
       destinationUrl: "",
       ctaType: "LEARN_MORE",
+      mediaByCountry: {},
     });
   }
 
@@ -247,6 +329,59 @@ export default function Templates() {
       description: payload.description ?? "",
       destinationUrl: payload.destinationUrl ?? "",
       ctaType: payload.ctaType ?? "LEARN_MORE",
+      mediaByCountry: normalizeMediaByCountry(getMediaByCountryFromPayload(payload)),
+    });
+  }
+
+  async function onUploadMediaForCountry(countryCode, file) {
+    const cc = String(countryCode || "").trim().toUpperCase();
+    if (!cc) return;
+    if (!file) return;
+    setNotice("");
+    setError("");
+    setBusy(true);
+    try {
+      const res = await uploadCreativeAsset(file);
+      const asset = res?.creativeAsset ?? null;
+      const entry = normalizeMediaEntry(asset);
+      if (!entry) throw new Error("Falha ao obter asset após upload.");
+      setForm((p) => ({
+        ...p,
+        mediaByCountry: { ...(p.mediaByCountry || {}), [cc]: entry },
+      }));
+      setCreativeAssets((p) => [asset, ...(Array.isArray(p) ? p : [])].filter(Boolean).slice(0, 200));
+      setNotice(`Mídia definida para ${cc}.`);
+    } catch (err) {
+      setError(err?.message ? String(err.message) : "Falha ao enviar mídia.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function onSelectExistingMediaForCountry(countryCode, creativeAssetId) {
+    const cc = String(countryCode || "").trim().toUpperCase();
+    const id = normalizeNonEmptyString(creativeAssetId);
+    if (!cc) return;
+    if (!id) return;
+    const asset = (creativeAssets || []).find((a) => String(a?.id) === id) ?? null;
+    const entry = normalizeMediaEntry(asset);
+    if (!entry) {
+      setError("Asset inválido.");
+      return;
+    }
+    setForm((p) => ({
+      ...p,
+      mediaByCountry: { ...(p.mediaByCountry || {}), [cc]: entry },
+    }));
+  }
+
+  function onRemoveMediaForCountry(countryCode) {
+    const cc = String(countryCode || "").trim().toUpperCase();
+    if (!cc) return;
+    setForm((p) => {
+      const next = { ...(p.mediaByCountry || {}) };
+      delete next[cc];
+      return { ...p, mediaByCountry: next };
     });
   }
 
@@ -391,6 +526,7 @@ export default function Templates() {
         ctaType: payload.ctaType ?? "LEARN_MORE",
         translationsByCountry: getTranslationsByCountryFromPayload(payload),
         translationsRequired: true,
+        mediaByCountry: normalizeMediaByCountry(getMediaByCountryFromPayload(payload)),
         pageId: "",
         instagramActorId: "",
       },
@@ -627,6 +763,91 @@ export default function Templates() {
                       ]}
                     />
                   </Field>
+
+                  <Field
+                    label="Mídias por país"
+                    hint="Upload/seleção de imagem por país (o fluxo REAL atual usa imagem; vídeo fica para item futuro)."
+                  >
+                    <div style={{ display: "grid", gap: 10 }}>
+                      {uniqueCountryCodes(form.countryCodes).length ? (
+                        uniqueCountryCodes(form.countryCodes).map((code) => {
+                          const cc = String(code || "").trim().toUpperCase();
+                          const entry = form?.mediaByCountry?.[cc] ?? null;
+                          const isImage = entry?.mimeType ? String(entry.mimeType).startsWith("image/") : false;
+                          const previewUrl = entry?.url ? `${getBackendBaseUrl()}${entry.url}` : null;
+                          return (
+                            <div key={cc} className="card" style={{ padding: 12 }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                                <div style={{ fontWeight: 950 }}>{cc}</div>
+                                <div style={{ color: "#6b7280", fontWeight: 850, fontSize: 12 }}>
+                                  {entry?.originalName ? entry.originalName : entry?.creativeAssetId ? "Asset selecionado" : "Sem mídia"}
+                                </div>
+                              </div>
+                              <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+                                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    disabled={busy}
+                                    onChange={(e) => onUploadMediaForCountry(cc, e.target.files?.[0] ?? null)}
+                                  />
+                                  <select
+                                    className="templatesSelect"
+                                    style={{ height: 40, minWidth: 260 }}
+                                    disabled={busy}
+                                    value=""
+                                    onChange={(e) => {
+                                      const id = e.target.value;
+                                      if (!id) return;
+                                      onSelectExistingMediaForCountry(cc, id);
+                                    }}
+                                  >
+                                    <option value="" disabled>
+                                      Selecionar asset existente…
+                                    </option>
+                                    {(creativeAssets || []).map((a) => (
+                                      <option key={a.id} value={String(a.id)}>
+                                        {a?.original_name ? `${a.original_name} (${String(a.id).slice(0, 8)})` : String(a.id).slice(0, 12)}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <button
+                                    type="button"
+                                    className="templatesBtnOutline"
+                                    disabled={busy || !entry?.creativeAssetId}
+                                    onClick={() => onRemoveMediaForCountry(cc)}
+                                  >
+                                    Remover
+                                  </button>
+                                </div>
+                                {isImage && previewUrl ? (
+                                  <img
+                                    src={previewUrl}
+                                    alt={`Prévia ${cc}`}
+                                    style={{
+                                      width: "100%",
+                                      maxWidth: 520,
+                                      borderRadius: 12,
+                                      border: "1px solid #e5e7eb",
+                                      display: "block",
+                                    }}
+                                  />
+                                ) : entry?.creativeAssetId ? (
+                                  <div style={{ color: "#6b7280", fontWeight: 800, fontSize: 12 }}>
+                                    Tipo: {entry?.mimeType || "desconhecido"}
+                                  </div>
+                                ) : null}
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="muted" style={{ fontWeight: 800, fontSize: 12 }}>
+                          Defina países para adicionar mídias.
+                        </div>
+                      )}
+                    </div>
+                  </Field>
                 </div>
               </div>
             </div>
@@ -669,12 +890,19 @@ export default function Templates() {
                 {(filteredTemplates || []).map((t) => {
                   const payload = t?.payload && typeof t.payload === "object" ? t.payload : {};
                   const status = computeTranslationsStatus(payload);
+                  const mediaStatus = computeMediaStatus(payload);
                   const countries = uniqueCountryCodes(payload.countryCodes);
                   const active = String(t.id) === String(selectedId);
                   const tagTone =
                     status.tone === "good"
                       ? "templatesStatusTagGood"
                       : status.tone === "info"
+                        ? "templatesStatusTagInfo"
+                        : "templatesStatusTagMuted";
+                  const mediaTone =
+                    mediaStatus.tone === "good"
+                      ? "templatesStatusTagGood"
+                      : mediaStatus.tone === "info"
                         ? "templatesStatusTagInfo"
                         : "templatesStatusTagMuted";
                   return (
@@ -692,6 +920,7 @@ export default function Templates() {
                       <div className="templatesTplMetaRow">
                         <div>{countries.length ? `${countries.length} país(es)` : "Sem países"}</div>
                         <div className={`templatesStatusTag ${tagTone}`}>{status.label}</div>
+                        <div className={`templatesStatusTag ${mediaTone}`}>{mediaStatus.label}</div>
                       </div>
                     </button>
                   );
@@ -715,8 +944,11 @@ export default function Templates() {
                   const payload = selectedTemplate?.payload && typeof selectedTemplate.payload === "object" ? selectedTemplate.payload : {};
                   const countries = uniqueCountryCodes(payload.countryCodes);
                   const status = computeTranslationsStatus(payload);
+                  const mediaStatus = computeMediaStatus(payload);
                   const translations = getTranslationsByCountryFromPayload(payload);
                   const translationCount = Object.keys(translations || {}).length;
+                  const mediaByCountry = normalizeMediaByCountry(getMediaByCountryFromPayload(payload));
+                  const backendBase = getBackendBaseUrl();
                   const primaryPreview = normalizeNonEmptyString(payload.primaryText)
                     ? `${String(payload.primaryText).slice(0, 70)}${String(payload.primaryText).length > 70 ? "…" : ""}`
                     : "—";
@@ -724,6 +956,12 @@ export default function Templates() {
                     status.tone === "good"
                       ? "templatesStatusTagGood"
                       : status.tone === "info"
+                        ? "templatesStatusTagInfo"
+                        : "templatesStatusTagMuted";
+                  const mediaTone =
+                    mediaStatus.tone === "good"
+                      ? "templatesStatusTagGood"
+                      : mediaStatus.tone === "info"
                         ? "templatesStatusTagInfo"
                         : "templatesStatusTagMuted";
 
@@ -740,6 +978,8 @@ export default function Templates() {
                             ))}
                             <span className="templatesSep">·</span>
                             <span className={`templatesStatusTag ${tagTone}`}>{status.label}</span>
+                            <span className="templatesSep">·</span>
+                            <span className={`templatesStatusTag ${mediaTone}`}>{mediaStatus.label}</span>
                             {translationCount ? (
                               <>
                                 <span className="templatesSep">·</span>
@@ -818,6 +1058,128 @@ export default function Templates() {
                             <div className="templatesK">ctaType</div>
                             <div className="templatesV">{payload.ctaType ?? "—"}</div>
                           </div>
+                        </div>
+                      </div>
+
+                      <div className="templatesCreativeBlock" style={{ marginTop: 12 }}>
+                        <div className="templatesColTitle">Mídias por país</div>
+                        <div style={{ color: "#6b7280", fontWeight: 750, fontSize: 12 }}>
+                          Fluxo REAL atual usa apenas imagem (vídeo fica como item futuro).
+                        </div>
+                        <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+                          {countries.length ? (
+                            countries.map((code) => {
+                              const cc = String(code || "").trim().toUpperCase();
+                              const entry = mediaByCountry?.[cc] ?? null;
+                              const isImage = entry?.mimeType ? String(entry.mimeType).startsWith("image/") : false;
+                              const previewUrl = entry?.url ? `${backendBase}${entry.url}` : null;
+                              return (
+                                <div key={cc} className="card" style={{ padding: 12 }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                                    <div style={{ fontWeight: 950 }}>{cc}</div>
+                                    <div style={{ color: "#6b7280", fontWeight: 850, fontSize: 12 }}>
+                                      {entry?.originalName ? entry.originalName : entry?.creativeAssetId ? "Asset selecionado" : "Sem mídia"}
+                                    </div>
+                                  </div>
+                                  {isImage && previewUrl ? (
+                                    <div style={{ marginTop: 10 }}>
+                                      <img
+                                        src={previewUrl}
+                                        alt={`Mídia ${cc}`}
+                                        style={{
+                                          width: "100%",
+                                          maxWidth: 520,
+                                          borderRadius: 12,
+                                          border: "1px solid #e5e7eb",
+                                          display: "block",
+                                        }}
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div style={{ marginTop: 10, color: "#6b7280", fontWeight: 800, fontSize: 12 }}>
+                                      {entry?.creativeAssetId ? `Tipo: ${entry?.mimeType || "desconhecido"}` : "—"}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <div className="muted" style={{ fontWeight: 800, fontSize: 12 }}>
+                              Sem países definidos no template.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="templatesCreativeBlock" style={{ marginTop: 12 }}>
+                        <div className="templatesColTitle">Copy + mídia por país</div>
+                        <div style={{ color: "#6b7280", fontWeight: 750, fontSize: 12 }}>
+                          Mostra o que será usado por país: tradução quando existir; caso contrário, texto base.
+                        </div>
+                        <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+                          {countries.length ? (
+                            countries.map((code) => {
+                              const cc = String(code || "").trim().toUpperCase();
+                              const t = translations?.[cc] && typeof translations[cc] === "object" ? translations[cc] : null;
+                              const entry = mediaByCountry?.[cc] ?? null;
+                              const isImage = entry?.mimeType ? String(entry.mimeType).startsWith("image/") : false;
+                              const previewUrl = entry?.url ? `${backendBase}${entry.url}` : null;
+                              const primaryText = t?.primaryText ?? payload.primaryText ?? "";
+                              const headline = t?.headline ?? payload.headline ?? "";
+                              const description = t?.description ?? payload.description ?? "";
+                              return (
+                                <div key={cc} className="card" style={{ padding: 12 }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                                    <div style={{ fontWeight: 950 }}>{cc}</div>
+                                    <div style={{ color: "#6b7280", fontWeight: 850, fontSize: 12 }}>
+                                      fonte: {t ? "tradução" : "base"} • mídia: {entry?.creativeAssetId ? "definida" : "sem mídia"}
+                                    </div>
+                                  </div>
+                                  <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
+                                    <div style={{ display: "grid", gap: 4 }}>
+                                      <div style={{ color: "#6b7280", fontWeight: 900, fontSize: 12 }}>primaryText</div>
+                                      <div style={{ fontWeight: 800, fontSize: 12, color: "#111827" }}>
+                                        {normalizeNonEmptyString(String(primaryText)) ? String(primaryText).slice(0, 140) : "—"}
+                                      </div>
+                                    </div>
+                                    <div style={{ display: "grid", gap: 4 }}>
+                                      <div style={{ color: "#6b7280", fontWeight: 900, fontSize: 12 }}>headline</div>
+                                      <div style={{ fontWeight: 800, fontSize: 12, color: "#111827" }}>
+                                        {normalizeNonEmptyString(String(headline)) ? String(headline).slice(0, 120) : "—"}
+                                      </div>
+                                    </div>
+                                    <div style={{ display: "grid", gap: 4 }}>
+                                      <div style={{ color: "#6b7280", fontWeight: 900, fontSize: 12 }}>description</div>
+                                      <div style={{ fontWeight: 800, fontSize: 12, color: "#111827" }}>
+                                        {normalizeNonEmptyString(String(description)) ? String(description).slice(0, 120) : "—"}
+                                      </div>
+                                    </div>
+                                    {isImage && previewUrl ? (
+                                      <img
+                                        src={previewUrl}
+                                        alt={`Mídia ${cc}`}
+                                        style={{
+                                          width: "100%",
+                                          maxWidth: 520,
+                                          borderRadius: 12,
+                                          border: "1px solid #e5e7eb",
+                                          display: "block",
+                                        }}
+                                      />
+                                    ) : (
+                                      <div style={{ color: "#6b7280", fontWeight: 800, fontSize: 12 }}>
+                                        {entry?.creativeAssetId ? `Tipo: ${entry?.mimeType || "desconhecido"}` : "—"}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <div className="muted" style={{ fontWeight: 800, fontSize: 12 }}>
+                              Sem países definidos no template.
+                            </div>
+                          )}
                         </div>
                       </div>
 

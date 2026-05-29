@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { getCountries } from "../services/reference.js";
 import { getAuthMe } from "../services/auth.js";
+import { getBackendBaseUrl } from "../services/http.js";
 import { createMetaCampaignSimple } from "../services/metaCampaigns.js";
 import { createMetaAdSet } from "../services/metaAdSets.js";
 import { createCreativeDraft } from "../services/creativeDrafts.js";
@@ -35,6 +36,7 @@ const DEFAULTS = {
     description: "",
     destinationUrl: "",
     ctaType: "LEARN_MORE",
+    mediaByCountry: {},
     pageId: "",
     instagramActorId: "",
   },
@@ -672,9 +674,40 @@ export default function CampaignFlow() {
           }
         }
 
+        const skipCountries = new Set();
+        if (campaign.mode === "REAL") {
+          const missingMedia = [];
+          for (const raw of codes) {
+            const cc = String(raw || "").trim().toUpperCase();
+            const media = resolveMediaForCountry(cc);
+            if (media.status !== "ok") missingMedia.push(cc);
+          }
+          if (missingMedia.length) {
+            const ok = window.confirm(
+              `Mídia ausente/indisponível para: ${missingMedia.join(", ")}.\n\nOK = continuar e PULAR esses países (não cria nada para eles).\nCancelar = voltar para revisar.`
+            );
+            if (!ok) {
+              setSubmitting(false);
+              setNotice("Execução cancelada: mídias pendentes.");
+              return;
+            }
+            for (const cc of missingMedia) skipCountries.add(cc);
+          }
+        }
+
         for (let i = 0; i < codes.length; i += 1) {
           const countryCode = codes[i];
           const label = `${countryCode} — ${countryNameByCode[countryCode] ?? ""}`.trim();
+
+          if (skipCountries.has(String(countryCode || "").trim().toUpperCase())) {
+            perCountry.push({
+              ok: false,
+              countryCode,
+              label,
+              error: "Sem mídia (execução REAL bloqueada para este país).",
+            });
+            continue;
+          }
 
           setProgress({ total: codes.length, currentIndex: i, currentCountryCode: countryCode, stage: "campaign" });
 
@@ -709,9 +742,11 @@ export default function CampaignFlow() {
             const entry =
               translationsByCountry?.[cc] && typeof translationsByCountry[cc] === "object" ? translationsByCountry[cc] : null;
             const useEntry = Boolean(translationsRequired && lang && entry && (!entry.language || String(entry.language) === String(lang)));
+            const media = resolveMediaForCountry(cc);
 
             const draftRes = await createCreativeDraft({
               generatedCampaignId,
+              creativeAssetId: media?.supported ? media.creativeAssetId : null,
               primaryText: useEntry ? entry?.primaryText ?? creative.primaryText : creative.primaryText,
               headline: useEntry ? entry?.headline || null : creative.headline || null,
               description: useEntry ? entry?.description || null : creative.description || null,
@@ -776,6 +811,18 @@ export default function CampaignFlow() {
         persistLastExecution({ base: { campaign, adSet, creative, ad }, batchEnabled: true, selectedCountryCodes: codes });
         setStep(4);
       } else {
+        if (campaign.mode === "REAL") {
+          const cc = String(campaign.countryCode || "").trim().toUpperCase();
+          const media = resolveMediaForCountry(cc);
+          if (media.status !== "ok") {
+            setSubmitting(false);
+            setNotice("");
+            setError(`Execução REAL bloqueada: mídia ausente/indisponível para ${cc}. Volte para revisar a mídia por país.`);
+            setStep(3);
+            return;
+          }
+        }
+
         const campaignRes = await createMetaCampaignSimple({
           name: campaign.name,
           objective: campaign.objective,
@@ -806,9 +853,11 @@ export default function CampaignFlow() {
         const entry =
           translationsByCountry?.[cc] && typeof translationsByCountry[cc] === "object" ? translationsByCountry[cc] : null;
         const useEntry = Boolean(translationsRequired && lang && entry && (!entry.language || String(entry.language) === String(lang)));
+        const media = resolveMediaForCountry(cc);
 
         const draftRes = await createCreativeDraft({
           generatedCampaignId,
+          creativeAssetId: media?.supported ? media.creativeAssetId : null,
           primaryText: useEntry ? entry?.primaryText ?? creative.primaryText : creative.primaryText,
           headline: useEntry ? entry?.headline || null : creative.headline || null,
           description: useEntry ? entry?.description || null : creative.description || null,
@@ -893,6 +942,33 @@ export default function CampaignFlow() {
       primaryText: entry?.primaryText ?? base.primaryText,
       headline: entry?.headline ?? base.headline,
       description: entry?.description ?? base.description,
+    };
+  }
+
+  function resolveMediaForCountry(countryCode) {
+    const cc = String(countryCode || "").trim().toUpperCase();
+    const mediaByCountry =
+      creative?.mediaByCountry && typeof creative.mediaByCountry === "object" ? creative.mediaByCountry : null;
+    const entry = mediaByCountry?.[cc] && typeof mediaByCountry[cc] === "object" ? mediaByCountry[cc] : null;
+
+    const creativeAssetId = normalizeNonEmptyString(entry?.creativeAssetId) || null;
+    const mimeType = normalizeNonEmptyString(entry?.mimeType) || null;
+    const originalName = normalizeNonEmptyString(entry?.originalName) || null;
+    const url = normalizeNonEmptyString(entry?.url) || null;
+
+    const kind = mimeType && mimeType.startsWith("image/") ? "image" : mimeType && mimeType.startsWith("video/") ? "video" : "unknown";
+    const supported = kind === "image";
+
+    return {
+      countryCode: cc,
+      creativeAssetId,
+      mimeType,
+      originalName,
+      url,
+      kind,
+      supported,
+      status:
+        !creativeAssetId ? "missing" : supported ? "ok" : "unsupported",
     };
   }
 
@@ -1458,6 +1534,55 @@ export default function CampaignFlow() {
                             </div>
                           </div>
                         </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="card" style={{ padding: 18 }}>
+                <div style={{ fontWeight: 950, marginBottom: 10 }}>Mídia por país</div>
+                <div style={{ color: "#6b7280", fontWeight: 750, fontSize: 12 }}>
+                  Fluxo REAL atual usa apenas imagem (vídeo fica como item futuro). País sem mídia será bloqueado no REAL.
+                </div>
+                <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+                  {(batchEnabled ? selectedCountryCodes : [campaign.countryCode || "BR"]).map((code) => {
+                    const cc = String(code || "").trim().toUpperCase();
+                    const info = resolveMediaForCountry(cc);
+                    const previewUrl = info?.url ? `${getBackendBaseUrl()}${info.url}` : null;
+                    const statusLabel =
+                      info.status === "ok" ? "OK" : info.status === "missing" ? "Sem mídia" : "Tipo não suportado (por enquanto)";
+                    const tone = info.status === "ok" ? "#065f46" : "#92400e";
+                    const bg = info.status === "ok" ? "#ecfdf5" : "#fffbeb";
+                    const border = info.status === "ok" ? "#a7f3d0" : "#fde68a";
+                    return (
+                      <div key={cc} className="card" style={{ padding: 12, borderColor: border, background: bg }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                          <div style={{ fontWeight: 950 }}>{cc}</div>
+                          <div style={{ color: tone, fontWeight: 900, fontSize: 12 }}>{statusLabel}</div>
+                        </div>
+                        <div style={{ marginTop: 8, color: "#6b7280", fontWeight: 800, fontSize: 12 }}>
+                          {info?.originalName ? info.originalName : info?.creativeAssetId ? "Asset selecionado" : "—"}
+                        </div>
+                        {info.status === "ok" && previewUrl ? (
+                          <div style={{ marginTop: 10 }}>
+                            <img
+                              src={previewUrl}
+                              alt={`Mídia ${cc}`}
+                              style={{
+                                width: "100%",
+                                maxWidth: 640,
+                                borderRadius: 12,
+                                border: "1px solid #e5e7eb",
+                                display: "block",
+                              }}
+                            />
+                          </div>
+                        ) : (
+                          <div style={{ marginTop: 10, color: "#6b7280", fontWeight: 800, fontSize: 12 }}>
+                            {info?.mimeType ? `Tipo: ${info.mimeType}` : "—"}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
