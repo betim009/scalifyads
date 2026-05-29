@@ -79,7 +79,8 @@ export function creativeAssetsRouter() {
 
       const bb = Busboy({
         headers: req.headers,
-        limits: { files: 1, fileSize: 15 * 1024 * 1024 } // 15MB
+        // Supports images and (small/medium) videos; keep a reasonable cap for disk usage.
+        limits: { files: 1, fileSize: 200 * 1024 * 1024 } // 200MB
       })
 
       let done = false
@@ -117,7 +118,7 @@ export function creativeAssetsRouter() {
         })
 
         file.on('limit', () => {
-          out.destroy(new Error('File too large (max 15MB)'))
+          out.destroy(new Error('File too large (max 200MB)'))
         })
 
         out.on('error', (err) => {

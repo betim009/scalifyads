@@ -168,12 +168,35 @@ export function flowTemplatesRouter() {
       const tpl = found[0]
       const payload = tpl?.payload && typeof tpl.payload === 'object' ? tpl.payload : {}
 
-      const basePrimaryText = normalizeNonEmptyString(payload?.primaryText, { maxLen: 5000 })
-      const baseHeadline = normalizeNonEmptyString(payload?.headline, { maxLen: 255 })
-      const baseDescription = normalizeNonEmptyString(payload?.description, { maxLen: 1000 })
+      const rawVariants = Array.isArray(payload?.adVariants) ? payload.adVariants : null
+      const adKeys = ['A', 'B', 'C', 'D', 'E']
+      const baseVariants = adKeys.map((key, idx) => {
+        const src = rawVariants?.[idx] && typeof rawVariants[idx] === 'object' ? rawVariants[idx] : {}
+        return {
+          key,
+          primaryText: normalizeNonEmptyString(src?.primaryText, { maxLen: 5000 }),
+          headline: normalizeNonEmptyString(src?.headline, { maxLen: 255 }),
+          description: normalizeNonEmptyString(src?.description, { maxLen: 1000 })
+        }
+      })
 
-      if (!basePrimaryText && !baseHeadline && !baseDescription) {
-        return jsonError(res, 400, 'Nothing to translate (primaryText/headline/description are empty)')
+      const legacyPrimaryText = normalizeNonEmptyString(payload?.primaryText, { maxLen: 5000 })
+      const legacyHeadline = normalizeNonEmptyString(payload?.headline, { maxLen: 255 })
+      const legacyDescription = normalizeNonEmptyString(payload?.description, { maxLen: 1000 })
+
+      // Backward-compat: if no variants were provided, translate legacy fields as Ad A.
+      if (!rawVariants) {
+        baseVariants[0] = {
+          key: 'A',
+          primaryText: legacyPrimaryText,
+          headline: legacyHeadline,
+          description: legacyDescription
+        }
+      }
+
+      const hasAnyBaseText = baseVariants.some((v) => v.primaryText || v.headline || v.description)
+      if (!hasAnyBaseText) {
+        return jsonError(res, 400, 'Nothing to translate (adVariants are empty)')
       }
 
       const { rows: op } = await pool.query(
@@ -199,29 +222,43 @@ export function flowTemplatesRouter() {
         const countryCode = normalizeNonEmptyString(row?.country_code, { maxLen: 12 })
         const lang = normalizeNonEmptyString(row?.primary_language, { maxLen: 12 })
         if (!countryCode || !lang) continue
+        if (countryCode.toUpperCase() === 'BR') continue
         if (allowedCountryCodes && allowedCountryCodes.size > 0 && !allowedCountryCodes.has(countryCode.toUpperCase())) continue
 
-        const existing = nextTranslationsByCountry[countryCode] && typeof nextTranslationsByCountry[countryCode] === 'object'
-          ? nextTranslationsByCountry[countryCode]
-          : null
+        const existing =
+          nextTranslationsByCountry[countryCode] && typeof nextTranslationsByCountry[countryCode] === 'object'
+            ? nextTranslationsByCountry[countryCode]
+            : null
 
         if (!overwrite && existing && normalizeNonEmptyString(existing?.language) === lang) {
-          // Already exists for this language; keep it.
           continue
         }
 
-        const translatedPrimaryText = basePrimaryText ? await libreTranslateText({ q: basePrimaryText, source: 'auto', target: lang }) : ''
-        const translatedHeadline = baseHeadline ? await libreTranslateText({ q: baseHeadline, source: 'auto', target: lang }) : ''
-        const translatedDescription = baseDescription ? await libreTranslateText({ q: baseDescription, source: 'auto', target: lang }) : ''
+        const ads = {}
+        for (const variant of baseVariants) {
+          const translatedPrimaryText = variant.primaryText
+            ? await libreTranslateText({ q: variant.primaryText, source: 'auto', target: lang })
+            : ''
+          const translatedHeadline = variant.headline
+            ? await libreTranslateText({ q: variant.headline, source: 'auto', target: lang })
+            : ''
+          const translatedDescription = variant.description
+            ? await libreTranslateText({ q: variant.description, source: 'auto', target: lang })
+            : ''
+
+          ads[variant.key] = {
+            primaryText: translatedPrimaryText,
+            headline: translatedHeadline,
+            description: translatedDescription
+          }
+        }
 
         nextTranslationsByCountry[countryCode] = {
           language: lang,
           provider: 'libretranslate',
           sourceLanguage: 'auto',
           generatedAt: new Date().toISOString(),
-          primaryText: translatedPrimaryText,
-          headline: translatedHeadline,
-          description: translatedDescription
+          ads
         }
       }
 

@@ -17,7 +17,8 @@ import {
   metaCreateAdCreative,
   metaFetchAdCreative,
   metaFetchAdCreativePreviews,
-  metaUploadAdImage
+  metaUploadAdImage,
+  metaUploadAdVideo
 } from '../meta/creatives.js'
 import {
   metaListAdAccountPromotePages,
@@ -246,6 +247,7 @@ export function metaRouter() {
       }
 
       let imageHash = null
+      let videoId = null
       if (normalizeNonEmptyString(draft.creative_asset_id)) {
         const storedName = normalizeNonEmptyString(draft.asset_stored_name)
         if (!storedName) {
@@ -258,18 +260,35 @@ export function metaRouter() {
           return jsonError(res, 400, 'Creative asset file not found on disk', { stored_name: storedName })
         }
 
-        try {
-          const uploaded = await metaUploadAdImage({
-            metaAdAccountId,
-            accessToken,
-            filePath: fullPath,
-            mimeType: draft.asset_mime_type,
-            originalName: draft.asset_original_name ?? storedName
-          })
-          imageHash = uploaded.hash
-        } catch (err) {
-          const status = typeof err?.status === 'number' ? err.status : 502
-          return jsonError(res, status, err?.message ?? 'Meta image upload failed', err?.details)
+        const mimeType = normalizeNonEmptyString(draft.asset_mime_type) ?? null
+        if (mimeType && mimeType.startsWith('video/')) {
+          try {
+            const uploaded = await metaUploadAdVideo({
+              metaAdAccountId,
+              accessToken,
+              filePath: fullPath,
+              mimeType,
+              originalName: draft.asset_original_name ?? storedName
+            })
+            videoId = uploaded.id
+          } catch (err) {
+            const status = typeof err?.status === 'number' ? err.status : 502
+            return jsonError(res, status, err?.message ?? 'Meta video upload failed', err?.details)
+          }
+        } else {
+          try {
+            const uploaded = await metaUploadAdImage({
+              metaAdAccountId,
+              accessToken,
+              filePath: fullPath,
+              mimeType,
+              originalName: draft.asset_original_name ?? storedName
+            })
+            imageHash = uploaded.hash
+          } catch (err) {
+            const status = typeof err?.status === 'number' ? err.status : 502
+            return jsonError(res, status, err?.message ?? 'Meta image upload failed', err?.details)
+          }
         }
       }
 
@@ -285,7 +304,8 @@ export function metaRouter() {
           headline: normalizeNonEmptyString(draft.headline),
           description: normalizeNonEmptyString(draft.description),
           ctaType: normalizeNonEmptyString(draft.cta_type),
-          imageHash
+          imageHash,
+          videoId
         })
 
         const client = await pool.connect()

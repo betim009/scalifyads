@@ -1534,7 +1534,7 @@ Validação executada (local):
 
 - [2026-05-28 20:20] `cd frontend && npm run build` (OK) após aplicar design premium no `/templates` (P27.1).
 
-### P27.2 — Mídias por país no template
+### P27.2 (concluído / modelo antigo) — Mídias por país no template
 
 Última atualização: [2026-05-29 09:43]
 
@@ -1610,6 +1610,57 @@ Validação obrigatória:
 Validação executada (local):
 
 - [2026-05-29 09:43] `cd frontend && npm run build` (OK) após P27.2 (mídias por país no template + uso no lote).
+
+### P27.2 — Templates com 5 variações de anúncios por país
+
+Última atualização: [2026-05-29 10:45]
+
+Contexto:
+O modelo anterior (1 texto + 1 mídia por país) não reflete o fluxo real do cliente. O cliente opera com **5 variações de anúncio por país**, e **cada variação possui texto próprio + vídeo próprio**. Os textos são criados em **PT-BR** (origem) e traduzidos automaticamente para os demais países. Os vídeos são específicos por país.
+
+Resultado esperado no `/campaign-flow`:
+
+- Para cada país: `1 Campaign` → `1 AdSet` → `5 Ads` (A–E)
+- Cada Ad usa: texto do país (tradução quando aplicável) + vídeo do país (A–E)
+- Guardrail: toda criação REAL permanece `PAUSED` (nunca `ACTIVE`)
+
+Tarefas:
+
+- [x] Auditar estrutura atual de templates.
+- [x] Auditar estrutura atual de traduções.
+- [x] Auditar estrutura atual de campaign-flow.
+- [x] Definir migração segura do modelo atual para o novo modelo. (payload backward-compat: legado → Ad A)
+- [x] Atualizar persistência para suportar 5 variações de anúncios por template. (`payload.adVariants`)
+- [x] Cada variação deve possuir: `primaryText`, `headline`, `description`.
+- [x] Manter globais: `objective`, `countries`, `destinationUrl`, `ctaType`, `dailyBudgetCents`, `billingEvent`, `optimizationGoal`.
+- [x] Redesenhar o bloco Creative do Template:
+  - [x] Criar seções `Ad A`…`Ad E`.
+  - [x] Permitir edição das 5 variações em PT-BR.
+- [x] Ajustar geração de traduções:
+  - [x] Não gerar tradução para `BR` (PT-BR é a origem).
+  - [x] Gerar traduções apenas para países adicionais configurados.
+  - [x] Permitir revisão das traduções por país e anúncio.
+- [x] Criar seção `Vídeos por país`:
+  - [x] Permitir upload/seleção de Vídeo A…E para cada país.
+  - [x] Exibir status de completude (textos / traduções / vídeos).
+- [x] Atualizar aba `Meus templates`:
+  - [x] Mostrar quantidade de países, status de traduções, status de vídeos e quantidade de anúncios.
+- [x] Atualizar integração `Usar no /campaign-flow` (carregar textos+traduções+vídeos).
+- [x] Atualizar etapa de revisão no `/campaign-flow` (por país → Ads A–E → texto + vídeo).
+- [x] Atualizar execução REAL:
+  - [x] Para cada país criar 1 Campaign, 1 AdSet e 5 Ads.
+  - [x] Todos os Ads continuam `PAUSED`.
+  - [x] Bloquear execução REAL se faltar vídeo ou texto.
+  - [x] Registrar erros por país e anúncio (sem quebrar o lote inteiro).
+- [x] Validar build do frontend.
+
+Validação obrigatória:
+
+- [x] `cd frontend && npm run build`
+
+Validação executada (local):
+
+- [2026-05-29 10:45] `cd frontend && npm run build` (OK) após P27.2 (5 variações + vídeos por país + execução 5 Ads por país).
 
 ## Decision Log (Ativo)
 

@@ -15,6 +15,7 @@ import { getBackendBaseUrl } from "../services/http.js";
 const STORAGE_LAST_EXECUTION_KEY = "campaignFlow:lastExecution:v1";
 const TAB_CREATE = "create";
 const TAB_MINE = "mine";
+const AD_KEYS = ["A", "B", "C", "D", "E"];
 
 function normalizeNonEmptyString(value) {
   if (typeof value !== "string") return "";
@@ -47,6 +48,30 @@ function getMediaByCountryFromPayload(payload) {
   return payload?.mediaByCountry && typeof payload.mediaByCountry === "object" ? payload.mediaByCountry : {};
 }
 
+function getAdVariantsFromPayload(payload) {
+  const raw = payload?.adVariants;
+  if (Array.isArray(raw) && raw.length) {
+    const out = AD_KEYS.map((key, idx) => {
+      const src = raw[idx] && typeof raw[idx] === "object" ? raw[idx] : {};
+      return {
+        key,
+        primaryText: normalizeNonEmptyString(src?.primaryText) || "",
+        headline: normalizeNonEmptyString(src?.headline) || "",
+        description: normalizeNonEmptyString(src?.description) || "",
+      };
+    });
+    return out;
+  }
+
+  // Backward-compat: legacy single creative fields -> Ad A.
+  return AD_KEYS.map((key) => ({
+    key,
+    primaryText: key === "A" ? normalizeNonEmptyString(payload?.primaryText) || "" : "",
+    headline: key === "A" ? normalizeNonEmptyString(payload?.headline) || "" : "",
+    description: key === "A" ? normalizeNonEmptyString(payload?.description) || "" : "",
+  }));
+}
+
 function computeTranslationsStatus(payload) {
   const translations = getTranslationsByCountryFromPayload(payload);
   const count = Object.keys(translations || {}).length;
@@ -64,12 +89,29 @@ function computeMediaStatus(payload) {
   for (const c of countries) {
     const cc = String(c || "").trim().toUpperCase();
     const entry = media?.[cc] && typeof media[cc] === "object" ? media[cc] : null;
-    if (entry?.creativeAssetId) withMedia += 1;
+    if (!entry) continue;
+    // New model: media[CC][A..E]. Legacy: media[CC].creativeAssetId.
+    if (entry?.creativeAssetId) {
+      withMedia += 1;
+      continue;
+    }
+    for (const key of AD_KEYS) {
+      const adEntry = entry?.[key] && typeof entry[key] === "object" ? entry[key] : null;
+      if (adEntry?.creativeAssetId) withMedia += 1;
+    }
   }
 
   if (withMedia === 0) return { label: "Sem mídia", tone: "muted" };
-  if (withMedia < countries.length) return { label: "Mídia parcial", tone: "info" };
+  // Expect 5 media items per country (A..E). Legacy counts as 1.
+  const expected = countries.length * AD_KEYS.length;
+  if (withMedia < expected) return { label: "Mídia parcial", tone: "info" };
   return { label: "Mídias completas", tone: "good" };
+}
+
+function computeAdCount(payload) {
+  const variants = Array.isArray(payload?.adVariants) ? payload.adVariants : null;
+  if (variants && variants.length) return Math.min(variants.length, AD_KEYS.length);
+  return 1;
 }
 
 function normalizeMediaEntry(asset) {
@@ -96,16 +138,40 @@ function normalizeMediaByCountry(value) {
     if (!cc) continue;
     const entry = rawEntry && typeof rawEntry === "object" ? rawEntry : null;
     if (!entry) continue;
-    const creativeAssetId = normalizeNonEmptyString(entry?.creativeAssetId);
-    if (!creativeAssetId) continue;
-    out[cc] = {
-      creativeAssetId,
-      mimeType: normalizeNonEmptyString(entry?.mimeType) || null,
-      originalName: normalizeNonEmptyString(entry?.originalName) || null,
-      url: normalizeNonEmptyString(entry?.url) || null,
-      kind: normalizeNonEmptyString(entry?.kind) || null,
-      updatedAt: normalizeNonEmptyString(entry?.updatedAt) || null,
-    };
+
+    // Legacy shape: mediaByCountry[CC] = { creativeAssetId, ... }
+    const legacyId = normalizeNonEmptyString(entry?.creativeAssetId);
+    if (legacyId) {
+      out[cc] = {
+        A: {
+          creativeAssetId: legacyId,
+          mimeType: normalizeNonEmptyString(entry?.mimeType) || null,
+          originalName: normalizeNonEmptyString(entry?.originalName) || null,
+          url: normalizeNonEmptyString(entry?.url) || null,
+          kind: normalizeNonEmptyString(entry?.kind) || null,
+          updatedAt: normalizeNonEmptyString(entry?.updatedAt) || null,
+        },
+      };
+      continue;
+    }
+
+    // New shape: mediaByCountry[CC][A..E]
+    const nextByAd = {};
+    for (const key of AD_KEYS) {
+      const adEntry = entry?.[key] && typeof entry[key] === "object" ? entry[key] : null;
+      const creativeAssetId = normalizeNonEmptyString(adEntry?.creativeAssetId);
+      if (!creativeAssetId) continue;
+      nextByAd[key] = {
+        creativeAssetId,
+        mimeType: normalizeNonEmptyString(adEntry?.mimeType) || null,
+        originalName: normalizeNonEmptyString(adEntry?.originalName) || null,
+        url: normalizeNonEmptyString(adEntry?.url) || null,
+        kind: normalizeNonEmptyString(adEntry?.kind) || null,
+        updatedAt: normalizeNonEmptyString(adEntry?.updatedAt) || null,
+      };
+    }
+    if (Object.keys(nextByAd).length === 0) continue;
+    out[cc] = nextByAd;
   }
   return out;
 }
@@ -165,15 +231,28 @@ function SelectLike({ value, onChange, options }) {
 }
 
 function buildPayloadFromForm(form) {
+  const adVariants = Array.isArray(form?.adVariants) ? form.adVariants : [];
+  const normalizedVariants = AD_KEYS.map((key, idx) => {
+    const src = adVariants[idx] && typeof adVariants[idx] === "object" ? adVariants[idx] : {};
+    return {
+      key,
+      primaryText: normalizeNonEmptyString(src?.primaryText) || "",
+      headline: normalizeNonEmptyString(src?.headline) || "",
+      description: normalizeNonEmptyString(src?.description) || "",
+    };
+  });
+  const adA = normalizedVariants[0] ?? { primaryText: "", headline: "", description: "" };
   return {
     objective: normalizeNonEmptyString(form.objective) || "OUTCOME_TRAFFIC",
     countryCodes: uniqueCountryCodes(form.countryCodes),
     dailyBudgetCents: Number(form.dailyBudgetCents) || 1000,
     billingEvent: normalizeNonEmptyString(form.billingEvent) || "IMPRESSIONS",
     optimizationGoal: normalizeNonEmptyString(form.optimizationGoal) || "LINK_CLICKS",
-    primaryText: normalizeNonEmptyString(form.primaryText) || "",
-    headline: normalizeNonEmptyString(form.headline) || "",
-    description: normalizeNonEmptyString(form.description) || "",
+    // Backward-compat (legacy single creative fields = Ad A).
+    primaryText: adA.primaryText || "",
+    headline: adA.headline || "",
+    description: adA.description || "",
+    adVariants: normalizedVariants,
     destinationUrl: normalizeNonEmptyString(form.destinationUrl) || "",
     ctaType: normalizeNonEmptyString(form.ctaType) || "LEARN_MORE",
     mediaByCountry: normalizeMediaByCountry(form?.mediaByCountry),
@@ -209,11 +288,9 @@ export default function Templates() {
     dailyBudgetCents: 1000,
     billingEvent: "IMPRESSIONS",
     optimizationGoal: "LINK_CLICKS",
-    primaryText: "",
-    headline: "",
-    description: "",
     destinationUrl: "",
     ctaType: "LEARN_MORE",
+    adVariants: AD_KEYS.map((key) => ({ key, primaryText: "", headline: "", description: "" })),
     mediaByCountry: {},
   });
 
@@ -304,11 +381,9 @@ export default function Templates() {
       dailyBudgetCents: 1000,
       billingEvent: "IMPRESSIONS",
       optimizationGoal: "LINK_CLICKS",
-      primaryText: "",
-      headline: "",
-      description: "",
       destinationUrl: "",
       ctaType: "LEARN_MORE",
+      adVariants: AD_KEYS.map((key) => ({ key, primaryText: "", headline: "", description: "" })),
       mediaByCountry: {},
     });
   }
@@ -324,18 +399,18 @@ export default function Templates() {
       dailyBudgetCents: payload.dailyBudgetCents ?? 1000,
       billingEvent: payload.billingEvent ?? "IMPRESSIONS",
       optimizationGoal: payload.optimizationGoal ?? "LINK_CLICKS",
-      primaryText: payload.primaryText ?? "",
-      headline: payload.headline ?? "",
-      description: payload.description ?? "",
       destinationUrl: payload.destinationUrl ?? "",
       ctaType: payload.ctaType ?? "LEARN_MORE",
+      adVariants: getAdVariantsFromPayload(payload),
       mediaByCountry: normalizeMediaByCountry(getMediaByCountryFromPayload(payload)),
     });
   }
 
-  async function onUploadMediaForCountry(countryCode, file) {
+  async function onUploadMediaForCountryAd(countryCode, adKey, file) {
     const cc = String(countryCode || "").trim().toUpperCase();
+    const k = String(adKey || "").trim().toUpperCase();
     if (!cc) return;
+    if (!AD_KEYS.includes(k)) return;
     if (!file) return;
     setNotice("");
     setError("");
@@ -347,10 +422,13 @@ export default function Templates() {
       if (!entry) throw new Error("Falha ao obter asset após upload.");
       setForm((p) => ({
         ...p,
-        mediaByCountry: { ...(p.mediaByCountry || {}), [cc]: entry },
+        mediaByCountry: {
+          ...(p.mediaByCountry || {}),
+          [cc]: { ...((p.mediaByCountry || {})[cc] || {}), [k]: entry },
+        },
       }));
       setCreativeAssets((p) => [asset, ...(Array.isArray(p) ? p : [])].filter(Boolean).slice(0, 200));
-      setNotice(`Mídia definida para ${cc}.`);
+      setNotice(`Mídia definida para ${cc} (Ad ${k}).`);
     } catch (err) {
       setError(err?.message ? String(err.message) : "Falha ao enviar mídia.");
     } finally {
@@ -358,10 +436,12 @@ export default function Templates() {
     }
   }
 
-  function onSelectExistingMediaForCountry(countryCode, creativeAssetId) {
+  function onSelectExistingMediaForCountryAd(countryCode, adKey, creativeAssetId) {
     const cc = String(countryCode || "").trim().toUpperCase();
+    const k = String(adKey || "").trim().toUpperCase();
     const id = normalizeNonEmptyString(creativeAssetId);
     if (!cc) return;
+    if (!AD_KEYS.includes(k)) return;
     if (!id) return;
     const asset = (creativeAssets || []).find((a) => String(a?.id) === id) ?? null;
     const entry = normalizeMediaEntry(asset);
@@ -371,16 +451,25 @@ export default function Templates() {
     }
     setForm((p) => ({
       ...p,
-      mediaByCountry: { ...(p.mediaByCountry || {}), [cc]: entry },
+      mediaByCountry: {
+        ...(p.mediaByCountry || {}),
+        [cc]: { ...((p.mediaByCountry || {})[cc] || {}), [k]: entry },
+      },
     }));
   }
 
-  function onRemoveMediaForCountry(countryCode) {
+  function onRemoveMediaForCountryAd(countryCode, adKey) {
     const cc = String(countryCode || "").trim().toUpperCase();
+    const k = String(adKey || "").trim().toUpperCase();
     if (!cc) return;
+    if (!AD_KEYS.includes(k)) return;
     setForm((p) => {
       const next = { ...(p.mediaByCountry || {}) };
-      delete next[cc];
+      const countryEntry = next[cc] && typeof next[cc] === "object" ? { ...next[cc] } : null;
+      if (!countryEntry) return p;
+      delete countryEntry[k];
+      if (Object.keys(countryEntry).length) next[cc] = countryEntry;
+      else delete next[cc];
       return { ...p, mediaByCountry: next };
     });
   }
@@ -519,11 +608,9 @@ export default function Templates() {
         optimizationGoal: payload.optimizationGoal ?? "LINK_CLICKS",
       },
       creative: {
-        primaryText: payload.primaryText ?? "",
-        headline: payload.headline ?? "",
-        description: payload.description ?? "",
         destinationUrl: payload.destinationUrl ?? "",
         ctaType: payload.ctaType ?? "LEARN_MORE",
+        adVariants: getAdVariantsFromPayload(payload),
         translationsByCountry: getTranslationsByCountryFromPayload(payload),
         translationsRequired: true,
         mediaByCountry: normalizeMediaByCountry(getMediaByCountryFromPayload(payload)),
@@ -731,19 +818,63 @@ export default function Templates() {
               <div className="templatesCard">
                 <div className="templatesCardLabel">Criativo</div>
                 <div style={{ display: "grid", gap: 12 }}>
-                  <Field label="Primary text">
-                    <TextAreaLike
-                      value={form.primaryText}
-                      onChange={(e) => setForm((p) => ({ ...p, primaryText: e.target.value }))}
-                      placeholder="Ex: Teste controlado. Não ativar."
-                      rows={3}
-                    />
-                  </Field>
-                  <Field label="Headline">
-                    <InputLike value={form.headline} onChange={(e) => setForm((p) => ({ ...p, headline: e.target.value }))} />
-                  </Field>
-                  <Field label="Description">
-                    <InputLike value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} />
+                  <Field
+                    label="Variações (PT-BR)"
+                    hint="O cliente opera com 5 anúncios (A–E). O texto base é PT-BR (Brasil não é traduzido)."
+                  >
+                    <div style={{ display: "grid", gap: 10 }}>
+                      {(form.adVariants || AD_KEYS.map((key) => ({ key }))).map((ad, idx) => {
+                        const key = AD_KEYS[idx] ?? ad?.key ?? `${idx + 1}`;
+                        const item = ad && typeof ad === "object" ? ad : {};
+                        return (
+                          <div key={key} className="card" style={{ padding: 12 }}>
+                            <div style={{ fontWeight: 950, marginBottom: 10 }}>{`Ad ${key}`}</div>
+                            <div style={{ display: "grid", gap: 10 }}>
+                              <TextAreaLike
+                                value={item.primaryText ?? ""}
+                                onChange={(e) =>
+                                  setForm((p) => {
+                                    const next = Array.isArray(p.adVariants) ? [...p.adVariants] : [];
+                                    while (next.length < AD_KEYS.length) next.push({ key: AD_KEYS[next.length], primaryText: "", headline: "", description: "" });
+                                    const cur = next[idx] && typeof next[idx] === "object" ? next[idx] : {};
+                                    next[idx] = { ...cur, key, primaryText: e.target.value };
+                                    return { ...p, adVariants: next };
+                                  })
+                                }
+                                placeholder="Texto principal"
+                                rows={3}
+                              />
+                              <InputLike
+                                value={item.headline ?? ""}
+                                onChange={(e) =>
+                                  setForm((p) => {
+                                    const next = Array.isArray(p.adVariants) ? [...p.adVariants] : [];
+                                    while (next.length < AD_KEYS.length) next.push({ key: AD_KEYS[next.length], primaryText: "", headline: "", description: "" });
+                                    const cur = next[idx] && typeof next[idx] === "object" ? next[idx] : {};
+                                    next[idx] = { ...cur, key, headline: e.target.value };
+                                    return { ...p, adVariants: next };
+                                  })
+                                }
+                                placeholder="Headline"
+                              />
+                              <InputLike
+                                value={item.description ?? ""}
+                                onChange={(e) =>
+                                  setForm((p) => {
+                                    const next = Array.isArray(p.adVariants) ? [...p.adVariants] : [];
+                                    while (next.length < AD_KEYS.length) next.push({ key: AD_KEYS[next.length], primaryText: "", headline: "", description: "" });
+                                    const cur = next[idx] && typeof next[idx] === "object" ? next[idx] : {};
+                                    next[idx] = { ...cur, key, description: e.target.value };
+                                    return { ...p, adVariants: next };
+                                  })
+                                }
+                                placeholder="Description"
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </Field>
                   <Field label="Destination URL" hint="Obrigatório para Creative REAL.">
                     <InputLike
@@ -765,78 +896,93 @@ export default function Templates() {
                   </Field>
 
                   <Field
-                    label="Mídias por país"
-                    hint="Upload/seleção de imagem por país (o fluxo REAL atual usa imagem; vídeo fica para item futuro)."
+                    label="Vídeos por país (A–E)"
+                    hint="Upload/seleção de vídeo por país e por anúncio (A–E). Reaproveita `creative_assets`."
                   >
                     <div style={{ display: "grid", gap: 10 }}>
                       {uniqueCountryCodes(form.countryCodes).length ? (
                         uniqueCountryCodes(form.countryCodes).map((code) => {
                           const cc = String(code || "").trim().toUpperCase();
-                          const entry = form?.mediaByCountry?.[cc] ?? null;
-                          const isImage = entry?.mimeType ? String(entry.mimeType).startsWith("image/") : false;
-                          const previewUrl = entry?.url ? `${getBackendBaseUrl()}${entry.url}` : null;
+                          const byAd = form?.mediaByCountry?.[cc] && typeof form.mediaByCountry[cc] === "object" ? form.mediaByCountry[cc] : {};
                           return (
                             <div key={cc} className="card" style={{ padding: 12 }}>
                               <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
                                 <div style={{ fontWeight: 950 }}>{cc}</div>
-                                <div style={{ color: "#6b7280", fontWeight: 850, fontSize: 12 }}>
-                                  {entry?.originalName ? entry.originalName : entry?.creativeAssetId ? "Asset selecionado" : "Sem mídia"}
-                                </div>
+                                <div style={{ color: "#6b7280", fontWeight: 850, fontSize: 12 }}>5 vídeos (A–E)</div>
                               </div>
                               <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
-                                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    disabled={busy}
-                                    onChange={(e) => onUploadMediaForCountry(cc, e.target.files?.[0] ?? null)}
-                                  />
-                                  <select
-                                    className="templatesSelect"
-                                    style={{ height: 40, minWidth: 260 }}
-                                    disabled={busy}
-                                    value=""
-                                    onChange={(e) => {
-                                      const id = e.target.value;
-                                      if (!id) return;
-                                      onSelectExistingMediaForCountry(cc, id);
-                                    }}
-                                  >
-                                    <option value="" disabled>
-                                      Selecionar asset existente…
-                                    </option>
-                                    {(creativeAssets || []).map((a) => (
-                                      <option key={a.id} value={String(a.id)}>
-                                        {a?.original_name ? `${a.original_name} (${String(a.id).slice(0, 8)})` : String(a.id).slice(0, 12)}
-                                      </option>
-                                    ))}
-                                  </select>
-                                  <button
-                                    type="button"
-                                    className="templatesBtnOutline"
-                                    disabled={busy || !entry?.creativeAssetId}
-                                    onClick={() => onRemoveMediaForCountry(cc)}
-                                  >
-                                    Remover
-                                  </button>
-                                </div>
-                                {isImage && previewUrl ? (
-                                  <img
-                                    src={previewUrl}
-                                    alt={`Prévia ${cc}`}
-                                    style={{
-                                      width: "100%",
-                                      maxWidth: 520,
-                                      borderRadius: 12,
-                                      border: "1px solid #e5e7eb",
-                                      display: "block",
-                                    }}
-                                  />
-                                ) : entry?.creativeAssetId ? (
-                                  <div style={{ color: "#6b7280", fontWeight: 800, fontSize: 12 }}>
-                                    Tipo: {entry?.mimeType || "desconhecido"}
-                                  </div>
-                                ) : null}
+                                {AD_KEYS.map((k) => {
+                                  const entry = byAd?.[k] ?? null;
+                                  const isVideo = entry?.mimeType ? String(entry.mimeType).startsWith("video/") : false;
+                                  const previewUrl = entry?.url ? `${getBackendBaseUrl()}${entry.url}` : null;
+                                  return (
+                                    <div key={k} className="card" style={{ padding: 12 }}>
+                                      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                                        <div style={{ fontWeight: 950 }}>{`Ad ${k}`}</div>
+                                        <div style={{ color: "#6b7280", fontWeight: 850, fontSize: 12 }}>
+                                          {entry?.originalName ? entry.originalName : entry?.creativeAssetId ? "Asset selecionado" : "Sem vídeo"}
+                                        </div>
+                                      </div>
+                                      <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+                                        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                                          <input
+                                            type="file"
+                                            accept="video/*"
+                                            disabled={busy}
+                                            onChange={(e) => onUploadMediaForCountryAd(cc, k, e.target.files?.[0] ?? null)}
+                                          />
+                                          <select
+                                            className="templatesSelect"
+                                            style={{ height: 40, minWidth: 260 }}
+                                            disabled={busy}
+                                            value=""
+                                            onChange={(e) => {
+                                              const id = e.target.value;
+                                              if (!id) return;
+                                              onSelectExistingMediaForCountryAd(cc, k, id);
+                                            }}
+                                          >
+                                            <option value="" disabled>
+                                              Selecionar asset existente…
+                                            </option>
+                                            {(creativeAssets || []).map((a) => (
+                                              <option key={a.id} value={String(a.id)}>
+                                                {a?.original_name
+                                                  ? `${a.original_name} (${String(a.id).slice(0, 8)})`
+                                                  : String(a.id).slice(0, 12)}
+                                              </option>
+                                            ))}
+                                          </select>
+                                          <button
+                                            type="button"
+                                            className="templatesBtnOutline"
+                                            disabled={busy || !entry?.creativeAssetId}
+                                            onClick={() => onRemoveMediaForCountryAd(cc, k)}
+                                          >
+                                            Remover
+                                          </button>
+                                        </div>
+                                        {isVideo && previewUrl ? (
+                                          <video
+                                            src={previewUrl}
+                                            controls
+                                            style={{
+                                              width: "100%",
+                                              maxWidth: 520,
+                                              borderRadius: 12,
+                                              border: "1px solid #e5e7eb",
+                                              display: "block",
+                                            }}
+                                          />
+                                        ) : entry?.creativeAssetId ? (
+                                          <div style={{ color: "#6b7280", fontWeight: 800, fontSize: 12 }}>
+                                            Tipo: {entry?.mimeType || "desconhecido"}
+                                          </div>
+                                        ) : null}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </div>
                           );
@@ -891,6 +1037,7 @@ export default function Templates() {
                   const payload = t?.payload && typeof t.payload === "object" ? t.payload : {};
                   const status = computeTranslationsStatus(payload);
                   const mediaStatus = computeMediaStatus(payload);
+                  const adCount = computeAdCount(payload);
                   const countries = uniqueCountryCodes(payload.countryCodes);
                   const active = String(t.id) === String(selectedId);
                   const tagTone =
@@ -919,6 +1066,7 @@ export default function Templates() {
                       <div className="templatesTplName">{t.name}</div>
                       <div className="templatesTplMetaRow">
                         <div>{countries.length ? `${countries.length} país(es)` : "Sem países"}</div>
+                        <div>{`${adCount} ad(s)`}</div>
                         <div className={`templatesStatusTag ${tagTone}`}>{status.label}</div>
                         <div className={`templatesStatusTag ${mediaTone}`}>{mediaStatus.label}</div>
                       </div>
@@ -949,9 +1097,11 @@ export default function Templates() {
                   const translationCount = Object.keys(translations || {}).length;
                   const mediaByCountry = normalizeMediaByCountry(getMediaByCountryFromPayload(payload));
                   const backendBase = getBackendBaseUrl();
+                  const adCount = computeAdCount(payload);
                   const primaryPreview = normalizeNonEmptyString(payload.primaryText)
                     ? `${String(payload.primaryText).slice(0, 70)}${String(payload.primaryText).length > 70 ? "…" : ""}`
                     : "—";
+                  const adVariants = getAdVariantsFromPayload(payload);
                   const tagTone =
                     status.tone === "good"
                       ? "templatesStatusTagGood"
@@ -976,6 +1126,8 @@ export default function Templates() {
                                 {c}
                               </span>
                             ))}
+                            <span className="templatesSep">·</span>
+                            <span className="templatesVarBadge">{adCount} ad(s)</span>
                             <span className="templatesSep">·</span>
                             <span className={`templatesStatusTag ${tagTone}`}>{status.label}</span>
                             <span className="templatesSep">·</span>
@@ -1062,44 +1214,57 @@ export default function Templates() {
                       </div>
 
                       <div className="templatesCreativeBlock" style={{ marginTop: 12 }}>
-                        <div className="templatesColTitle">Mídias por país</div>
+                        <div className="templatesColTitle">Vídeos por país (A–E)</div>
                         <div style={{ color: "#6b7280", fontWeight: 750, fontSize: 12 }}>
-                          Fluxo REAL atual usa apenas imagem (vídeo fica como item futuro).
+                          Cada país deve ter 5 vídeos (A–E) vinculados via `creative_assets`.
                         </div>
                         <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
                           {countries.length ? (
                             countries.map((code) => {
                               const cc = String(code || "").trim().toUpperCase();
-                              const entry = mediaByCountry?.[cc] ?? null;
-                              const isImage = entry?.mimeType ? String(entry.mimeType).startsWith("image/") : false;
-                              const previewUrl = entry?.url ? `${backendBase}${entry.url}` : null;
+                              const byAd = mediaByCountry?.[cc] && typeof mediaByCountry[cc] === "object" ? mediaByCountry[cc] : {};
                               return (
                                 <div key={cc} className="card" style={{ padding: 12 }}>
                                   <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
                                     <div style={{ fontWeight: 950 }}>{cc}</div>
-                                    <div style={{ color: "#6b7280", fontWeight: 850, fontSize: 12 }}>
-                                      {entry?.originalName ? entry.originalName : entry?.creativeAssetId ? "Asset selecionado" : "Sem mídia"}
-                                    </div>
+                                    <div style={{ color: "#6b7280", fontWeight: 850, fontSize: 12 }}>Ads A–E</div>
                                   </div>
-                                  {isImage && previewUrl ? (
-                                    <div style={{ marginTop: 10 }}>
-                                      <img
-                                        src={previewUrl}
-                                        alt={`Mídia ${cc}`}
-                                        style={{
-                                          width: "100%",
-                                          maxWidth: 520,
-                                          borderRadius: 12,
-                                          border: "1px solid #e5e7eb",
-                                          display: "block",
-                                        }}
-                                      />
-                                    </div>
-                                  ) : (
-                                    <div style={{ marginTop: 10, color: "#6b7280", fontWeight: 800, fontSize: 12 }}>
-                                      {entry?.creativeAssetId ? `Tipo: ${entry?.mimeType || "desconhecido"}` : "—"}
-                                    </div>
-                                  )}
+                                  <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+                                    {AD_KEYS.map((k) => {
+                                      const entry = byAd?.[k] ?? null;
+                                      const isVideo = entry?.mimeType ? String(entry.mimeType).startsWith("video/") : false;
+                                      const previewUrl = entry?.url ? `${backendBase}${entry.url}` : null;
+                                      return (
+                                        <div key={k} className="card" style={{ padding: 12 }}>
+                                          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                                            <div style={{ fontWeight: 950 }}>{`Ad ${k}`}</div>
+                                            <div style={{ color: "#6b7280", fontWeight: 850, fontSize: 12 }}>
+                                              {entry?.originalName ? entry.originalName : entry?.creativeAssetId ? "Asset selecionado" : "Sem vídeo"}
+                                            </div>
+                                          </div>
+                                          {isVideo && previewUrl ? (
+                                            <div style={{ marginTop: 10 }}>
+                                              <video
+                                                src={previewUrl}
+                                                controls
+                                                style={{
+                                                  width: "100%",
+                                                  maxWidth: 520,
+                                                  borderRadius: 12,
+                                                  border: "1px solid #e5e7eb",
+                                                  display: "block",
+                                                }}
+                                              />
+                                            </div>
+                                          ) : (
+                                            <div style={{ marginTop: 10, color: "#6b7280", fontWeight: 800, fontSize: 12 }}>
+                                              {entry?.creativeAssetId ? `Tipo: ${entry?.mimeType || "desconhecido"}` : "—"}
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
                                 </div>
                               );
                             })
@@ -1112,65 +1277,87 @@ export default function Templates() {
                       </div>
 
                       <div className="templatesCreativeBlock" style={{ marginTop: 12 }}>
-                        <div className="templatesColTitle">Copy + mídia por país</div>
+                        <div className="templatesColTitle">Copy + vídeo por país (A–E)</div>
                         <div style={{ color: "#6b7280", fontWeight: 750, fontSize: 12 }}>
-                          Mostra o que será usado por país: tradução quando existir; caso contrário, texto base.
+                          Mostra o que será usado por país: tradução quando existir (exceto BR); caso contrário, texto base (PT-BR).
                         </div>
                         <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
                           {countries.length ? (
                             countries.map((code) => {
                               const cc = String(code || "").trim().toUpperCase();
                               const t = translations?.[cc] && typeof translations[cc] === "object" ? translations[cc] : null;
-                              const entry = mediaByCountry?.[cc] ?? null;
-                              const isImage = entry?.mimeType ? String(entry.mimeType).startsWith("image/") : false;
-                              const previewUrl = entry?.url ? `${backendBase}${entry.url}` : null;
-                              const primaryText = t?.primaryText ?? payload.primaryText ?? "";
-                              const headline = t?.headline ?? payload.headline ?? "";
-                              const description = t?.description ?? payload.description ?? "";
+                              const byAd = mediaByCountry?.[cc] && typeof mediaByCountry[cc] === "object" ? mediaByCountry[cc] : {};
                               return (
                                 <div key={cc} className="card" style={{ padding: 12 }}>
                                   <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
                                     <div style={{ fontWeight: 950 }}>{cc}</div>
                                     <div style={{ color: "#6b7280", fontWeight: 850, fontSize: 12 }}>
-                                      fonte: {t ? "tradução" : "base"} • mídia: {entry?.creativeAssetId ? "definida" : "sem mídia"}
+                                      fonte: {cc === "BR" ? "base (PT-BR)" : t ? "tradução" : "base"} • vídeos: {Object.keys(byAd || {}).length}/5
                                     </div>
                                   </div>
                                   <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
-                                    <div style={{ display: "grid", gap: 4 }}>
-                                      <div style={{ color: "#6b7280", fontWeight: 900, fontSize: 12 }}>primaryText</div>
-                                      <div style={{ fontWeight: 800, fontSize: 12, color: "#111827" }}>
-                                        {normalizeNonEmptyString(String(primaryText)) ? String(primaryText).slice(0, 140) : "—"}
-                                      </div>
-                                    </div>
-                                    <div style={{ display: "grid", gap: 4 }}>
-                                      <div style={{ color: "#6b7280", fontWeight: 900, fontSize: 12 }}>headline</div>
-                                      <div style={{ fontWeight: 800, fontSize: 12, color: "#111827" }}>
-                                        {normalizeNonEmptyString(String(headline)) ? String(headline).slice(0, 120) : "—"}
-                                      </div>
-                                    </div>
-                                    <div style={{ display: "grid", gap: 4 }}>
-                                      <div style={{ color: "#6b7280", fontWeight: 900, fontSize: 12 }}>description</div>
-                                      <div style={{ fontWeight: 800, fontSize: 12, color: "#111827" }}>
-                                        {normalizeNonEmptyString(String(description)) ? String(description).slice(0, 120) : "—"}
-                                      </div>
-                                    </div>
-                                    {isImage && previewUrl ? (
-                                      <img
-                                        src={previewUrl}
-                                        alt={`Mídia ${cc}`}
-                                        style={{
-                                          width: "100%",
-                                          maxWidth: 520,
-                                          borderRadius: 12,
-                                          border: "1px solid #e5e7eb",
-                                          display: "block",
-                                        }}
-                                      />
-                                    ) : (
-                                      <div style={{ color: "#6b7280", fontWeight: 800, fontSize: 12 }}>
-                                        {entry?.creativeAssetId ? `Tipo: ${entry?.mimeType || "desconhecido"}` : "—"}
-                                      </div>
-                                    )}
+                                    {AD_KEYS.map((k, idx) => {
+                                      const base = adVariants?.[idx] ?? {};
+                                      const translatedAds = t?.ads && typeof t.ads === "object" ? t.ads : null;
+                                      const translated = translatedAds?.[k] && typeof translatedAds[k] === "object" ? translatedAds[k] : null;
+                                      const legacyTranslated = t && !translatedAds ? t : null;
+                                      const primaryText =
+                                        cc !== "BR" && translated ? translated?.primaryText ?? base.primaryText : legacyTranslated && k === "A" ? legacyTranslated?.primaryText ?? base.primaryText : base.primaryText;
+                                      const headline =
+                                        cc !== "BR" && translated ? translated?.headline ?? base.headline : legacyTranslated && k === "A" ? legacyTranslated?.headline ?? base.headline : base.headline;
+                                      const description =
+                                        cc !== "BR" && translated ? translated?.description ?? base.description : legacyTranslated && k === "A" ? legacyTranslated?.description ?? base.description : base.description;
+                                      const media = byAd?.[k] ?? null;
+                                      const isVideo = media?.mimeType ? String(media.mimeType).startsWith("video/") : false;
+                                      const previewUrl = media?.url ? `${backendBase}${media.url}` : null;
+                                      return (
+                                        <div key={k} className="card" style={{ padding: 12 }}>
+                                          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                                            <div style={{ fontWeight: 950 }}>{`Ad ${k}`}</div>
+                                            <div style={{ color: "#6b7280", fontWeight: 850, fontSize: 12 }}>
+                                              vídeo: {media?.creativeAssetId ? "definido" : "faltando"}
+                                            </div>
+                                          </div>
+                                          <div style={{ marginTop: 10, display: "grid", gap: 6 }}>
+                                            <div style={{ display: "grid", gap: 4 }}>
+                                              <div style={{ color: "#6b7280", fontWeight: 900, fontSize: 12 }}>primaryText</div>
+                                              <div style={{ fontWeight: 800, fontSize: 12, color: "#111827" }}>
+                                                {normalizeNonEmptyString(String(primaryText)) ? String(primaryText).slice(0, 140) : "—"}
+                                              </div>
+                                            </div>
+                                            <div style={{ display: "grid", gap: 4 }}>
+                                              <div style={{ color: "#6b7280", fontWeight: 900, fontSize: 12 }}>headline</div>
+                                              <div style={{ fontWeight: 800, fontSize: 12, color: "#111827" }}>
+                                                {normalizeNonEmptyString(String(headline)) ? String(headline).slice(0, 120) : "—"}
+                                              </div>
+                                            </div>
+                                            <div style={{ display: "grid", gap: 4 }}>
+                                              <div style={{ color: "#6b7280", fontWeight: 900, fontSize: 12 }}>description</div>
+                                              <div style={{ fontWeight: 800, fontSize: 12, color: "#111827" }}>
+                                                {normalizeNonEmptyString(String(description)) ? String(description).slice(0, 120) : "—"}
+                                              </div>
+                                            </div>
+                                            {isVideo && previewUrl ? (
+                                              <video
+                                                src={previewUrl}
+                                                controls
+                                                style={{
+                                                  width: "100%",
+                                                  maxWidth: 520,
+                                                  borderRadius: 12,
+                                                  border: "1px solid #e5e7eb",
+                                                  display: "block",
+                                                }}
+                                              />
+                                            ) : (
+                                              <div style={{ color: "#6b7280", fontWeight: 800, fontSize: 12 }}>
+                                                {media?.creativeAssetId ? `Tipo: ${media?.mimeType || "desconhecido"}` : "—"}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
                                   </div>
                                 </div>
                               );
@@ -1221,6 +1408,17 @@ export default function Templates() {
                                   translationsDraftByCountry?.[c] && typeof translationsDraftByCountry[c] === "object"
                                     ? translationsDraftByCountry[c]
                                     : null;
+                                const existingAds = item?.ads && typeof item.ads === "object" ? item.ads : null;
+                                const legacyAds = !existingAds
+                                  ? {
+                                      A: {
+                                        primaryText: item?.primaryText ?? "",
+                                        headline: item?.headline ?? "",
+                                        description: item?.description ?? "",
+                                      },
+                                    }
+                                  : null;
+                                const ads = existingAds || legacyAds || {};
                                 return (
                                   <div key={c} className="templatesCard" style={{ padding: 16 }}>
                                     <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
@@ -1230,47 +1428,87 @@ export default function Templates() {
                                       </div>
                                     </div>
 
-                                    <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
-                                      <Field label="primary text">
-                                        <TextAreaLike
-                                          value={item?.primaryText ?? ""}
-                                          onChange={(e) =>
-                                            setTranslationsDraftByCountry((p) => ({
-                                              ...(p && typeof p === "object" ? p : {}),
-                                              [c]: { ...(item ?? {}), language: item?.language || lang, primaryText: e.target.value },
-                                            }))
-                                          }
-                                          rows={3}
-                                          placeholder="Tradução do primaryText"
-                                        />
-                                      </Field>
-                                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                                        <Field label="headline">
-                                          <InputLike
-                                            value={item?.headline ?? ""}
-                                            onChange={(e) =>
-                                              setTranslationsDraftByCountry((p) => ({
-                                                ...(p && typeof p === "object" ? p : {}),
-                                                [c]: { ...(item ?? {}), language: item?.language || lang, headline: e.target.value },
-                                              }))
-                                            }
-                                            placeholder="Tradução do headline"
-                                          />
-                                        </Field>
-                                        <Field label="description">
-                                          <InputLike
-                                            value={item?.description ?? ""}
-                                            onChange={(e) =>
-                                              setTranslationsDraftByCountry((p) => ({
-                                                ...(p && typeof p === "object" ? p : {}),
-                                                [c]: { ...(item ?? {}), language: item?.language || lang, description: e.target.value },
-                                              }))
-                                            }
-                                            placeholder="Tradução do description"
-                                          />
-                                        </Field>
+                                    {c === "BR" ? (
+                                      <div style={{ marginTop: 10, color: "#6b7280", fontWeight: 800, fontSize: 12 }}>
+                                        BR é a origem (PT-BR). Não gerar nem revisar tradução para BR.
                                       </div>
-                                    </div>
+                                    ) : (
+                                      <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+                                        {AD_KEYS.map((k) => {
+                                          const ad = ads?.[k] && typeof ads[k] === "object" ? ads[k] : {};
+                                          return (
+                                            <div key={k} className="card" style={{ padding: 12 }}>
+                                              <div style={{ fontWeight: 950, marginBottom: 10 }}>{`Ad ${k}`}</div>
+                                              <div style={{ display: "grid", gap: 10 }}>
+                                                <Field label="primary text">
+                                                  <TextAreaLike
+                                                    value={ad?.primaryText ?? ""}
+                                                    onChange={(e) =>
+                                                      setTranslationsDraftByCountry((p) => {
+                                                        const base = p && typeof p === "object" ? p : {};
+                                                        const prev = base?.[c] && typeof base[c] === "object" ? base[c] : item ?? {};
+                                                        const prevAds = prev?.ads && typeof prev.ads === "object" ? prev.ads : ads;
+                                                        const nextAds = { ...(prevAds || {}) };
+                                                        const prevAd = nextAds[k] && typeof nextAds[k] === "object" ? nextAds[k] : {};
+                                                        nextAds[k] = { ...prevAd, primaryText: e.target.value };
+                                                        return {
+                                                          ...base,
+                                                          [c]: { ...(prev || {}), language: prev?.language || lang, ads: nextAds },
+                                                        };
+                                                      })
+                                                    }
+                                                    rows={3}
+                                                    placeholder="Tradução do primaryText"
+                                                  />
+                                                </Field>
+                                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                                                  <Field label="headline">
+                                                    <InputLike
+                                                      value={ad?.headline ?? ""}
+                                                      onChange={(e) =>
+                                                        setTranslationsDraftByCountry((p) => {
+                                                          const base = p && typeof p === "object" ? p : {};
+                                                          const prev = base?.[c] && typeof base[c] === "object" ? base[c] : item ?? {};
+                                                          const prevAds = prev?.ads && typeof prev.ads === "object" ? prev.ads : ads;
+                                                          const nextAds = { ...(prevAds || {}) };
+                                                          const prevAd = nextAds[k] && typeof nextAds[k] === "object" ? nextAds[k] : {};
+                                                          nextAds[k] = { ...prevAd, headline: e.target.value };
+                                                          return {
+                                                            ...base,
+                                                            [c]: { ...(prev || {}), language: prev?.language || lang, ads: nextAds },
+                                                          };
+                                                        })
+                                                      }
+                                                      placeholder="Tradução do headline"
+                                                    />
+                                                  </Field>
+                                                  <Field label="description">
+                                                    <InputLike
+                                                      value={ad?.description ?? ""}
+                                                      onChange={(e) =>
+                                                        setTranslationsDraftByCountry((p) => {
+                                                          const base = p && typeof p === "object" ? p : {};
+                                                          const prev = base?.[c] && typeof base[c] === "object" ? base[c] : item ?? {};
+                                                          const prevAds = prev?.ads && typeof prev.ads === "object" ? prev.ads : ads;
+                                                          const nextAds = { ...(prevAds || {}) };
+                                                          const prevAd = nextAds[k] && typeof nextAds[k] === "object" ? nextAds[k] : {};
+                                                          nextAds[k] = { ...prevAd, description: e.target.value };
+                                                          return {
+                                                            ...base,
+                                                            [c]: { ...(prev || {}), language: prev?.language || lang, ads: nextAds },
+                                                          };
+                                                        })
+                                                      }
+                                                      placeholder="Tradução do description"
+                                                    />
+                                                  </Field>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
                                   </div>
                                 );
                               })

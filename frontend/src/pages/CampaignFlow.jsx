@@ -31,11 +31,9 @@ const DEFAULTS = {
     optimizationGoal: "LINK_CLICKS",
   },
   creative: {
-    primaryText: "",
-    headline: "",
-    description: "",
     destinationUrl: "",
     ctaType: "LEARN_MORE",
+    adVariants: ["A", "B", "C", "D", "E"].map((key) => ({ key, primaryText: "", headline: "", description: "" })),
     mediaByCountry: {},
     pageId: "",
     instagramActorId: "",
@@ -47,6 +45,7 @@ const DEFAULTS = {
 
 const STORAGE_LAST_EXECUTION_KEY = "campaignFlow:lastExecution:v1";
 const STORAGE_PRESETS_KEY = "campaignFlow:quickPresets:v1";
+const AD_KEYS = ["A", "B", "C", "D", "E"];
 
 function normalizeNonEmptyString(value) {
   if (typeof value !== "string") return "";
@@ -368,8 +367,10 @@ export default function CampaignFlow() {
       );
     }
     if (step === 2) {
+      const variants = getCreativeAdVariants();
+      const allHaveText = variants.every((v) => normalizeNonEmptyString(v?.primaryText));
       return (
-        normalizeNonEmptyString(creative.primaryText) &&
+        allHaveText &&
         normalizeNonEmptyString(creative.destinationUrl) &&
         normalizeNonEmptyString(creative.ctaType)
       );
@@ -598,14 +599,24 @@ export default function CampaignFlow() {
     const t = (creativeTemplates || []).find((x) => String(x?.id) === templateId);
     if (!t) return;
 
-    setCreative((p) => ({
-      ...p,
-      primaryText: normalizeNonEmptyString(t.primary_text) || p.primaryText,
-      headline: normalizeNonEmptyString(t.headline) || p.headline,
-      description: normalizeNonEmptyString(t.description) || p.description,
-      destinationUrl: normalizeNonEmptyString(t.destination_url) || p.destinationUrl,
-      ctaType: normalizeNonEmptyString(t.cta_type) || p.ctaType,
-    }));
+    setCreative((p) => {
+      const nextVariants = Array.isArray(p.adVariants) ? [...p.adVariants] : AD_KEYS.map((key) => ({ key, primaryText: "", headline: "", description: "" }));
+      while (nextVariants.length < AD_KEYS.length) nextVariants.push({ key: AD_KEYS[nextVariants.length], primaryText: "", headline: "", description: "" });
+      const curA = nextVariants[0] && typeof nextVariants[0] === "object" ? nextVariants[0] : { key: "A" };
+      nextVariants[0] = {
+        ...curA,
+        key: "A",
+        primaryText: normalizeNonEmptyString(t.primary_text) || curA.primaryText || "",
+        headline: normalizeNonEmptyString(t.headline) || curA.headline || "",
+        description: normalizeNonEmptyString(t.description) || curA.description || "",
+      };
+      return {
+        ...p,
+        adVariants: nextVariants,
+        destinationUrl: normalizeNonEmptyString(t.destination_url) || p.destinationUrl,
+        ctaType: normalizeNonEmptyString(t.cta_type) || p.ctaType,
+      };
+    });
     setNotice("Creative Template aplicado (Etapa 3 preenchida).");
   }
 
@@ -643,6 +654,19 @@ export default function CampaignFlow() {
     setProgress(null);
 
     try {
+      const variants = getCreativeAdVariants();
+      const missingVariantKeys = variants
+        .filter((v) => !normalizeNonEmptyString(v?.primaryText))
+        .map((v) => v?.key)
+        .filter(Boolean);
+      if (campaign.mode === "REAL" && missingVariantKeys.length) {
+        setSubmitting(false);
+        setNotice("");
+        setError(`Execução REAL bloqueada: texto faltando em ${missingVariantKeys.join(", ")} (primaryText).`);
+        setStep(2);
+        return;
+      }
+
       if (batchEnabled) {
         const codes = Array.from(new Set((selectedCountryCodes || []).map((c) => String(c || "").trim()).filter(Boolean)));
         const perCountry = [];
@@ -679,19 +703,26 @@ export default function CampaignFlow() {
           const missingMedia = [];
           for (const raw of codes) {
             const cc = String(raw || "").trim().toUpperCase();
-            const media = resolveMediaForCountry(cc);
-            if (media.status !== "ok") missingMedia.push(cc);
+            for (const k of AD_KEYS) {
+              const media = resolveMediaForCountryAd(cc, k);
+              if (media.status !== "ok" || media.kind !== "video") {
+                missingMedia.push(`${cc}:${k}`);
+              }
+            }
           }
           if (missingMedia.length) {
             const ok = window.confirm(
-              `Mídia ausente/indisponível para: ${missingMedia.join(", ")}.\n\nOK = continuar e PULAR esses países (não cria nada para eles).\nCancelar = voltar para revisar.`
+              `Vídeo ausente/indisponível para: ${missingMedia.join(", ")}.\n\nOK = continuar e PULAR os países afetados (não cria nada para eles).\nCancelar = voltar para revisar.`
             );
             if (!ok) {
               setSubmitting(false);
               setNotice("Execução cancelada: mídias pendentes.");
               return;
             }
-            for (const cc of missingMedia) skipCountries.add(cc);
+            for (const item of missingMedia) {
+              const cc = String(item || "").split(":")[0] || "";
+              if (cc) skipCountries.add(cc);
+            }
           }
         }
 
@@ -735,59 +766,88 @@ export default function CampaignFlow() {
               mode: campaign.mode,
             });
 
-            setProgress({ total: codes.length, currentIndex: i, currentCountryCode: countryCode, stage: "creativeDraft" });
-
             const cc = String(countryCode || "").trim().toUpperCase();
-            const lang = countryLanguageByCode?.[cc] ?? null;
-            const entry =
-              translationsByCountry?.[cc] && typeof translationsByCountry[cc] === "object" ? translationsByCountry[cc] : null;
-            const useEntry = Boolean(translationsRequired && lang && entry && (!entry.language || String(entry.language) === String(lang)));
-            const media = resolveMediaForCountry(cc);
+            const perAds = [];
+            for (const k of AD_KEYS) {
+              setProgress({
+                total: codes.length,
+                currentIndex: i,
+                currentCountryCode: countryCode,
+                stage: "creativeDraft",
+                adKey: k,
+              });
 
-            const draftRes = await createCreativeDraft({
-              generatedCampaignId,
-              creativeAssetId: media?.supported ? media.creativeAssetId : null,
-              primaryText: useEntry ? entry?.primaryText ?? creative.primaryText : creative.primaryText,
-              headline: useEntry ? entry?.headline || null : creative.headline || null,
-              description: useEntry ? entry?.description || null : creative.description || null,
-              destinationUrl: creative.destinationUrl,
-              ctaType: creative.ctaType,
-            });
+              const copy = resolveCopyForCountryAd(cc, k);
+              const media = resolveMediaForCountryAd(cc, k);
 
-            const creativeDraftId = draftRes?.creativeDraft?.id;
-            if (!normalizeNonEmptyString(creativeDraftId)) {
-              throw new Error("Falha ao criar Creative Draft (id ausente).");
-            }
+              if (!normalizeNonEmptyString(copy?.primaryText)) {
+                perAds.push({ ok: false, key: k, error: "Texto faltando (primaryText)." });
+                continue;
+              }
 
-            let publishRes = null;
-            if (campaign.mode === "REAL") {
-              setProgress({ total: codes.length, currentIndex: i, currentCountryCode: countryCode, stage: "creativePublish" });
-              publishRes = await publishMetaCreativeDraft(creativeDraftId, {
-                pageId: normalizeNonEmptyString(creative.pageId) || null,
-                instagramActorId: normalizeNonEmptyString(creative.instagramActorId) || null,
-                force: false,
+              if (campaign.mode === "REAL" && (media.status !== "ok" || media.kind !== "video")) {
+                perAds.push({ ok: false, key: k, error: "Vídeo faltando/indisponível para este Ad." });
+                continue;
+              }
+
+              const draftRes = await createCreativeDraft({
+                generatedCampaignId,
+                creativeAssetId: media?.supported ? media.creativeAssetId : null,
+                primaryText: copy.primaryText,
+                headline: copy.headline || null,
+                description: copy.description || null,
+                destinationUrl: creative.destinationUrl,
+                ctaType: creative.ctaType,
+              });
+
+              const creativeDraftId = draftRes?.creativeDraft?.id;
+              if (!normalizeNonEmptyString(creativeDraftId)) {
+                perAds.push({ ok: false, key: k, error: "Falha ao criar Creative Draft (id ausente)." });
+                continue;
+              }
+
+              let publishRes = null;
+              if (campaign.mode === "REAL") {
+                setProgress({
+                  total: codes.length,
+                  currentIndex: i,
+                  currentCountryCode: countryCode,
+                  stage: "creativePublish",
+                  adKey: k,
+                });
+                publishRes = await publishMetaCreativeDraft(creativeDraftId, {
+                  pageId: normalizeNonEmptyString(creative.pageId) || null,
+                  instagramActorId: normalizeNonEmptyString(creative.instagramActorId) || null,
+                  force: false,
+                });
+              }
+
+              setProgress({ total: codes.length, currentIndex: i, currentCountryCode: countryCode, stage: "ad", adKey: k });
+              const adRes = await createMetaAd({
+                generatedCampaignId,
+                name: `Ad • ${cc} — ${k}`,
+                creativeDraftId,
+                mode: campaign.mode,
+              });
+
+              perAds.push({
+                ok: true,
+                key: k,
+                creativeDraftId,
+                metaCreativeId: publishRes?.metaCreative?.id ?? null,
+                metaAdId: adRes?.metaAd?.id ?? null,
+                metaAdEffectiveStatus: adRes?.metaAd?.effective_status ?? null,
               });
             }
 
-            setProgress({ total: codes.length, currentIndex: i, currentCountryCode: countryCode, stage: "ad" });
-            const adRes = await createMetaAd({
-              generatedCampaignId,
-              name: normalizeCountrySuffixName(ad.name, countryCode, { fallbackPrefix: "Ad" }),
-              creativeDraftId,
-              mode: campaign.mode,
-            });
-
             perCountry.push({
-              ok: true,
+              ok: perAds.every((a) => a?.ok),
               countryCode,
               label,
               generatedCampaignId,
               metaCampaignId: campaignRes?.metaCampaign?.id ?? null,
               metaAdSetId: adSetRes?.metaAdSet?.id ?? null,
-              creativeDraftId,
-              metaCreativeId: publishRes?.metaCreative?.id ?? null,
-              metaAdId: adRes?.metaAd?.id ?? null,
-              metaAdEffectiveStatus: adRes?.metaAd?.effective_status ?? null,
+              ads: perAds,
             });
           } catch (err) {
             perCountry.push({
@@ -813,11 +873,15 @@ export default function CampaignFlow() {
       } else {
         if (campaign.mode === "REAL") {
           const cc = String(campaign.countryCode || "").trim().toUpperCase();
-          const media = resolveMediaForCountry(cc);
-          if (media.status !== "ok") {
+          const missing = [];
+          for (const k of AD_KEYS) {
+            const media = resolveMediaForCountryAd(cc, k);
+            if (media.status !== "ok" || media.kind !== "video") missing.push(k);
+          }
+          if (missing.length) {
             setSubmitting(false);
             setNotice("");
-            setError(`Execução REAL bloqueada: mídia ausente/indisponível para ${cc}. Volte para revisar a mídia por país.`);
+            setError(`Execução REAL bloqueada: vídeo ausente/indisponível para ${cc}: ${missing.join(", ")}.`);
             setStep(3);
             return;
           }
@@ -849,42 +913,55 @@ export default function CampaignFlow() {
         const translationsByCountry =
           creative?.translationsByCountry && typeof creative.translationsByCountry === "object" ? creative.translationsByCountry : null;
         const cc = String(campaign.countryCode || "").trim().toUpperCase();
-        const lang = countryLanguageByCode?.[cc] ?? null;
-        const entry =
-          translationsByCountry?.[cc] && typeof translationsByCountry[cc] === "object" ? translationsByCountry[cc] : null;
-        const useEntry = Boolean(translationsRequired && lang && entry && (!entry.language || String(entry.language) === String(lang)));
-        const media = resolveMediaForCountry(cc);
-
-        const draftRes = await createCreativeDraft({
-          generatedCampaignId,
-          creativeAssetId: media?.supported ? media.creativeAssetId : null,
-          primaryText: useEntry ? entry?.primaryText ?? creative.primaryText : creative.primaryText,
-          headline: useEntry ? entry?.headline || null : creative.headline || null,
-          description: useEntry ? entry?.description || null : creative.description || null,
-          destinationUrl: creative.destinationUrl,
-          ctaType: creative.ctaType,
-        });
-
-        const creativeDraftId = draftRes?.creativeDraft?.id;
-        if (!normalizeNonEmptyString(creativeDraftId)) {
-          throw new Error("Falha ao criar Creative Draft (id ausente).");
-        }
-
-        let publishRes = null;
-        if (campaign.mode === "REAL") {
-          publishRes = await publishMetaCreativeDraft(creativeDraftId, {
-            pageId: normalizeNonEmptyString(creative.pageId) || null,
-            instagramActorId: normalizeNonEmptyString(creative.instagramActorId) || null,
-            force: false,
+        const perAds = [];
+        for (const k of AD_KEYS) {
+          const copy = resolveCopyForCountryAd(cc, k);
+          const media = resolveMediaForCountryAd(cc, k);
+          if (!normalizeNonEmptyString(copy?.primaryText)) {
+            perAds.push({ ok: false, key: k, error: "Texto faltando (primaryText)." });
+            continue;
+          }
+          if (campaign.mode === "REAL" && (media.status !== "ok" || media.kind !== "video")) {
+            perAds.push({ ok: false, key: k, error: "Vídeo faltando/indisponível para este Ad." });
+            continue;
+          }
+          const draftRes = await createCreativeDraft({
+            generatedCampaignId,
+            creativeAssetId: media?.supported ? media.creativeAssetId : null,
+            primaryText: copy.primaryText,
+            headline: copy.headline || null,
+            description: copy.description || null,
+            destinationUrl: creative.destinationUrl,
+            ctaType: creative.ctaType,
+          });
+          const creativeDraftId = draftRes?.creativeDraft?.id;
+          if (!normalizeNonEmptyString(creativeDraftId)) {
+            perAds.push({ ok: false, key: k, error: "Falha ao criar Creative Draft (id ausente)." });
+            continue;
+          }
+          let publishRes = null;
+          if (campaign.mode === "REAL") {
+            publishRes = await publishMetaCreativeDraft(creativeDraftId, {
+              pageId: normalizeNonEmptyString(creative.pageId) || null,
+              instagramActorId: normalizeNonEmptyString(creative.instagramActorId) || null,
+              force: false,
+            });
+          }
+          const adRes = await createMetaAd({
+            generatedCampaignId,
+            name: `Ad • ${cc} — ${k}`,
+            creativeDraftId,
+            mode: campaign.mode,
+          });
+          perAds.push({
+            ok: true,
+            key: k,
+            creativeDraftId,
+            metaCreativeId: publishRes?.metaCreative?.id ?? null,
+            metaAdId: adRes?.metaAd?.id ?? null,
+            metaAdEffectiveStatus: adRes?.metaAd?.effective_status ?? null,
           });
         }
-
-        const adRes = await createMetaAd({
-          generatedCampaignId,
-          name: ad.name,
-          creativeDraftId,
-          mode: campaign.mode,
-        });
 
         const nextResult = {
           type: "single",
@@ -893,10 +970,7 @@ export default function CampaignFlow() {
           generatedCampaignId,
           metaCampaignId: campaignRes?.metaCampaign?.id ?? null,
           metaAdSetId: adSetRes?.metaAdSet?.id ?? null,
-          creativeDraftId,
-          metaCreativeId: publishRes?.metaCreative?.id ?? null,
-          metaAdId: adRes?.metaAd?.id ?? null,
-          metaAdEffectiveStatus: adRes?.metaAd?.effective_status ?? null,
+          ads: perAds,
           createdAt: new Date().toISOString(),
         };
         setResult(nextResult);
@@ -921,35 +995,103 @@ export default function CampaignFlow() {
   const pausedWarning = "Tudo será criado como PAUSED (guardrail obrigatório).";
 
   function resolveCopyForCountry(countryCode) {
-    const cc = String(countryCode || "").trim().toUpperCase();
-    const base = {
-      primaryText: creative.primaryText,
-      headline: creative.headline || "",
-      description: creative.description || "",
+    // Backward-compat shim for existing UI (Ad A).
+    return resolveCopyForCountryAd(countryCode, "A");
+  }
+
+  function getCreativeAdVariants() {
+    const raw = creative?.adVariants;
+    if (Array.isArray(raw) && raw.length) {
+      return AD_KEYS.map((key, idx) => {
+        const src = raw[idx] && typeof raw[idx] === "object" ? raw[idx] : {};
+        return {
+          key,
+          primaryText: normalizeNonEmptyString(src?.primaryText) || "",
+          headline: normalizeNonEmptyString(src?.headline) || "",
+          description: normalizeNonEmptyString(src?.description) || "",
+        };
+      });
+    }
+    // Older snapshots may still have single creative fields.
+    const legacy = {
+      primaryText: normalizeNonEmptyString(creative?.primaryText) || "",
+      headline: normalizeNonEmptyString(creative?.headline) || "",
+      description: normalizeNonEmptyString(creative?.description) || "",
     };
+    return AD_KEYS.map((key) => ({
+      key,
+      primaryText: key === "A" ? legacy.primaryText : "",
+      headline: key === "A" ? legacy.headline : "",
+      description: key === "A" ? legacy.description : "",
+    }));
+  }
+
+  function resolveCopyForCountryAd(countryCode, adKey) {
+    const cc = String(countryCode || "").trim().toUpperCase();
+    const k = String(adKey || "").trim().toUpperCase();
+    const variants = getCreativeAdVariants();
+    const idx = AD_KEYS.indexOf(k);
+    const baseVariant = idx >= 0 ? variants[idx] : variants[0];
+
     const lang = countryLanguageByCode?.[cc] ?? null;
     const translationsRequired = creative?.translationsRequired === true;
     const translationsByCountry =
       creative?.translationsByCountry && typeof creative.translationsByCountry === "object" ? creative.translationsByCountry : null;
     const entry = translationsByCountry?.[cc] && typeof translationsByCountry[cc] === "object" ? translationsByCountry[cc] : null;
-    const ok = Boolean(translationsRequired && lang && entry && (!entry.language || String(entry.language) === String(lang)));
+
+    const ok = Boolean(translationsRequired && cc !== "BR" && lang && entry && (!entry.language || String(entry.language) === String(lang)));
     if (!ok) {
-      return { source: "base", language: lang, ...base };
+      return { source: "base", language: lang, ...baseVariant };
     }
-    return {
-      source: "translation",
-      language: lang,
-      primaryText: entry?.primaryText ?? base.primaryText,
-      headline: entry?.headline ?? base.headline,
-      description: entry?.description ?? base.description,
-    };
+
+    const ads = entry?.ads && typeof entry.ads === "object" ? entry.ads : null;
+    if (ads && ads[k] && typeof ads[k] === "object") {
+      const t = ads[k];
+      return {
+        source: "translation",
+        language: lang,
+        key: k,
+        primaryText: t?.primaryText ?? baseVariant.primaryText,
+        headline: t?.headline ?? baseVariant.headline,
+        description: t?.description ?? baseVariant.description,
+      };
+    }
+
+    // Legacy translation entry -> Ad A only.
+    if (!ads && k === "A") {
+      return {
+        source: "translation",
+        language: lang,
+        key: "A",
+        primaryText: entry?.primaryText ?? baseVariant.primaryText,
+        headline: entry?.headline ?? baseVariant.headline,
+        description: entry?.description ?? baseVariant.description,
+      };
+    }
+
+    return { source: "base", language: lang, ...baseVariant };
   }
 
-  function resolveMediaForCountry(countryCode) {
+  function resolveMediaForCountryAd(countryCode, adKey) {
     const cc = String(countryCode || "").trim().toUpperCase();
+    const k = String(adKey || "").trim().toUpperCase();
+    if (!AD_KEYS.includes(k)) {
+      return {
+        countryCode: cc,
+        adKey: k,
+        creativeAssetId: null,
+        mimeType: null,
+        originalName: null,
+        url: null,
+        kind: "unknown",
+        supported: false,
+        status: "missing",
+      };
+    }
     const mediaByCountry =
       creative?.mediaByCountry && typeof creative.mediaByCountry === "object" ? creative.mediaByCountry : null;
-    const entry = mediaByCountry?.[cc] && typeof mediaByCountry[cc] === "object" ? mediaByCountry[cc] : null;
+    const byAd = mediaByCountry?.[cc] && typeof mediaByCountry[cc] === "object" ? mediaByCountry[cc] : null;
+    const entry = byAd?.[k] && typeof byAd[k] === "object" ? byAd[k] : null;
 
     const creativeAssetId = normalizeNonEmptyString(entry?.creativeAssetId) || null;
     const mimeType = normalizeNonEmptyString(entry?.mimeType) || null;
@@ -957,10 +1099,11 @@ export default function CampaignFlow() {
     const url = normalizeNonEmptyString(entry?.url) || null;
 
     const kind = mimeType && mimeType.startsWith("image/") ? "image" : mimeType && mimeType.startsWith("video/") ? "video" : "unknown";
-    const supported = kind === "image";
+    const supported = kind === "image" || kind === "video";
 
     return {
       countryCode: cc,
+      adKey: k,
       creativeAssetId,
       mimeType,
       originalName,
@@ -1356,29 +1499,68 @@ export default function CampaignFlow() {
                   </button>
                 </div>
               </Field>
-              <Field label="Primary text" required>
-                <TextAreaLike
-                  placeholder="Ex: Teste controlado do Campaign Builder. Não ativar."
-                  value={creative.primaryText}
-                  onChange={(e) => setCreative((p) => ({ ...p, primaryText: e.target.value }))}
-                  disabled={submitting}
-                />
-              </Field>
-              <Field label="Headline">
-                <InputLike
-                  placeholder="Ex: Demo — Anúncio PAUSED"
-                  value={creative.headline}
-                  onChange={(e) => setCreative((p) => ({ ...p, headline: e.target.value }))}
-                  disabled={submitting}
-                />
-              </Field>
-              <Field label="Description">
-                <InputLike
-                  placeholder="Opcional"
-                  value={creative.description}
-                  onChange={(e) => setCreative((p) => ({ ...p, description: e.target.value }))}
-                  disabled={submitting}
-                />
+              <Field label="Variações (A–E) — PT-BR" required hint="Cada variação vira 1 Ad no país. BR é a origem (não traduz).">
+                <div style={{ display: "grid", gap: 10 }}>
+                  {(Array.isArray(creative.adVariants) ? creative.adVariants : AD_KEYS.map((key) => ({ key }))).map((ad, idx) => {
+                    const key = AD_KEYS[idx] ?? ad?.key ?? `${idx + 1}`;
+                    const item = ad && typeof ad === "object" ? ad : {};
+                    return (
+                      <div key={key} className="card" style={{ padding: 12 }}>
+                        <div style={{ fontWeight: 950, marginBottom: 10 }}>{`Ad ${key}`}</div>
+                        <div style={{ display: "grid", gap: 10 }}>
+                          <TextAreaLike
+                            placeholder="Primary text"
+                            value={item.primaryText ?? ""}
+                            onChange={(e) =>
+                              setCreative((p) => {
+                                const next = Array.isArray(p.adVariants)
+                                  ? [...p.adVariants]
+                                  : AD_KEYS.map((k) => ({ key: k, primaryText: "", headline: "", description: "" }));
+                                while (next.length < AD_KEYS.length) next.push({ key: AD_KEYS[next.length], primaryText: "", headline: "", description: "" });
+                                const cur = next[idx] && typeof next[idx] === "object" ? next[idx] : {};
+                                next[idx] = { ...cur, key, primaryText: e.target.value };
+                                return { ...p, adVariants: next };
+                              })
+                            }
+                            disabled={submitting}
+                          />
+                          <InputLike
+                            placeholder="Headline"
+                            value={item.headline ?? ""}
+                            onChange={(e) =>
+                              setCreative((p) => {
+                                const next = Array.isArray(p.adVariants)
+                                  ? [...p.adVariants]
+                                  : AD_KEYS.map((k) => ({ key: k, primaryText: "", headline: "", description: "" }));
+                                while (next.length < AD_KEYS.length) next.push({ key: AD_KEYS[next.length], primaryText: "", headline: "", description: "" });
+                                const cur = next[idx] && typeof next[idx] === "object" ? next[idx] : {};
+                                next[idx] = { ...cur, key, headline: e.target.value };
+                                return { ...p, adVariants: next };
+                              })
+                            }
+                            disabled={submitting}
+                          />
+                          <InputLike
+                            placeholder="Description"
+                            value={item.description ?? ""}
+                            onChange={(e) =>
+                              setCreative((p) => {
+                                const next = Array.isArray(p.adVariants)
+                                  ? [...p.adVariants]
+                                  : AD_KEYS.map((k) => ({ key: k, primaryText: "", headline: "", description: "" }));
+                                while (next.length < AD_KEYS.length) next.push({ key: AD_KEYS[next.length], primaryText: "", headline: "", description: "" });
+                                const cur = next[idx] && typeof next[idx] === "object" ? next[idx] : {};
+                                next[idx] = { ...cur, key, description: e.target.value };
+                                return { ...p, adVariants: next };
+                              })
+                            }
+                            disabled={submitting}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </Field>
               <Field label="Destination URL" required>
                 <InputLike
@@ -1477,9 +1659,14 @@ export default function CampaignFlow() {
               <div className="card" style={{ padding: 18 }}>
                 <div style={{ fontWeight: 950, marginBottom: 10 }}>Creative</div>
                 <div style={{ display: "grid", gap: 10 }}>
-                  <SummaryRow label="primaryText" value={creative.primaryText ? "ok" : "—"} />
-                  <SummaryRow label="headline" value={creative.headline || "—"} />
-                  <SummaryRow label="description" value={creative.description || "—"} />
+                  <SummaryRow
+                    label="ads"
+                    value={(() => {
+                      const variants = getCreativeAdVariants();
+                      const missing = variants.filter((v) => !normalizeNonEmptyString(v?.primaryText)).length;
+                      return missing ? `5 (faltando texto em ${missing})` : "5 (ok)";
+                    })()}
+                  />
                   <SummaryRow label="destinationUrl" value={creative.destinationUrl || "—"} />
                   <SummaryRow label="ctaType" value={creative.ctaType || "—"} />
                   <SummaryRow label="translations" value={creative?.translationsRequired ? "ativas (revisar antes)" : "—"} />
@@ -1497,42 +1684,54 @@ export default function CampaignFlow() {
               <div className="card" style={{ padding: 18 }}>
                 <div style={{ fontWeight: 950, marginBottom: 10 }}>Copy por país</div>
                 <div style={{ color: "#6b7280", fontWeight: 750, fontSize: 12 }}>
-                  Mostra o que será enviado no Creative Draft por país (tradução quando existir; caso contrário, texto base).
+                  Mostra o que será enviado no Creative Draft por país e por Ad (A–E). BR usa sempre o texto base (PT-BR).
                 </div>
                 <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
                   {(batchEnabled ? selectedCountryCodes : [campaign.countryCode || "BR"]).map((code) => {
                     const cc = String(code || "").trim().toUpperCase();
-                    const info = resolveCopyForCountry(cc);
-                    const primaryPreview = String(info.primaryText || "").slice(0, 90);
-                    const headlinePreview = String(info.headline || "").slice(0, 90);
-                    const descriptionPreview = String(info.description || "").slice(0, 90);
                     return (
                       <div key={cc} className="card" style={{ padding: 12 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
                           <div style={{ fontWeight: 950 }}>{cc}</div>
-                          <div style={{ color: "#6b7280", fontWeight: 850, fontSize: 12 }}>
-                            idioma: {info.language || "—"} • fonte: {info.source === "translation" ? "tradução" : "base"}
-                          </div>
+                          <div style={{ color: "#6b7280", fontWeight: 850, fontSize: 12 }}>Ads A–E</div>
                         </div>
-                        <div style={{ marginTop: 8, display: "grid", gap: 6 }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                            <div style={{ color: "#6b7280", fontWeight: 800, fontSize: 12 }}>primaryText</div>
-                            <div style={{ fontWeight: 850, fontSize: 12, color: "#111827", textAlign: "right" }}>
-                              {primaryPreview ? `${primaryPreview}${String(info.primaryText || "").length > 90 ? "…" : ""}` : "—"}
-                            </div>
-                          </div>
-                          <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                            <div style={{ color: "#6b7280", fontWeight: 800, fontSize: 12 }}>headline</div>
-                            <div style={{ fontWeight: 850, fontSize: 12, color: "#111827", textAlign: "right" }}>
-                              {headlinePreview ? `${headlinePreview}${String(info.headline || "").length > 90 ? "…" : ""}` : "—"}
-                            </div>
-                          </div>
-                          <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                            <div style={{ color: "#6b7280", fontWeight: 800, fontSize: 12 }}>description</div>
-                            <div style={{ fontWeight: 850, fontSize: 12, color: "#111827", textAlign: "right" }}>
-                              {descriptionPreview ? `${descriptionPreview}${String(info.description || "").length > 90 ? "…" : ""}` : "—"}
-                            </div>
-                          </div>
+                        <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+                          {AD_KEYS.map((k) => {
+                            const info = resolveCopyForCountryAd(cc, k);
+                            const primaryPreview = String(info.primaryText || "").slice(0, 90);
+                            const headlinePreview = String(info.headline || "").slice(0, 90);
+                            const descriptionPreview = String(info.description || "").slice(0, 90);
+                            return (
+                              <div key={k} className="card" style={{ padding: 12 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                                  <div style={{ fontWeight: 950 }}>{`Ad ${k}`}</div>
+                                  <div style={{ color: "#6b7280", fontWeight: 850, fontSize: 12 }}>
+                                    idioma: {info.language || "—"} • fonte: {info.source === "translation" ? "tradução" : "base"}
+                                  </div>
+                                </div>
+                                <div style={{ marginTop: 8, display: "grid", gap: 6 }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                                    <div style={{ color: "#6b7280", fontWeight: 800, fontSize: 12 }}>primaryText</div>
+                                    <div style={{ fontWeight: 850, fontSize: 12, color: "#111827", textAlign: "right" }}>
+                                      {primaryPreview ? `${primaryPreview}${String(info.primaryText || "").length > 90 ? "…" : ""}` : "—"}
+                                    </div>
+                                  </div>
+                                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                                    <div style={{ color: "#6b7280", fontWeight: 800, fontSize: 12 }}>headline</div>
+                                    <div style={{ fontWeight: 850, fontSize: 12, color: "#111827", textAlign: "right" }}>
+                                      {headlinePreview ? `${headlinePreview}${String(info.headline || "").length > 90 ? "…" : ""}` : "—"}
+                                    </div>
+                                  </div>
+                                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                                    <div style={{ color: "#6b7280", fontWeight: 800, fontSize: 12 }}>description</div>
+                                    <div style={{ fontWeight: 850, fontSize: 12, color: "#111827", textAlign: "right" }}>
+                                      {descriptionPreview ? `${descriptionPreview}${String(info.description || "").length > 90 ? "…" : ""}` : "—"}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     );
@@ -1541,48 +1740,60 @@ export default function CampaignFlow() {
               </div>
 
               <div className="card" style={{ padding: 18 }}>
-                <div style={{ fontWeight: 950, marginBottom: 10 }}>Mídia por país</div>
+                <div style={{ fontWeight: 950, marginBottom: 10 }}>Vídeos por país (A–E)</div>
                 <div style={{ color: "#6b7280", fontWeight: 750, fontSize: 12 }}>
-                  Fluxo REAL atual usa apenas imagem (vídeo fica como item futuro). País sem mídia será bloqueado no REAL.
+                  País sem vídeo (A–E) será bloqueado no REAL (ou pulado no lote, com confirmação).
                 </div>
                 <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
                   {(batchEnabled ? selectedCountryCodes : [campaign.countryCode || "BR"]).map((code) => {
                     const cc = String(code || "").trim().toUpperCase();
-                    const info = resolveMediaForCountry(cc);
-                    const previewUrl = info?.url ? `${getBackendBaseUrl()}${info.url}` : null;
-                    const statusLabel =
-                      info.status === "ok" ? "OK" : info.status === "missing" ? "Sem mídia" : "Tipo não suportado (por enquanto)";
-                    const tone = info.status === "ok" ? "#065f46" : "#92400e";
-                    const bg = info.status === "ok" ? "#ecfdf5" : "#fffbeb";
-                    const border = info.status === "ok" ? "#a7f3d0" : "#fde68a";
                     return (
-                      <div key={cc} className="card" style={{ padding: 12, borderColor: border, background: bg }}>
+                      <div key={cc} className="card" style={{ padding: 12 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
                           <div style={{ fontWeight: 950 }}>{cc}</div>
-                          <div style={{ color: tone, fontWeight: 900, fontSize: 12 }}>{statusLabel}</div>
+                          <div style={{ color: "#6b7280", fontWeight: 900, fontSize: 12 }}>Ads A–E</div>
                         </div>
-                        <div style={{ marginTop: 8, color: "#6b7280", fontWeight: 800, fontSize: 12 }}>
-                          {info?.originalName ? info.originalName : info?.creativeAssetId ? "Asset selecionado" : "—"}
+                        <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+                          {AD_KEYS.map((k) => {
+                            const info = resolveMediaForCountryAd(cc, k);
+                            const previewUrl = info?.url ? `${getBackendBaseUrl()}${info.url}` : null;
+                            const ok = info.status === "ok" && info.kind === "video";
+                            const statusLabel = ok ? "OK" : info.status === "missing" ? "Sem vídeo" : "Tipo inválido";
+                            const tone = ok ? "#065f46" : "#92400e";
+                            const bg = ok ? "#ecfdf5" : "#fffbeb";
+                            const border = ok ? "#a7f3d0" : "#fde68a";
+                            return (
+                              <div key={k} className="card" style={{ padding: 12, borderColor: border, background: bg }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                                  <div style={{ fontWeight: 950 }}>{`Ad ${k}`}</div>
+                                  <div style={{ color: tone, fontWeight: 900, fontSize: 12 }}>{statusLabel}</div>
+                                </div>
+                                <div style={{ marginTop: 8, color: "#6b7280", fontWeight: 800, fontSize: 12 }}>
+                                  {info?.originalName ? info.originalName : info?.creativeAssetId ? "Asset selecionado" : "—"}
+                                </div>
+                                {ok && previewUrl ? (
+                                  <div style={{ marginTop: 10 }}>
+                                    <video
+                                      src={previewUrl}
+                                      controls
+                                      style={{
+                                        width: "100%",
+                                        maxWidth: 640,
+                                        borderRadius: 12,
+                                        border: "1px solid #e5e7eb",
+                                        display: "block",
+                                      }}
+                                    />
+                                  </div>
+                                ) : (
+                                  <div style={{ marginTop: 10, color: "#6b7280", fontWeight: 800, fontSize: 12 }}>
+                                    {info?.mimeType ? `Tipo: ${info.mimeType}` : "—"}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
-                        {info.status === "ok" && previewUrl ? (
-                          <div style={{ marginTop: 10 }}>
-                            <img
-                              src={previewUrl}
-                              alt={`Mídia ${cc}`}
-                              style={{
-                                width: "100%",
-                                maxWidth: 640,
-                                borderRadius: 12,
-                                border: "1px solid #e5e7eb",
-                                display: "block",
-                              }}
-                            />
-                          </div>
-                        ) : (
-                          <div style={{ marginTop: 10, color: "#6b7280", fontWeight: 800, fontSize: 12 }}>
-                            {info?.mimeType ? `Tipo: ${info.mimeType}` : "—"}
-                          </div>
-                        )}
                       </div>
                     );
                   })}

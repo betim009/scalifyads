@@ -11,8 +11,23 @@ function getGraphBaseUrl() {
   return `https://graph.facebook.com/${version.replace(/^v/, 'v')}`
 }
 
+function getGraphVideoBaseUrl() {
+  const version = process.env.META_GRAPH_VERSION ?? 'v20.0'
+  return `https://graph-video.facebook.com/${version.replace(/^v/, 'v')}`
+}
+
 function buildUrl(path, params) {
   const base = getGraphBaseUrl()
+  const url = new URL(`${base}/${String(path).replace(/^\//, '')}`)
+  for (const [key, value] of Object.entries(params ?? {})) {
+    if (value === undefined || value === null) continue
+    url.searchParams.set(key, String(value))
+  }
+  return url
+}
+
+function buildVideoUrl(path, params) {
+  const base = getGraphVideoBaseUrl()
   const url = new URL(`${base}/${String(path).replace(/^\//, '')}`)
   for (const [key, value] of Object.entries(params ?? {})) {
     if (value === undefined || value === null) continue
@@ -156,6 +171,46 @@ export async function metaUploadAdImage({
   return { hash, raw: json }
 }
 
+export async function metaUploadAdVideo({ metaAdAccountId, accessToken, filePath, mimeType, originalName } = {}) {
+  const act = normalizeMetaAdAccountId(metaAdAccountId)
+  if (!act) {
+    const err = new Error('metaAdAccountId is required (expected act_<digits>)')
+    err.status = 400
+    throw err
+  }
+
+  const token = normalizeNonEmptyString(accessToken)
+  if (!token) {
+    const err = new Error('accessToken is required')
+    err.status = 400
+    throw err
+  }
+
+  const fp = normalizeNonEmptyString(filePath)
+  if (!fp) {
+    const err = new Error('filePath is required')
+    err.status = 400
+    throw err
+  }
+
+  const buf = await fsp.readFile(fp)
+  const form = new FormData()
+  form.append('access_token', token)
+  const mt = normalizeNonEmptyString(mimeType) ?? 'application/octet-stream'
+  const name = normalizeNonEmptyString(originalName) ?? 'asset'
+  form.append('source', new Blob([buf], { type: mt }), name)
+
+  const json = await fetchJson(buildVideoUrl(`${act}/advideos`), { method: 'POST', body: form, retries: 3 })
+  const id = normalizeNonEmptyString(json?.id)
+  if (!id) {
+    const err = new Error('Meta ad video upload returned no id')
+    err.status = 502
+    err.details = json ?? null
+    throw err
+  }
+  return { id, raw: json }
+}
+
 export async function metaFetchAdCreative({
   metaCreativeId,
   accessToken,
@@ -193,7 +248,8 @@ export async function metaCreateAdCreative({
   headline,
   description,
   ctaType,
-  imageHash
+  imageHash,
+  videoId
 } = {}) {
   const act = normalizeMetaAdAccountId(metaAdAccountId)
   if (!act) {
@@ -229,20 +285,29 @@ export async function metaCreateAdCreative({
   const desc = normalizeNonEmptyString(description)
   const cta = normalizeNonEmptyString(ctaType)
   const imgHash = normalizeNonEmptyString(imageHash)
+  const vid = normalizeNonEmptyString(videoId)
   const igActor = normalizeNonEmptyString(instagramActorId)
 
-  const linkData = {
-    link: url,
-    ...(msg ? { message: msg } : null),
-    ...(head ? { name: head } : null),
-    ...(desc ? { description: desc } : null),
-    ...(imgHash ? { image_hash: imgHash } : null),
-    ...(cta ? { call_to_action: { type: cta, value: { link: url } } } : null)
-  }
+  const payloadData = vid
+    ? {
+        video_id: vid,
+        ...(msg ? { message: msg } : null),
+        ...(head ? { title: head } : null),
+        ...(desc ? { link_description: desc } : null),
+        ...(cta ? { call_to_action: { type: cta, value: { link: url } } } : null)
+      }
+    : {
+        link: url,
+        ...(msg ? { message: msg } : null),
+        ...(head ? { name: head } : null),
+        ...(desc ? { description: desc } : null),
+        ...(imgHash ? { image_hash: imgHash } : null),
+        ...(cta ? { call_to_action: { type: cta, value: { link: url } } } : null)
+      }
 
   const objectStorySpec = {
     page_id: pg,
-    link_data: linkData,
+    ...(vid ? { video_data: payloadData } : { link_data: payloadData }),
     ...(igActor ? { instagram_actor_id: igActor } : null)
   }
 
