@@ -1662,6 +1662,42 @@ Validação executada (local):
 
 - [2026-05-29 10:45] `cd frontend && npm run build` (OK) após P27.2 (5 variações + vídeos por país + execução 5 Ads por país).
 
+### P27.3 — Corrigir herança das credenciais Meta no fluxo REAL
+
+Última atualização: [2026-05-29 11:01]
+
+Contexto:
+Foi identificado bug onde, apesar das credenciais estarem preenchidas no `/profile` (Meta Ad Account ID e Meta Page ID), o `/campaign-flow` executava em modo REAL com:
+
+- `metaAdAccountId: ""`
+- `pageId: ""`
+
+Objetivo:
+Corrigir a herança automática de credenciais Meta entre:
+
+`/profile` → `/templates` → `/campaign-flow` → execução REAL
+
+Tarefas:
+
+- [x] Auditar como o Profile salva: `metaAdAccountId`, `pageId`, `accessToken`.
+- [x] Auditar como o `/campaign-flow` carrega credenciais.
+- [x] Auditar a montagem do payload REAL.
+- [x] Identificar por que `metaAdAccountId` e `pageId` chegavam vazios. (Snapshots do template zeravam os campos e o flow não herdava automaticamente.)
+- [x] Corrigir herança automática das credenciais do Profile.
+- [x] Garantir que o payload REAL receba `metaAdAccountId` e `pageId` (quando existir Profile configurado).
+- [x] Não exigir preenchimento manual se já existir Profile configurado.
+- [x] Melhorar diagnóstico de erros Meta (quando existir): `error_user_title`, `error_user_msg`, `error_subcode`, `fbtrace_id`.
+- [ ] Validar novamente o fluxo REAL: BR e AE (validação manual).
+- [x] Registrar evidências no `PLANS.md`.
+
+Validação obrigatória:
+
+- [x] `cd frontend && npm run build`
+
+Validação executada (local):
+
+- [2026-05-29 11:01] `cd frontend && npm run build` (OK) após P27.3 (herança de credenciais + diagnóstico de erro).
+
 ## Decision Log (Ativo)
 
 Última atualização: [2026-05-26 12:10]

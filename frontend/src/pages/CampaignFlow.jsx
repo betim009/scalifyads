@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { getCountries } from "../services/reference.js";
 import { getAuthMe } from "../services/auth.js";
-import { getBackendBaseUrl } from "../services/http.js";
+import { getBackendBaseUrl, HttpError } from "../services/http.js";
 import { createMetaCampaignSimple } from "../services/metaCampaigns.js";
 import { createMetaAdSet } from "../services/metaAdSets.js";
 import { createCreativeDraft } from "../services/creativeDrafts.js";
@@ -75,6 +75,34 @@ function safeJsonParse(raw) {
   } catch {
     return null;
   }
+}
+
+function extractMetaErrorDetails(err) {
+  if (!(err instanceof HttpError)) return null;
+  const body = err?.body && typeof err.body === "object" ? err.body : null;
+  const details = body?.error?.details && typeof body.error.details === "object" ? body.error.details : null;
+  if (!details) return null;
+  const title = typeof details.error_user_title === "string" ? details.error_user_title : null;
+  const msg = typeof details.error_user_msg === "string" ? details.error_user_msg : null;
+  const subcode = typeof details.error_subcode === "number" ? details.error_subcode : null;
+  const fbtraceId = typeof details.fbtrace_id === "string" ? details.fbtrace_id : null;
+  const code = typeof details.code === "number" ? details.code : null;
+  return { title, msg, subcode, fbtraceId, code };
+}
+
+function formatMetaErrorSuffix(err) {
+  const meta = extractMetaErrorDetails(err);
+  if (!meta) return "";
+  const parts = [];
+  if (meta.title) parts.push(meta.title);
+  if (meta.msg) parts.push(meta.msg);
+  const tags = [];
+  if (meta.code != null) tags.push(`code:${meta.code}`);
+  if (meta.subcode != null) tags.push(`subcode:${meta.subcode}`);
+  if (meta.fbtraceId) tags.push(`fbtrace_id:${meta.fbtraceId}`);
+  const head = parts.filter(Boolean).join(" — ");
+  const tail = tags.length ? ` (${tags.join(", ")})` : "";
+  return head ? `\nMeta: ${head}${tail}` : tags.length ? `\nMeta: ${tags.join(", ")}` : "";
 }
 
 function StepPill({ active, label }) {
@@ -199,6 +227,8 @@ export default function CampaignFlow() {
   const [countries, setCountries] = useState([]);
   const [operationalCountryCodes, setOperationalCountryCodes] = useState([]);
   const [countryLanguageByCode, setCountryLanguageByCode] = useState({});
+  const [profileMetaAdAccountId, setProfileMetaAdAccountId] = useState("");
+  const [profileMetaPageId, setProfileMetaPageId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -257,11 +287,24 @@ export default function CampaignFlow() {
               .map((i) => [String(i.countryCode).toUpperCase(), i.primaryLanguage ?? null])
           )
         );
+        setProfileMetaAdAccountId(res?.user?.metaAdAccountId ?? "");
+        setProfileMetaPageId(res?.user?.metaPageId ?? "");
+
+        const metaAdAccountId = normalizeNonEmptyString(res?.user?.metaAdAccountId);
+        if (metaAdAccountId) {
+          setCampaign((p) => (normalizeNonEmptyString(p.metaAdAccountId) ? p : { ...p, metaAdAccountId }));
+        }
+        const pageId = normalizeNonEmptyString(res?.user?.metaPageId);
+        if (pageId) {
+          setCreative((p) => (normalizeNonEmptyString(p.pageId) ? p : { ...p, pageId }));
+        }
       })
       .catch(() => {
         if (!alive) return;
         setOperationalCountryCodes([]);
         setCountryLanguageByCode({});
+        setProfileMetaAdAccountId("");
+        setProfileMetaPageId("");
       });
     return () => {
       alive = false;
@@ -467,9 +510,22 @@ export default function CampaignFlow() {
       name: normalizeNonEmptyString(nextCampaign?.name)
         ? `${String(nextCampaign.name)}${nameSuffix || ""}`
         : p.name,
+      metaAdAccountId:
+        normalizeNonEmptyString(nextCampaign?.metaAdAccountId) ||
+        normalizeNonEmptyString(p.metaAdAccountId) ||
+        normalizeNonEmptyString(profileMetaAdAccountId) ||
+        "",
     }));
     setAdSet((p) => ({ ...p, ...nextAdSet }));
-    setCreative((p) => ({ ...p, ...nextCreative }));
+    setCreative((p) => ({
+      ...p,
+      ...nextCreative,
+      pageId:
+        normalizeNonEmptyString(nextCreative?.pageId) ||
+        normalizeNonEmptyString(p.pageId) ||
+        normalizeNonEmptyString(profileMetaPageId) ||
+        "",
+    }));
     setAd((p) => ({ ...p, ...nextAd }));
 
     const snapBatchEnabled = Boolean(snap.batchEnabled);
@@ -790,54 +846,62 @@ export default function CampaignFlow() {
                 continue;
               }
 
-              const draftRes = await createCreativeDraft({
-                generatedCampaignId,
-                creativeAssetId: media?.supported ? media.creativeAssetId : null,
-                primaryText: copy.primaryText,
-                headline: copy.headline || null,
-                description: copy.description || null,
-                destinationUrl: creative.destinationUrl,
-                ctaType: creative.ctaType,
-              });
-
-              const creativeDraftId = draftRes?.creativeDraft?.id;
-              if (!normalizeNonEmptyString(creativeDraftId)) {
-                perAds.push({ ok: false, key: k, error: "Falha ao criar Creative Draft (id ausente)." });
-                continue;
-              }
-
-              let publishRes = null;
-              if (campaign.mode === "REAL") {
-                setProgress({
-                  total: codes.length,
-                  currentIndex: i,
-                  currentCountryCode: countryCode,
-                  stage: "creativePublish",
-                  adKey: k,
+              try {
+                const draftRes = await createCreativeDraft({
+                  generatedCampaignId,
+                  creativeAssetId: media?.supported ? media.creativeAssetId : null,
+                  primaryText: copy.primaryText,
+                  headline: copy.headline || null,
+                  description: copy.description || null,
+                  destinationUrl: creative.destinationUrl,
+                  ctaType: creative.ctaType,
                 });
-                publishRes = await publishMetaCreativeDraft(creativeDraftId, {
-                  pageId: normalizeNonEmptyString(creative.pageId) || null,
-                  instagramActorId: normalizeNonEmptyString(creative.instagramActorId) || null,
-                  force: false,
+
+                const creativeDraftId = draftRes?.creativeDraft?.id;
+                if (!normalizeNonEmptyString(creativeDraftId)) {
+                  perAds.push({ ok: false, key: k, error: "Falha ao criar Creative Draft (id ausente)." });
+                  continue;
+                }
+
+                let publishRes = null;
+                if (campaign.mode === "REAL") {
+                  setProgress({
+                    total: codes.length,
+                    currentIndex: i,
+                    currentCountryCode: countryCode,
+                    stage: "creativePublish",
+                    adKey: k,
+                  });
+                  publishRes = await publishMetaCreativeDraft(creativeDraftId, {
+                    pageId: normalizeNonEmptyString(creative.pageId) || null,
+                    instagramActorId: normalizeNonEmptyString(creative.instagramActorId) || null,
+                    force: false,
+                  });
+                }
+
+                setProgress({ total: codes.length, currentIndex: i, currentCountryCode: countryCode, stage: "ad", adKey: k });
+                const adRes = await createMetaAd({
+                  generatedCampaignId,
+                  name: `Ad • ${cc} — ${k}`,
+                  creativeDraftId,
+                  mode: campaign.mode,
+                });
+
+                perAds.push({
+                  ok: true,
+                  key: k,
+                  creativeDraftId,
+                  metaCreativeId: publishRes?.metaCreative?.id ?? null,
+                  metaAdId: adRes?.metaAd?.id ?? null,
+                  metaAdEffectiveStatus: adRes?.metaAd?.effective_status ?? null,
+                });
+              } catch (err) {
+                perAds.push({
+                  ok: false,
+                  key: k,
+                  error: (err?.message ? String(err.message) : "Falha no Ad.") + formatMetaErrorSuffix(err),
                 });
               }
-
-              setProgress({ total: codes.length, currentIndex: i, currentCountryCode: countryCode, stage: "ad", adKey: k });
-              const adRes = await createMetaAd({
-                generatedCampaignId,
-                name: `Ad • ${cc} — ${k}`,
-                creativeDraftId,
-                mode: campaign.mode,
-              });
-
-              perAds.push({
-                ok: true,
-                key: k,
-                creativeDraftId,
-                metaCreativeId: publishRes?.metaCreative?.id ?? null,
-                metaAdId: adRes?.metaAd?.id ?? null,
-                metaAdEffectiveStatus: adRes?.metaAd?.effective_status ?? null,
-              });
             }
 
             perCountry.push({
@@ -854,7 +918,7 @@ export default function CampaignFlow() {
               ok: false,
               countryCode,
               label,
-              error: err?.message ? String(err.message) : "Falha ao executar o lote para este país.",
+              error: (err?.message ? String(err.message) : "Falha ao executar o lote para este país.") + formatMetaErrorSuffix(err),
             });
           }
         }
@@ -925,42 +989,50 @@ export default function CampaignFlow() {
             perAds.push({ ok: false, key: k, error: "Vídeo faltando/indisponível para este Ad." });
             continue;
           }
-          const draftRes = await createCreativeDraft({
-            generatedCampaignId,
-            creativeAssetId: media?.supported ? media.creativeAssetId : null,
-            primaryText: copy.primaryText,
-            headline: copy.headline || null,
-            description: copy.description || null,
-            destinationUrl: creative.destinationUrl,
-            ctaType: creative.ctaType,
-          });
-          const creativeDraftId = draftRes?.creativeDraft?.id;
-          if (!normalizeNonEmptyString(creativeDraftId)) {
-            perAds.push({ ok: false, key: k, error: "Falha ao criar Creative Draft (id ausente)." });
-            continue;
-          }
-          let publishRes = null;
-          if (campaign.mode === "REAL") {
-            publishRes = await publishMetaCreativeDraft(creativeDraftId, {
-              pageId: normalizeNonEmptyString(creative.pageId) || null,
-              instagramActorId: normalizeNonEmptyString(creative.instagramActorId) || null,
-              force: false,
+          try {
+            const draftRes = await createCreativeDraft({
+              generatedCampaignId,
+              creativeAssetId: media?.supported ? media.creativeAssetId : null,
+              primaryText: copy.primaryText,
+              headline: copy.headline || null,
+              description: copy.description || null,
+              destinationUrl: creative.destinationUrl,
+              ctaType: creative.ctaType,
+            });
+            const creativeDraftId = draftRes?.creativeDraft?.id;
+            if (!normalizeNonEmptyString(creativeDraftId)) {
+              perAds.push({ ok: false, key: k, error: "Falha ao criar Creative Draft (id ausente)." });
+              continue;
+            }
+            let publishRes = null;
+            if (campaign.mode === "REAL") {
+              publishRes = await publishMetaCreativeDraft(creativeDraftId, {
+                pageId: normalizeNonEmptyString(creative.pageId) || null,
+                instagramActorId: normalizeNonEmptyString(creative.instagramActorId) || null,
+                force: false,
+              });
+            }
+            const adRes = await createMetaAd({
+              generatedCampaignId,
+              name: `Ad • ${cc} — ${k}`,
+              creativeDraftId,
+              mode: campaign.mode,
+            });
+            perAds.push({
+              ok: true,
+              key: k,
+              creativeDraftId,
+              metaCreativeId: publishRes?.metaCreative?.id ?? null,
+              metaAdId: adRes?.metaAd?.id ?? null,
+              metaAdEffectiveStatus: adRes?.metaAd?.effective_status ?? null,
+            });
+          } catch (err) {
+            perAds.push({
+              ok: false,
+              key: k,
+              error: (err?.message ? String(err.message) : "Falha no Ad.") + formatMetaErrorSuffix(err),
             });
           }
-          const adRes = await createMetaAd({
-            generatedCampaignId,
-            name: `Ad • ${cc} — ${k}`,
-            creativeDraftId,
-            mode: campaign.mode,
-          });
-          perAds.push({
-            ok: true,
-            key: k,
-            creativeDraftId,
-            metaCreativeId: publishRes?.metaCreative?.id ?? null,
-            metaAdId: adRes?.metaAd?.id ?? null,
-            metaAdEffectiveStatus: adRes?.metaAd?.effective_status ?? null,
-          });
         }
 
         const nextResult = {
@@ -983,7 +1055,7 @@ export default function CampaignFlow() {
         setStep(4);
       }
     } catch (err) {
-      setError(err?.message ? String(err.message) : "Falha ao executar o fluxo.");
+      setError((err?.message ? String(err.message) : "Falha ao executar o fluxo.") + formatMetaErrorSuffix(err));
       setStep(4);
     } finally {
       setSubmitting(false);

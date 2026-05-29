@@ -274,6 +274,8 @@ export default function Templates() {
 
   const [profileCountryCodes, setProfileCountryCodes] = useState([]);
   const [profileCountryLanguageByCode, setProfileCountryLanguageByCode] = useState({});
+  const [profileMetaAdAccountId, setProfileMetaAdAccountId] = useState("");
+  const [profileMetaPageId, setProfileMetaPageId] = useState("");
 
   const [editingTranslationsByCountry, setEditingTranslationsByCountry] = useState({});
   const [translationsDraftByCountry, setTranslationsDraftByCountry] = useState({});
@@ -355,11 +357,15 @@ export default function Templates() {
               .map((i) => [String(i.countryCode).toUpperCase(), i.primaryLanguage ?? null])
           )
         );
+        setProfileMetaAdAccountId(res?.user?.metaAdAccountId ?? "");
+        setProfileMetaPageId(res?.user?.metaPageId ?? "");
       })
       .catch(() => {
         if (!alive) return;
         setProfileCountryCodes([]);
         setProfileCountryLanguageByCode({});
+        setProfileMetaAdAccountId("");
+        setProfileMetaPageId("");
       });
     return () => {
       alive = false;
@@ -596,7 +602,7 @@ export default function Templates() {
     const base = {
       campaign: {
         name: tpl.name ?? "",
-        metaAdAccountId: "",
+        metaAdAccountId: normalizeNonEmptyString(profileMetaAdAccountId) || "",
         objective: payload.objective ?? "OUTCOME_TRAFFIC",
         countryCode: countryCodes[0] ?? "BR",
         mode: "REAL",
@@ -614,7 +620,7 @@ export default function Templates() {
         translationsByCountry: getTranslationsByCountryFromPayload(payload),
         translationsRequired: true,
         mediaByCountry: normalizeMediaByCountry(getMediaByCountryFromPayload(payload)),
-        pageId: "",
+        pageId: normalizeNonEmptyString(profileMetaPageId) || "",
         instagramActorId: "",
       },
       ad: {
