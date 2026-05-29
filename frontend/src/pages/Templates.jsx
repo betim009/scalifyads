@@ -41,7 +41,14 @@ function uniqueCountryCodes(input) {
 }
 
 function getTranslationsByCountryFromPayload(payload) {
-  return payload?.translationsByCountry && typeof payload.translationsByCountry === "object" ? payload.translationsByCountry : {};
+  const raw = payload?.translationsByCountry && typeof payload.translationsByCountry === "object" ? payload.translationsByCountry : {};
+  const out = {};
+  for (const [k, v] of Object.entries(raw || {})) {
+    const cc = String(k || "").trim().toUpperCase();
+    if (!cc || cc === "BR") continue;
+    out[cc] = v;
+  }
+  return out;
 }
 
 function getMediaByCountryFromPayload(payload) {
@@ -708,7 +715,9 @@ export default function Templates() {
       return;
     }
 
-    const ok = window.confirm("Confirmo: gerar traduções via LibreTranslate? Você poderá revisar/editar antes de usar.");
+    const ok = window.confirm(
+      "Confirmo: gerar traduções via LibreTranslate para países diferentes de BR? (BR é a origem PT-BR). Você poderá revisar/editar antes de usar."
+    );
     if (!ok) return;
 
     setBusy(true);
@@ -798,7 +807,13 @@ export default function Templates() {
     }
 
     const basePayload = tpl?.payload && typeof tpl.payload === "object" ? tpl.payload : {};
-    const nextTranslations = translationsDraftByCountry && typeof translationsDraftByCountry === "object" ? translationsDraftByCountry : {};
+    const nextTranslationsRaw = translationsDraftByCountry && typeof translationsDraftByCountry === "object" ? translationsDraftByCountry : {};
+    const nextTranslations = {};
+    for (const [k, v] of Object.entries(nextTranslationsRaw || {})) {
+      const cc = String(k || "").trim().toUpperCase();
+      if (!cc || cc === "BR") continue;
+      nextTranslations[cc] = v;
+    }
     const nextPayload = {
       ...basePayload,
       translationsByCountry: nextTranslations,
@@ -1611,7 +1626,7 @@ export default function Templates() {
                       {showTranslationsEditor ? (
                         <div style={{ padding: 18, display: "grid", gap: 12 }}>
                             {countries.length ? (
-                              countries.map((code) => {
+                              countries.filter((code) => String(code || "").trim().toUpperCase() !== "BR").map((code) => {
                                 const c = String(code || "").toUpperCase();
                                 const lang = profileCountryLanguageByCode?.[c] ?? null;
                                 const item =
@@ -1638,12 +1653,7 @@ export default function Templates() {
                                       </div>
                                     </div>
 
-                                    {c === "BR" ? (
-                                      <div style={{ marginTop: 10, color: "#6b7280", fontWeight: 800, fontSize: 12 }}>
-                                        BR é a origem (PT-BR). Não gerar nem revisar tradução para BR.
-                                      </div>
-                                    ) : (
-                                      <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+                                    <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
                                         {AD_KEYS.map((k) => {
                                           const ad = ads?.[k] && typeof ads[k] === "object" ? ads[k] : {};
                                           return (
@@ -1718,7 +1728,6 @@ export default function Templates() {
                                           );
                                         })}
                                       </div>
-                                    )}
                                   </div>
                                 );
                               })

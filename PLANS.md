@@ -1779,6 +1779,64 @@ Validação executada (local):
 
 - [2026-05-29 11:49] `cd frontend && npm run build` (OK) após P27.4.2 (diagnóstico detalhado de mídia no /campaign-flow).
 
+### P27.5 — Ajustes operacionais finais do fluxo de Templates
+
+Última atualização: [2026-05-29 12:08]
+
+Objetivo:
+Melhorias de UX operacional (menos cliques/erros), aproximando o sistema do fluxo real do cliente, sem adicionar complexidade desnecessária e sem alterar o fluxo REAL validado.
+
+#### P27.5.1 — PT-BR como origem fixa
+
+Checklist:
+
+- [ ] Remover qualquer conceito de tradução para BR.
+- [ ] BR nunca deve aparecer na lista de traduções.
+- [ ] Se BR estiver configurado no perfil do usuário:
+  - [ ] incluir automaticamente BR na execução.
+- [ ] BR utiliza sempre os textos originais do template.
+- [ ] Traduções devem ser geradas apenas para países diferentes de BR.
+- [ ] Atualizar textos e labels da interface para refletir isso.
+
+#### P27.5.2 — Redesign operacional do /templates
+
+Checklist:
+
+- [ ] Reduzir profundidade visual (menos card→card→card).
+- [ ] Reduzir bordas desnecessárias.
+- [ ] Melhorar hierarquia visual.
+- [ ] Nova estrutura:
+  - [ ] Linha 1: `[ Campanha ] [ AdSet ]`
+  - [ ] Linha 2: `[ Criativo ]` (full width)
+- [ ] Criativo com accordion simples (A–E), apenas um aberto por vez.
+
+#### P27.5.3 — Upload múltiplo inteligente de vídeos
+
+Checklist:
+
+- [ ] Upload múltiplo (seleção múltipla + drag&drop).
+- [ ] Mapeamento automático por nome:
+  - [ ] `BR1 → BR / Ad A`, …, `BR5 → BR / Ad E`
+  - [ ] Aceitar padrões: `videoBR1.mp4`, `video_BR_1.mp4`, `BR-1.mp4`, `BR1.mp4`.
+- [ ] Exibir resumo (mapeados vs não identificados) e permitir associação manual.
+- [ ] Duplicados: se slot já existir, pedir confirmação para substituir.
+
+#### P27.5.4 — Revisão operacional editável
+
+Checklist:
+
+- [ ] Na etapa de revisão do `/campaign-flow`, permitir editar por país e por Ad:
+  - [ ] vídeo
+  - [ ] primaryText
+  - [ ] headline
+  - [ ] description
+- [ ] Permitir substituir/trocar vídeo entre Ads (mínimo: selecionar outro asset).
+- [ ] Automação nunca impede revisão (overrides locais antes de executar).
+
+Validação obrigatória:
+
+- [ ] `cd frontend && npm run build`
+
 ## Decision Log (Ativo)
 
 Última atualização: [2026-05-26 12:10]

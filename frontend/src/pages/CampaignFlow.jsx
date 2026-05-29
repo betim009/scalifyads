@@ -739,7 +739,14 @@ export default function CampaignFlow() {
       }
 
       if (batchEnabled) {
-        const codes = Array.from(new Set((selectedCountryCodes || []).map((c) => String(c || "").trim()).filter(Boolean)));
+        const rawCodes = Array.from(new Set((selectedCountryCodes || []).map((c) => String(c || "").trim()).filter(Boolean)));
+        const codes = (() => {
+          const out = [...rawCodes];
+          const hasBR = out.some((c) => String(c).toUpperCase() === "BR");
+          const profileHasBR = operationalCountryCodes.some((c) => String(c).toUpperCase() === "BR");
+          if (profileHasBR && !hasBR) out.unshift("BR");
+          return Array.from(new Set(out.map((c) => String(c || "").trim().toUpperCase()).filter(Boolean)));
+        })();
         const perCountry = [];
 
         const translationsRequired = creative?.translationsRequired === true;
