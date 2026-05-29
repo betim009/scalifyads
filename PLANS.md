@@ -1757,6 +1757,28 @@ Critério de aceite:
 
 - [ ] Revisão mostra: `Vídeo: videoAE1.mp4` e `Thumbnail: thumbnailAE1.jpg` (validação manual no ambiente REAL/DOCKER com ffmpeg).
 
+### P27.4.2 — Diagnóstico da validação "Sem mídia"
+
+Última atualização: [2026-05-29 11:49]
+
+Problema:
+Mesmo com vídeo persistido (creativeAssetId + mimeType `video/mp4` + `kind=video`), o `/campaign-flow` bloqueava REAL com mensagem genérica:
+
+`Sem mídia (execução REAL bloqueada para este país)`
+
+Correção:
+
+- Mensagem de bloqueio agora inclui o **motivo exato por Ad** (ex.: vídeo ausente / thumbnail ausente / asset inválido).
+- Logs no console (frontend) detalham para cada reprovação:
+  - asset encontrado?
+  - kind / mimeType
+  - thumbnail encontrada?
+  - creativeThumbnailAssetId / thumbnailMimeType
+
+Validação executada (local):
+
+- [2026-05-29 11:49] `cd frontend && npm run build` (OK) após P27.4.2 (diagnóstico detalhado de mídia no /campaign-flow).
+
 ## Decision Log (Ativo)
 
 Última atualização: [2026-05-26 12:10]

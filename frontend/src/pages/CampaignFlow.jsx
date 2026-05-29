@@ -221,6 +221,20 @@ function SummaryRow({ label, value }) {
   );
 }
 
+function mediaRejectionReasons(media) {
+  const m = media && typeof media === "object" ? media : null;
+  if (!m) return ["asset não encontrado"];
+  const reasons = [];
+  if (m.status !== "ok") reasons.push("vídeo ausente");
+  if (m.kind !== "video") reasons.push("asset inválido (mimeType não é vídeo)");
+  if (m.kind === "video" && !m.thumbnailOk) reasons.push("thumbnail ausente");
+  return reasons.length ? reasons : ["mídia inválida"];
+}
+
+function formatMediaRejection(media) {
+  return mediaRejectionReasons(media).join("; ");
+}
+
 export default function CampaignFlow() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -756,6 +770,7 @@ export default function CampaignFlow() {
         }
 
         const skipCountries = new Set();
+        const skipCountryReasons = {};
         if (campaign.mode === "REAL") {
           const missingMedia = [];
 
@@ -798,13 +813,30 @@ export default function CampaignFlow() {
             for (const k of AD_KEYS) {
               const media = resolveMediaForCountryAd(cc, k);
               if (media.status !== "ok" || media.kind !== "video" || !media.thumbnailOk) {
-                missingMedia.push(`${cc}:${k}`);
+                const reason = formatMediaRejection(media);
+                missingMedia.push({ cc, k, reason, media });
+                skipCountryReasons[cc] = Array.isArray(skipCountryReasons[cc]) ? skipCountryReasons[cc] : [];
+                skipCountryReasons[cc].push(`Ad ${k}: ${reason}`);
               }
             }
           }
           if (missingMedia.length) {
+            console.info("[campaign-flow] media validation failed", {
+              countries: codes,
+              failures: missingMedia.map((m) => ({
+                countryCode: m.cc,
+                adKey: m.k,
+                reason: m.reason,
+                creativeAssetId: m.media?.creativeAssetId ?? null,
+                mimeType: m.media?.mimeType ?? null,
+                kind: m.media?.kind ?? null,
+                thumbnailCreativeAssetId: m.media?.thumbnailCreativeAssetId ?? null,
+                thumbnailMimeType: m.media?.thumbnailMimeType ?? null,
+                thumbnailOk: m.media?.thumbnailOk ?? null,
+              })),
+            });
             const ok = window.confirm(
-              `Vídeo ausente/indisponível para: ${missingMedia.join(", ")}.\n\nOK = continuar e PULAR os países afetados (não cria nada para eles).\nCancelar = voltar para revisar.`
+              `Mídia reprovada para: ${missingMedia.map((m) => `${m.cc}:${m.k} (${m.reason})`).join(", ")}.\n\nOK = continuar e PULAR os países afetados (não cria nada para eles).\nCancelar = voltar para revisar.`
             );
             if (!ok) {
               setSubmitting(false);
@@ -812,8 +844,7 @@ export default function CampaignFlow() {
               return;
             }
             for (const item of missingMedia) {
-              const cc = String(item || "").split(":")[0] || "";
-              if (cc) skipCountries.add(cc);
+              if (item?.cc) skipCountries.add(item.cc);
             }
           }
         }
@@ -823,11 +854,15 @@ export default function CampaignFlow() {
           const label = `${countryCode} — ${countryNameByCode[countryCode] ?? ""}`.trim();
 
           if (skipCountries.has(String(countryCode || "").trim().toUpperCase())) {
+            const cc = String(countryCode || "").trim().toUpperCase();
+            const reasons = Array.isArray(skipCountryReasons?.[cc]) ? skipCountryReasons[cc] : [];
             perCountry.push({
               ok: false,
               countryCode,
               label,
-              error: "Sem mídia (execução REAL bloqueada para este país).",
+              error: reasons.length
+                ? `Mídia reprovada (execução REAL bloqueada para este país): ${reasons.join(" | ")}`
+                : "Mídia reprovada (execução REAL bloqueada para este país).",
             });
             continue;
           }
@@ -1919,7 +1954,15 @@ export default function CampaignFlow() {
                             const info = resolveMediaForCountryAd(cc, k);
                             const previewUrl = info?.url ? `${getBackendBaseUrl()}${info.url}` : null;
                             const ok = info.status === "ok" && info.kind === "video" && info.thumbnailOk;
-                            const statusLabel = ok ? "OK" : info.status === "missing" ? "Sem vídeo" : "Tipo inválido";
+                            const statusLabel = ok
+                              ? "OK"
+                              : info.status !== "ok"
+                                ? "FAIL — vídeo ausente"
+                                : info.kind !== "video"
+                                  ? "FAIL — asset inválido"
+                                  : !info.thumbnailOk
+                                    ? "FAIL — thumbnail ausente"
+                                    : "FAIL";
                             const tone = ok ? "#065f46" : "#92400e";
                             const bg = ok ? "#ecfdf5" : "#fffbeb";
                             const border = ok ? "#a7f3d0" : "#fde68a";
