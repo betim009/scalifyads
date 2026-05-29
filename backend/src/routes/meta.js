@@ -195,6 +195,7 @@ export function metaRouter() {
             cd.id,
             cd.generated_campaign_id,
             cd.creative_asset_id,
+            cd.creative_thumbnail_asset_id,
             cd.primary_text,
             cd.headline,
             cd.description,
@@ -205,10 +206,14 @@ export function metaRouter() {
             gc.meta_ad_account_id,
             ca.stored_name AS asset_stored_name,
             ca.original_name AS asset_original_name,
-            ca.mime_type AS asset_mime_type
+            ca.mime_type AS asset_mime_type,
+            cta.stored_name AS thumbnail_stored_name,
+            cta.original_name AS thumbnail_original_name,
+            cta.mime_type AS thumbnail_mime_type
           FROM creative_drafts cd
           JOIN generated_campaigns gc ON gc.id = cd.generated_campaign_id
           LEFT JOIN creative_assets ca ON ca.id = cd.creative_asset_id
+          LEFT JOIN creative_assets cta ON cta.id = cd.creative_thumbnail_asset_id
           WHERE cd.id = $1
         `,
         [creativeDraftId]
@@ -274,6 +279,42 @@ export function metaRouter() {
           } catch (err) {
             const status = typeof err?.status === 'number' ? err.status : 502
             return jsonError(res, status, err?.message ?? 'Meta video upload failed', err?.details)
+          }
+
+          // Video creatives require thumbnail (image_hash or image_url).
+          const thumbnailAssetId = normalizeNonEmptyString(draft.creative_thumbnail_asset_id)
+          if (!thumbnailAssetId) {
+            return jsonError(res, 400, 'Missing video thumbnail (set creativeThumbnailAssetId on creative draft)')
+          }
+
+          const thumbStored = normalizeNonEmptyString(draft.thumbnail_stored_name)
+          if (!thumbStored) {
+            return jsonError(res, 400, 'Video thumbnail asset is missing stored_name')
+          }
+          const thumbPath = path.join(getCreativeUploadsDir(), thumbStored)
+          try {
+            await fsp.stat(thumbPath)
+          } catch {
+            return jsonError(res, 400, 'Video thumbnail file not found on disk', { stored_name: thumbStored })
+          }
+
+          const thumbMime = normalizeNonEmptyString(draft.thumbnail_mime_type) ?? null
+          if (!thumbMime || !thumbMime.startsWith('image/')) {
+            return jsonError(res, 400, 'Invalid video thumbnail mime type (expected image/*)', { mime_type: thumbMime })
+          }
+
+          try {
+            const uploadedThumb = await metaUploadAdImage({
+              metaAdAccountId,
+              accessToken,
+              filePath: thumbPath,
+              mimeType: thumbMime,
+              originalName: draft.thumbnail_original_name ?? thumbStored
+            })
+            imageHash = uploadedThumb.hash
+          } catch (err) {
+            const status = typeof err?.status === 'number' ? err.status : 502
+            return jsonError(res, status, err?.message ?? 'Meta thumbnail upload failed', err?.details)
           }
         } else {
           try {

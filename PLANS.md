@@ -1698,6 +1698,36 @@ Validação executada (local):
 
 - [2026-05-29 11:01] `cd frontend && npm run build` (OK) após P27.3 (herança de credenciais + diagnóstico de erro).
 
+### P27.4 — Corrigir Creative de vídeo com thumbnail obrigatória
+
+Última atualização: [2026-05-29 11:09]
+
+Contexto:
+Ao publicar Creative com vídeo (REAL), o Meta retorna erro exigindo thumbnail:
+
+`Seu anúncio precisa de uma miniatura de vídeo — Especifique image_hash ou image_url no campo video_data de object_story_spec. (code:100, subcode:1443226)`
+
+Objetivo:
+Garantir que toda criação REAL de AdCreative com vídeo inclua thumbnail obrigatória (via `image_hash`).
+
+Tarefas:
+
+- [x] Auditar `backend/src/meta/creatives.js`.
+- [x] Auditar onde `object_story_spec.video_data` é montado.
+- [x] Para vídeos, enviar `image_hash` junto com `video_id`.
+- [x] Solução simples:
+  - [x] Permitir thumbnail (asset imagem) por vídeo no template.
+  - [x] Bloquear criação REAL se faltar thumbnail, antes de chamar a Meta.
+- [x] Atualizar `/templates` para permitir thumbnail por vídeo.
+- [x] Atualizar `/campaign-flow` para validar thumbnail antes da execução REAL.
+- [x] Rodar `cd frontend && npm run build`.
+- [ ] Validar manualmente execução REAL (1 país / 1 ad) com vídeo+thumbnail.
+- [ ] Criar commit incremental claro.
+
+Validação executada (local):
+
+- [2026-05-29 11:09] `cd frontend && npm run build` (OK) após P27.4 (thumbnail obrigatória em vídeo).
+
 ## Decision Log (Ativo)
 
 Última atualização: [2026-05-26 12:10]

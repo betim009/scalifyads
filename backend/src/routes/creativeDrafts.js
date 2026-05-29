@@ -35,6 +35,7 @@ export function creativeDraftsRouter() {
             cd.id,
             cd.generated_campaign_id,
             cd.creative_asset_id,
+            cd.creative_thumbnail_asset_id,
             cd.primary_text,
             cd.headline,
             cd.description,
@@ -45,9 +46,13 @@ export function creativeDraftsRouter() {
             cd.created_at,
             ca.stored_name AS asset_stored_name,
             ca.original_name AS asset_original_name,
-            ca.mime_type AS asset_mime_type
+            ca.mime_type AS asset_mime_type,
+            cta.stored_name AS thumbnail_stored_name,
+            cta.original_name AS thumbnail_original_name,
+            cta.mime_type AS thumbnail_mime_type
           FROM creative_drafts cd
           LEFT JOIN creative_assets ca ON ca.id = cd.creative_asset_id
+          LEFT JOIN creative_assets cta ON cta.id = cd.creative_thumbnail_asset_id
           WHERE ($1::uuid IS NULL OR cd.generated_campaign_id = $1::uuid)
           ORDER BY cd.created_at DESC
           LIMIT $2
@@ -57,7 +62,8 @@ export function creativeDraftsRouter() {
 
       const drafts = rows.map((d) => ({
         ...d,
-        asset_url: d.asset_stored_name ? `/uploads/creative-assets/${encodeURIComponent(d.asset_stored_name)}` : null
+        asset_url: d.asset_stored_name ? `/uploads/creative-assets/${encodeURIComponent(d.asset_stored_name)}` : null,
+        thumbnail_url: d.thumbnail_stored_name ? `/uploads/creative-assets/${encodeURIComponent(d.thumbnail_stored_name)}` : null
       }))
 
       return res.json({ ok: true, creative_drafts: drafts })
@@ -81,6 +87,11 @@ export function creativeDraftsRouter() {
         return jsonError(res, 400, 'Invalid creativeAssetId')
       }
 
+      const creativeThumbnailAssetId = normalizeNonEmptyString(req.body?.creativeThumbnailAssetId)
+      if (creativeThumbnailAssetId && !isUuid(creativeThumbnailAssetId)) {
+        return jsonError(res, 400, 'Invalid creativeThumbnailAssetId')
+      }
+
       const primaryText = normalizeNonEmptyString(req.body?.primaryText, { maxLen: 5000 })
       const headline = normalizeNonEmptyString(req.body?.headline, { maxLen: 255 })
       const description = normalizeNonEmptyString(req.body?.description, { maxLen: 1000 })
@@ -97,17 +108,19 @@ export function creativeDraftsRouter() {
           INSERT INTO creative_drafts (
             generated_campaign_id,
             creative_asset_id,
+            creative_thumbnail_asset_id,
             primary_text,
             headline,
             description,
             cta_type,
             destination_url
           )
-          VALUES ($1, $2::uuid, $3, $4, $5, $6, $7)
+          VALUES ($1, $2::uuid, $3::uuid, $4, $5, $6, $7, $8)
           RETURNING
             id,
             generated_campaign_id,
             creative_asset_id,
+            creative_thumbnail_asset_id,
             primary_text,
             headline,
             description,
@@ -117,7 +130,7 @@ export function creativeDraftsRouter() {
             meta_creative_id,
             created_at
         `,
-        [generatedCampaignId, creativeAssetId, primaryText, headline, description, ctaType, destinationUrl]
+        [generatedCampaignId, creativeAssetId, creativeThumbnailAssetId, primaryText, headline, description, ctaType, destinationUrl]
       )
 
       return res.status(201).json({ ok: true, creative_draft: rows[0] })

@@ -155,19 +155,40 @@ function normalizeMediaByCountry(value) {
       continue;
     }
 
-    // New shape: mediaByCountry[CC][A..E]
+    // New shape: mediaByCountry[CC][A..E] (each may contain `thumbnail`)
     const nextByAd = {};
     for (const key of AD_KEYS) {
       const adEntry = entry?.[key] && typeof entry[key] === "object" ? entry[key] : null;
       const creativeAssetId = normalizeNonEmptyString(adEntry?.creativeAssetId);
-      if (!creativeAssetId) continue;
+      const thumbEntry = adEntry?.thumbnail && typeof adEntry.thumbnail === "object" ? adEntry.thumbnail : null;
+      const thumbId = normalizeNonEmptyString(thumbEntry?.creativeAssetId);
+      if (!creativeAssetId && !thumbId) continue;
+
+      const base = creativeAssetId
+        ? {
+            creativeAssetId,
+            mimeType: normalizeNonEmptyString(adEntry?.mimeType) || null,
+            originalName: normalizeNonEmptyString(adEntry?.originalName) || null,
+            url: normalizeNonEmptyString(adEntry?.url) || null,
+            kind: normalizeNonEmptyString(adEntry?.kind) || null,
+            updatedAt: normalizeNonEmptyString(adEntry?.updatedAt) || null,
+          }
+        : {};
+
       nextByAd[key] = {
-        creativeAssetId,
-        mimeType: normalizeNonEmptyString(adEntry?.mimeType) || null,
-        originalName: normalizeNonEmptyString(adEntry?.originalName) || null,
-        url: normalizeNonEmptyString(adEntry?.url) || null,
-        kind: normalizeNonEmptyString(adEntry?.kind) || null,
-        updatedAt: normalizeNonEmptyString(adEntry?.updatedAt) || null,
+        ...base,
+        ...(thumbId
+          ? {
+              thumbnail: {
+                creativeAssetId: thumbId,
+                mimeType: normalizeNonEmptyString(thumbEntry?.mimeType) || null,
+                originalName: normalizeNonEmptyString(thumbEntry?.originalName) || null,
+                url: normalizeNonEmptyString(thumbEntry?.url) || null,
+                kind: normalizeNonEmptyString(thumbEntry?.kind) || null,
+                updatedAt: normalizeNonEmptyString(thumbEntry?.updatedAt) || null,
+              },
+            }
+          : null),
       };
     }
     if (Object.keys(nextByAd).length === 0) continue;
@@ -462,6 +483,84 @@ export default function Templates() {
         [cc]: { ...((p.mediaByCountry || {})[cc] || {}), [k]: entry },
       },
     }));
+  }
+
+  async function onUploadThumbnailForCountryAd(countryCode, adKey, file) {
+    const cc = String(countryCode || "").trim().toUpperCase();
+    const k = String(adKey || "").trim().toUpperCase();
+    if (!cc) return;
+    if (!AD_KEYS.includes(k)) return;
+    if (!file) return;
+    setNotice("");
+    setError("");
+    setBusy(true);
+    try {
+      const res = await uploadCreativeAsset(file);
+      const asset = res?.creativeAsset ?? null;
+      const entry = normalizeMediaEntry(asset);
+      if (!entry) throw new Error("Falha ao obter asset após upload.");
+      setForm((p) => {
+        const prevCountry = p.mediaByCountry?.[cc] && typeof p.mediaByCountry[cc] === "object" ? p.mediaByCountry[cc] : {};
+        const prevAd = prevCountry?.[k] && typeof prevCountry[k] === "object" ? prevCountry[k] : {};
+        return {
+          ...p,
+          mediaByCountry: {
+            ...(p.mediaByCountry || {}),
+            [cc]: { ...prevCountry, [k]: { ...prevAd, thumbnail: entry } },
+          },
+        };
+      });
+      setCreativeAssets((p) => [asset, ...(Array.isArray(p) ? p : [])].filter(Boolean).slice(0, 200));
+      setNotice(`Thumbnail definido para ${cc} (Ad ${k}).`);
+    } catch (err) {
+      setError(err?.message ? String(err.message) : "Falha ao enviar thumbnail.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function onSelectExistingThumbnailForCountryAd(countryCode, adKey, creativeAssetId) {
+    const cc = String(countryCode || "").trim().toUpperCase();
+    const k = String(adKey || "").trim().toUpperCase();
+    const id = normalizeNonEmptyString(creativeAssetId);
+    if (!cc) return;
+    if (!AD_KEYS.includes(k)) return;
+    if (!id) return;
+    const asset = (creativeAssets || []).find((a) => String(a?.id) === id) ?? null;
+    const entry = normalizeMediaEntry(asset);
+    if (!entry) {
+      setError("Asset inválido.");
+      return;
+    }
+    setForm((p) => {
+      const prevCountry = p.mediaByCountry?.[cc] && typeof p.mediaByCountry[cc] === "object" ? p.mediaByCountry[cc] : {};
+      const prevAd = prevCountry?.[k] && typeof prevCountry[k] === "object" ? prevCountry[k] : {};
+      return {
+        ...p,
+        mediaByCountry: {
+          ...(p.mediaByCountry || {}),
+          [cc]: { ...prevCountry, [k]: { ...prevAd, thumbnail: entry } },
+        },
+      };
+    });
+  }
+
+  function onRemoveThumbnailForCountryAd(countryCode, adKey) {
+    const cc = String(countryCode || "").trim().toUpperCase();
+    const k = String(adKey || "").trim().toUpperCase();
+    if (!cc) return;
+    if (!AD_KEYS.includes(k)) return;
+    setForm((p) => {
+      const next = { ...(p.mediaByCountry || {}) };
+      const countryEntry = next[cc] && typeof next[cc] === "object" ? { ...next[cc] } : null;
+      if (!countryEntry) return p;
+      const adEntry = countryEntry[k] && typeof countryEntry[k] === "object" ? { ...countryEntry[k] } : null;
+      if (!adEntry) return p;
+      delete adEntry.thumbnail;
+      countryEntry[k] = adEntry;
+      next[cc] = countryEntry;
+      return { ...p, mediaByCountry: next };
+    });
   }
 
   function onRemoveMediaForCountryAd(countryCode, adKey) {
@@ -929,7 +1028,7 @@ export default function Templates() {
                                           {entry?.originalName ? entry.originalName : entry?.creativeAssetId ? "Asset selecionado" : "Sem vídeo"}
                                         </div>
                                       </div>
-                                      <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+                                  <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
                                         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
                                           <input
                                             type="file"
@@ -968,6 +1067,62 @@ export default function Templates() {
                                             Remover
                                           </button>
                                         </div>
+                                        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                                          <div style={{ fontWeight: 900, fontSize: 12, color: "#374151" }}>Thumbnail</div>
+                                          <input
+                                            type="file"
+                                            accept="image/*"
+                                            disabled={busy}
+                                            onChange={(e) => onUploadThumbnailForCountryAd(cc, k, e.target.files?.[0] ?? null)}
+                                          />
+                                          <select
+                                            className="templatesSelect"
+                                            style={{ height: 40, minWidth: 260 }}
+                                            disabled={busy}
+                                            value=""
+                                            onChange={(e) => {
+                                              const id = e.target.value;
+                                              if (!id) return;
+                                              onSelectExistingThumbnailForCountryAd(cc, k, id);
+                                            }}
+                                          >
+                                            <option value="" disabled>
+                                              Selecionar thumbnail existente…
+                                            </option>
+                                            {(creativeAssets || []).map((a) => (
+                                              <option key={a.id} value={String(a.id)}>
+                                                {a?.original_name
+                                                  ? `${a.original_name} (${String(a.id).slice(0, 8)})`
+                                                  : String(a.id).slice(0, 12)}
+                                              </option>
+                                            ))}
+                                          </select>
+                                          <button
+                                            type="button"
+                                            className="templatesBtnOutline"
+                                            disabled={busy || !entry?.thumbnail?.creativeAssetId}
+                                            onClick={() => onRemoveThumbnailForCountryAd(cc, k)}
+                                          >
+                                            Remover thumbnail
+                                          </button>
+                                        </div>
+                                        {entry?.thumbnail?.mimeType?.startsWith("image/") && entry?.thumbnail?.url ? (
+                                          <img
+                                            src={`${getBackendBaseUrl()}${entry.thumbnail.url}`}
+                                            alt={`Thumbnail ${cc} Ad ${k}`}
+                                            style={{
+                                              width: "100%",
+                                              maxWidth: 520,
+                                              borderRadius: 12,
+                                              border: "1px solid #e5e7eb",
+                                              display: "block",
+                                            }}
+                                          />
+                                        ) : entry?.thumbnail?.creativeAssetId ? (
+                                          <div style={{ color: "#6b7280", fontWeight: 800, fontSize: 12 }}>
+                                            Thumbnail: {entry?.thumbnail?.mimeType || "desconhecido"}
+                                          </div>
+                                        ) : null}
                                         {isVideo && previewUrl ? (
                                           <video
                                             src={previewUrl}

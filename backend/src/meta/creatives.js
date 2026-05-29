@@ -294,6 +294,7 @@ export async function metaCreateAdCreative({
         ...(msg ? { message: msg } : null),
         ...(head ? { title: head } : null),
         ...(desc ? { link_description: desc } : null),
+        ...(imgHash ? { image_hash: imgHash } : null),
         ...(cta ? { call_to_action: { type: cta, value: { link: url } } } : null)
       }
     : {

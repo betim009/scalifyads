@@ -761,7 +761,7 @@ export default function CampaignFlow() {
             const cc = String(raw || "").trim().toUpperCase();
             for (const k of AD_KEYS) {
               const media = resolveMediaForCountryAd(cc, k);
-              if (media.status !== "ok" || media.kind !== "video") {
+              if (media.status !== "ok" || media.kind !== "video" || !media.thumbnailOk) {
                 missingMedia.push(`${cc}:${k}`);
               }
             }
@@ -845,11 +845,16 @@ export default function CampaignFlow() {
                 perAds.push({ ok: false, key: k, error: "Vídeo faltando/indisponível para este Ad." });
                 continue;
               }
+              if (campaign.mode === "REAL" && media.kind === "video" && !media.thumbnailOk) {
+                perAds.push({ ok: false, key: k, error: "Thumbnail faltando para o vídeo deste Ad." });
+                continue;
+              }
 
               try {
                 const draftRes = await createCreativeDraft({
                   generatedCampaignId,
                   creativeAssetId: media?.supported ? media.creativeAssetId : null,
+                  creativeThumbnailAssetId: media?.thumbnailCreativeAssetId ?? null,
                   primaryText: copy.primaryText,
                   headline: copy.headline || null,
                   description: copy.description || null,
@@ -940,12 +945,12 @@ export default function CampaignFlow() {
           const missing = [];
           for (const k of AD_KEYS) {
             const media = resolveMediaForCountryAd(cc, k);
-            if (media.status !== "ok" || media.kind !== "video") missing.push(k);
+            if (media.status !== "ok" || media.kind !== "video" || !media.thumbnailOk) missing.push(k);
           }
           if (missing.length) {
             setSubmitting(false);
             setNotice("");
-            setError(`Execução REAL bloqueada: vídeo ausente/indisponível para ${cc}: ${missing.join(", ")}.`);
+            setError(`Execução REAL bloqueada: vídeo/thumbnail ausente para ${cc}: ${missing.join(", ")}.`);
             setStep(3);
             return;
           }
@@ -989,10 +994,15 @@ export default function CampaignFlow() {
             perAds.push({ ok: false, key: k, error: "Vídeo faltando/indisponível para este Ad." });
             continue;
           }
+          if (campaign.mode === "REAL" && media.kind === "video" && !media.thumbnailOk) {
+            perAds.push({ ok: false, key: k, error: "Thumbnail faltando para o vídeo deste Ad." });
+            continue;
+          }
           try {
             const draftRes = await createCreativeDraft({
               generatedCampaignId,
               creativeAssetId: media?.supported ? media.creativeAssetId : null,
+              creativeThumbnailAssetId: media?.thumbnailCreativeAssetId ?? null,
               primaryText: copy.primaryText,
               headline: copy.headline || null,
               description: copy.description || null,
@@ -1164,14 +1174,21 @@ export default function CampaignFlow() {
       creative?.mediaByCountry && typeof creative.mediaByCountry === "object" ? creative.mediaByCountry : null;
     const byAd = mediaByCountry?.[cc] && typeof mediaByCountry[cc] === "object" ? mediaByCountry[cc] : null;
     const entry = byAd?.[k] && typeof byAd[k] === "object" ? byAd[k] : null;
+    const thumb = entry?.thumbnail && typeof entry.thumbnail === "object" ? entry.thumbnail : null;
 
     const creativeAssetId = normalizeNonEmptyString(entry?.creativeAssetId) || null;
     const mimeType = normalizeNonEmptyString(entry?.mimeType) || null;
     const originalName = normalizeNonEmptyString(entry?.originalName) || null;
     const url = normalizeNonEmptyString(entry?.url) || null;
 
+    const thumbnailCreativeAssetId = normalizeNonEmptyString(thumb?.creativeAssetId) || null;
+    const thumbnailMimeType = normalizeNonEmptyString(thumb?.mimeType) || null;
+    const thumbnailOriginalName = normalizeNonEmptyString(thumb?.originalName) || null;
+    const thumbnailUrl = normalizeNonEmptyString(thumb?.url) || null;
+
     const kind = mimeType && mimeType.startsWith("image/") ? "image" : mimeType && mimeType.startsWith("video/") ? "video" : "unknown";
     const supported = kind === "image" || kind === "video";
+    const thumbnailOk = kind !== "video" ? true : Boolean(thumbnailCreativeAssetId && thumbnailMimeType?.startsWith("image/"));
 
     return {
       countryCode: cc,
@@ -1180,8 +1197,13 @@ export default function CampaignFlow() {
       mimeType,
       originalName,
       url,
+      thumbnailCreativeAssetId,
+      thumbnailMimeType,
+      thumbnailOriginalName,
+      thumbnailUrl,
       kind,
       supported,
+      thumbnailOk,
       status:
         !creativeAssetId ? "missing" : supported ? "ok" : "unsupported",
     };
@@ -1829,7 +1851,7 @@ export default function CampaignFlow() {
                           {AD_KEYS.map((k) => {
                             const info = resolveMediaForCountryAd(cc, k);
                             const previewUrl = info?.url ? `${getBackendBaseUrl()}${info.url}` : null;
-                            const ok = info.status === "ok" && info.kind === "video";
+                            const ok = info.status === "ok" && info.kind === "video" && info.thumbnailOk;
                             const statusLabel = ok ? "OK" : info.status === "missing" ? "Sem vídeo" : "Tipo inválido";
                             const tone = ok ? "#065f46" : "#92400e";
                             const bg = ok ? "#ecfdf5" : "#fffbeb";
@@ -1841,7 +1863,15 @@ export default function CampaignFlow() {
                                   <div style={{ color: tone, fontWeight: 900, fontSize: 12 }}>{statusLabel}</div>
                                 </div>
                                 <div style={{ marginTop: 8, color: "#6b7280", fontWeight: 800, fontSize: 12 }}>
-                                  {info?.originalName ? info.originalName : info?.creativeAssetId ? "Asset selecionado" : "—"}
+                                  vídeo: {info?.originalName ? info.originalName : info?.creativeAssetId ? "Asset selecionado" : "—"}
+                                </div>
+                                <div style={{ marginTop: 4, color: "#6b7280", fontWeight: 800, fontSize: 12 }}>
+                                  thumbnail:{" "}
+                                  {info?.thumbnailOriginalName
+                                    ? info.thumbnailOriginalName
+                                    : info?.thumbnailCreativeAssetId
+                                      ? "Asset selecionado"
+                                      : "—"}
                                 </div>
                                 {ok && previewUrl ? (
                                   <div style={{ marginTop: 10 }}>
