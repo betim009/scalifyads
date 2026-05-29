@@ -10,6 +10,21 @@ try {
   ffmpegPath = null
 }
 
+let systemFfmpegChecked = false
+let systemFfmpegAvailable = false
+
+async function checkSystemFfmpeg() {
+  if (systemFfmpegChecked) return systemFfmpegAvailable
+  systemFfmpegChecked = true
+  try {
+    await run('ffmpeg', ['-version'], { timeoutMs: 3000 })
+    systemFfmpegAvailable = true
+  } catch {
+    systemFfmpegAvailable = false
+  }
+  return systemFfmpegAvailable
+}
+
 function normalizeNonEmptyString(value) {
   if (typeof value !== 'string') return null
   const trimmed = value.trim()
@@ -53,7 +68,7 @@ function run(cmd, args, { timeoutMs = 20000 } = {}) {
 }
 
 export function canGenerateVideoThumbnail() {
-  return Boolean(normalizeNonEmptyString(ffmpegPath))
+  return Boolean(normalizeNonEmptyString(ffmpegPath)) || systemFfmpegAvailable
 }
 
 export async function generateVideoThumbnailJpeg({ inputPath, outputPath, seekSeconds = 1 } = {}) {
@@ -61,8 +76,10 @@ export async function generateVideoThumbnailJpeg({ inputPath, outputPath, seekSe
   const out = normalizeNonEmptyString(outputPath)
   if (!inp) throw new Error('inputPath is required')
   if (!out) throw new Error('outputPath is required')
-  if (!canGenerateVideoThumbnail()) {
-    const err = new Error('ffmpeg is not available (install ffmpeg-static)')
+  const haveSystem = await checkSystemFfmpeg()
+  const cmd = normalizeNonEmptyString(ffmpegPath) ?? (haveSystem ? 'ffmpeg' : null)
+  if (!cmd) {
+    const err = new Error('ffmpeg is not available (install ffmpeg or ffmpeg-static)')
     err.code = 'THUMB_NO_FFMPEG'
     throw err
   }
@@ -84,8 +101,7 @@ export async function generateVideoThumbnailJpeg({ inputPath, outputPath, seekSe
     out
   ]
 
-  await run(ffmpegPath, args, { timeoutMs: 30000 })
+  await run(cmd, args, { timeoutMs: 30000 })
   const stat = await fsp.stat(out)
   return { sizeBytes: stat.size }
 }
-

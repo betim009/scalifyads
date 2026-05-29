@@ -1731,6 +1731,32 @@ Validação executada (local):
 
 - [2026-05-29 11:20] `cd frontend && npm run build` (OK) após P27.4 (thumbnail automática de vídeo).
 
+### P27.4.1 — Diagnóstico da geração automática de thumbnails
+
+Última atualização: [2026-05-29 11:27]
+
+Problema:
+Vídeos continuavam aparecendo com `thumbnail: —` e o `/campaign-flow` bloqueava REAL por mídia ausente/indisponível.
+
+Diagnóstico / causa raiz:
+
+- `ffmpeg-static` não estava instalado no ambiente em execução (sem thumbnail automática).
+- Em alguns uploads, `mime_type` podia vir vazio; sem inferência, o sistema tratava o asset como `unknown` (parecendo “vídeo ausente”).
+- Em Docker (`node:22-alpine`), depender só de binários “static” pode falhar; solução: instalar `ffmpeg` no container.
+
+Correções implementadas:
+
+- Upload agora **infere `mime_type` por extensão** quando o browser não envia.
+- Docker backend instala `ffmpeg` via `apk add` (garante thumbnail em Alpine).
+- Logs temporários (opt-in via `THUMBNAIL_DEBUG=true`) para evidenciar:
+  - geração iniciada
+  - geração concluída
+  - falha (code/message)
+
+Critério de aceite:
+
+- [ ] Revisão mostra: `Vídeo: videoAE1.mp4` e `Thumbnail: thumbnailAE1.jpg` (validação manual no ambiente REAL/DOCKER com ffmpeg).
+
 ## Decision Log (Ativo)
 
 Última atualização: [2026-05-26 12:10]

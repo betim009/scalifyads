@@ -7,7 +7,7 @@ import Busboy from 'busboy'
 import { getPool } from '../db.js'
 import { asyncHandler } from '../lib/asyncHandler.js'
 import { jsonError, parseLimit } from '../lib/http.js'
-import { canGenerateVideoThumbnail, generateVideoThumbnailJpeg } from '../lib/videoThumbnails.js'
+import { generateVideoThumbnailJpeg } from '../lib/videoThumbnails.js'
 
 function normalizeNonEmptyString(value, { maxLen } = {}) {
   if (typeof value !== 'string') return null
@@ -24,6 +24,20 @@ function safeBaseName(name) {
   return cleaned || 'file'
 }
 
+function inferMimeTypeFromName(filename) {
+  const name = normalizeNonEmptyString(filename, { maxLen: 240 })
+  if (!name) return null
+  const ext = path.extname(name).toLowerCase()
+  if (ext === '.mp4') return 'video/mp4'
+  if (ext === '.mov') return 'video/quicktime'
+  if (ext === '.webm') return 'video/webm'
+  if (ext === '.mkv') return 'video/x-matroska'
+  if (ext === '.jpg' || ext === '.jpeg') return 'image/jpeg'
+  if (ext === '.png') return 'image/png'
+  if (ext === '.gif') return 'image/gif'
+  return null
+}
+
 function getUploadsDir() {
   // backend runs with CWD at repo/backend (docker working_dir=/app)
   return path.resolve('uploads', 'creative-assets')
@@ -32,7 +46,6 @@ function getUploadsDir() {
 async function generateThumbnailAsset(pool, { videoAsset, uploadsDir } = {}) {
   const mimeType = normalizeNonEmptyString(videoAsset?.mime_type, { maxLen: 120 })
   if (!mimeType || !mimeType.startsWith('video/')) return null
-  if (!canGenerateVideoThumbnail()) return null
 
   const thumbId = crypto.randomUUID()
   const baseStored = normalizeNonEmptyString(videoAsset?.stored_name, { maxLen: 400 }) ?? `${thumbId}`
@@ -41,7 +54,12 @@ async function generateThumbnailAsset(pool, { videoAsset, uploadsDir } = {}) {
 
   const inputPath = path.join(uploadsDir, videoAsset.stored_name)
   const outputPath = path.join(uploadsDir, thumbStored)
-  await generateVideoThumbnailJpeg({ inputPath, outputPath, seekSeconds: 1 })
+  try {
+    await generateVideoThumbnailJpeg({ inputPath, outputPath, seekSeconds: 1 })
+  } catch (err) {
+    if (err?.code === 'THUMB_NO_FFMPEG') return null
+    throw err
+  }
 
   const stat = await fsp.stat(outputPath)
   const { rows } = await pool.query(
@@ -135,7 +153,7 @@ export function creativeAssetsRouter() {
         fileHandled = true
 
         originalName = normalizeNonEmptyString(info?.filename, { maxLen: 240 })
-        mimeType = normalizeNonEmptyString(info?.mimeType, { maxLen: 120 })
+        mimeType = normalizeNonEmptyString(info?.mimeType, { maxLen: 120 }) ?? inferMimeTypeFromName(originalName)
 
         const ext = originalName ? path.extname(originalName) : ''
         const baseName = originalName ? path.basename(originalName, ext) : 'asset'
@@ -175,8 +193,30 @@ export function creativeAssetsRouter() {
             }
             let autoThumbnail = null
             try {
+              const debug = process.env.THUMBNAIL_DEBUG === 'true'
+              if (debug) {
+                console.info('[thumbnails] start', {
+                  assetId: uploadId,
+                  storedName,
+                  mimeType
+                })
+              }
               autoThumbnail = await generateThumbnailAsset(pool, { videoAsset: rows[0], uploadsDir })
-            } catch {
+              if (debug) {
+                console.info('[thumbnails] done', {
+                  assetId: uploadId,
+                  thumbnailId: autoThumbnail?.id ?? null
+                })
+              }
+            } catch (err) {
+              const debug = process.env.THUMBNAIL_DEBUG === 'true'
+              if (debug) {
+                console.info('[thumbnails] failed', {
+                  assetId: uploadId,
+                  code: err?.code ?? null,
+                  message: err?.message ?? null
+                })
+              }
               autoThumbnail = null
             }
             finishOnce(() =>
@@ -216,10 +256,6 @@ export function creativeAssetsRouter() {
         return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
       }
 
-      if (!canGenerateVideoThumbnail()) {
-        return jsonError(res, 400, 'ffmpeg not available (thumbnail generation disabled)')
-      }
-
       const id = normalizeNonEmptyString(req.params.id, { maxLen: 80 })
       if (!id) return jsonError(res, 400, 'Invalid asset id')
 
@@ -250,7 +286,7 @@ export function creativeAssetsRouter() {
 
       try {
         const thumb = await generateThumbnailAsset(pool, { videoAsset: asset, uploadsDir })
-        if (!thumb) return jsonError(res, 500, 'Failed to generate thumbnail')
+        if (!thumb) return jsonError(res, 400, 'ffmpeg not available (thumbnail generation disabled)')
         return res.json({ ok: true, creative_thumbnail_asset: thumb })
       } catch (err) {
         return jsonError(res, 500, err?.message ?? 'Thumbnail generation failed', err?.details ?? null)
