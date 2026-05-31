@@ -27,6 +27,7 @@ export async function createMetaCampaignSimple({
   name,
   objective,
   metaAdAccountId,
+  metaAccountId,
   countryCode,
   mode,
   metaUserId,
@@ -34,6 +35,7 @@ export async function createMetaCampaignSimple({
   const body = {
     name,
     metaAdAccountId,
+    ...(metaAccountId ? { metaAccountId } : null),
     countryCode,
     ...(objective ? { objective } : null),
     ...(mode ? { mode } : null),

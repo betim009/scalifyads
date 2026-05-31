@@ -2020,6 +2020,93 @@ Evidências:
 
 - [2026-05-31 08:48] `cd frontend && npm run build` (OK) após limpeza operacional (P28).
 
+### P29 — Contas Meta por usuário
+
+Última atualização: [2026-05-31 09:22]
+
+Objetivo:
+suportar múltiplas contas Meta por usuário e permitir selecionar a conta no template e no `/campaign-flow`, mantendo criação REAL sempre `PAUSED` e token exclusivamente no backend.
+
+Regras (obrigatórias):
+
+- Token Meta nunca vai para o frontend; nunca aparece em respostas; nunca em logs.
+- Toda criação REAL continua obrigatoriamente `PAUSED` (nunca `ACTIVE`).
+- Validar ownership: `metaAccountId` deve pertencer ao usuário logado.
+- Compatibilidade: manter campos antigos do profile e fallback temporário.
+- Não quebrar: `/templates`, `/campaign-flow`, `/profile`, `/meta-test`.
+
+#### P29.1 — Modelo de dados
+
+- [x] Migration `user_meta_accounts` + índices + default único por usuário.
+- [x] `generated_campaigns.meta_account_id` para persistir a conta usada por execução (para AdSet/Ads/Creative usarem o mesmo token).
+
+#### P29.2 — Migração dos dados atuais
+
+- [x] Migration cria “Conta principal” (default) automaticamente para usuários que já tinham `users.meta_ad_account_id` / `users.meta_page_id` (e reaproveita o último token de `meta_tokens` quando existir).
+- [x] Mantidos campos antigos em `users` e tabela `meta_tokens` como fallback temporário.
+
+#### P29.3 — Backend/API
+
+- [x] Endpoints autenticados:
+  - `GET /api/meta-accounts`
+  - `POST /api/meta-accounts`
+  - `PUT /api/meta-accounts/:id`
+  - `DELETE /api/meta-accounts/:id` (soft: `is_active=false`)
+  - `POST /api/meta-accounts/:id/default`
+  - `POST /api/meta-accounts/:id/validate` (Graph `/me`)
+- [x] Respostas nunca retornam token completo; apenas `saved` + `last4`.
+- [x] Compatibilidade: `/api/auth/meta-credentials` também escreve/atualiza a conta default (quando existir) ou cria “Conta principal”.
+
+#### P29.4 — Profile/Configurações
+
+- [x] `/profile` agora possui seção **Contas Meta** (CRUD + validar + definir padrão + desativar).
+- [x] Token nunca é exibido completo após salvar.
+
+#### P29.5 — Templates com seleção de Conta Meta
+
+- [x] `/templates`: campo “Conta Meta” no formulário.
+- [x] Template salva `payload.metaAccountId`.
+- [x] “Meus templates”: exibe conta vinculada e alerta se estiver inativa/não encontrada.
+
+#### P29.6 — Campaign Flow usando Conta Meta
+
+- [x] `/campaign-flow`: seletor “Conta Meta” (usa default do usuário quando disponível).
+- [x] Envia `metaAccountId` para criação (Campaign/AdSet/Creative publish/Ad).
+- [x] Bloqueia REAL com mensagem clara quando não há conta/ID suficiente.
+
+#### P29.7 — Backend Meta usando conta selecionada
+
+- [x] `resolveAccessToken` prioriza token de `user_meta_accounts` (selecionada via `metaAccountId` ou default).
+- [x] Rotas `meta` passam a persistir e respeitar `generated_campaigns.meta_account_id`:
+  - Campaign create/simple
+  - AdSet create
+  - Ad create
+  - Creative publish (page/IG actor via conta, quando disponível)
+- [x] Ownership garantido via `user_id` na query.
+
+#### P29.8 — Compatibilidade com `/meta-test`
+
+- [x] `/meta-test` mantido; passa a usar token da conta default automaticamente (via `resolveAccessToken`) sem quebrar STUB.
+- [ ] (opcional) Seletor explícito de conta no `/meta-test` (fazer depois se necessário).
+
+#### P29.9 — Resultado e logs
+
+- [x] Backend: ops logs incluem `meta_account_id`, `meta_account_name`, `meta_ad_account_id`, `meta_page_id` (sem token).
+- [x] `/campaign-flow`: revisão mostra “Conta Meta” selecionada.
+
+#### P29.10 — Critérios de aceite
+
+- [ ] Validar manualmente: criar 2 contas Meta, definir padrão, criar template com conta, aplicar no `/campaign-flow`, executar STUB/REAL controlado e confirmar tudo `PAUSED`.
+- [ ] Garantir token não aparece no frontend/logs (conferir Network e console).
+
+Validação obrigatória (P29):
+
+- [x] `cd frontend && npm run build`
+
+Evidências:
+
+- [2026-05-31 09:23] `cd frontend && npm run build` (OK) após P29 (contas Meta por usuário).
+
 ## Decision Log (Ativo)
 
 Última atualização: [2026-05-26 12:10]

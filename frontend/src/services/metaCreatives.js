@@ -1,11 +1,12 @@
 import { apiGet, apiPost } from "./http.js";
 
-export async function publishMetaCreativeDraft(creativeDraftId, { pageId, instagramActorId, force } = {}) {
+export async function publishMetaCreativeDraft(creativeDraftId, { pageId, instagramActorId, force, metaAccountId } = {}) {
   const id = String(creativeDraftId || "").trim();
   const data = await apiPost(`/api/meta/creative-drafts/${encodeURIComponent(id)}/publish`, {
     pageId: pageId ?? null,
     instagramActorId: instagramActorId ?? null,
     force: force === true,
+    ...(metaAccountId ? { metaAccountId } : null),
   });
   return {
     ok: true,

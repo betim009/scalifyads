@@ -20,10 +20,12 @@ import {
 } from "../services/campaignTemplates.js";
 import { listCreativeTemplates } from "../services/creativeTemplates.js";
 import { listCreativeAssets, uploadCreativeAsset } from "../services/creativeAssets.js";
+import { listMetaAccounts } from "../services/metaAccounts.js";
 
 const DEFAULTS = {
   campaign: {
     name: "",
+    metaAccountId: "",
     metaAdAccountId: "",
     objective: "OUTCOME_TRAFFIC",
     countryCode: "BR",
@@ -246,6 +248,7 @@ export default function CampaignFlow() {
   const [countries, setCountries] = useState([]);
   const [operationalCountryCodes, setOperationalCountryCodes] = useState([]);
   const [countryLanguageByCode, setCountryLanguageByCode] = useState({});
+  const [metaAccounts, setMetaAccounts] = useState([]);
   const [profileMetaAdAccountId, setProfileMetaAdAccountId] = useState("");
   const [profileMetaPageId, setProfileMetaPageId] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -324,14 +327,20 @@ export default function CampaignFlow() {
               .map((i) => [String(i.countryCode).toUpperCase(), i.primaryLanguage ?? null])
           )
         );
-        setProfileMetaAdAccountId(res?.user?.metaAdAccountId ?? "");
-        setProfileMetaPageId(res?.user?.metaPageId ?? "");
+        const def = res?.user?.defaultMetaAccount ?? null;
+        setProfileMetaAdAccountId(def?.metaAdAccountId ?? res?.user?.metaAdAccountId ?? "");
+        setProfileMetaPageId(def?.metaPageId ?? res?.user?.metaPageId ?? "");
 
-        const metaAdAccountId = normalizeNonEmptyString(res?.user?.metaAdAccountId);
+        const defaultMetaAccountId = normalizeNonEmptyString(def?.id);
+        const metaAdAccountId = normalizeNonEmptyString(def?.metaAdAccountId) ?? normalizeNonEmptyString(res?.user?.metaAdAccountId);
+        const pageId = normalizeNonEmptyString(def?.metaPageId) ?? normalizeNonEmptyString(res?.user?.metaPageId);
+
+        if (defaultMetaAccountId) {
+          setCampaign((p) => (normalizeNonEmptyString(p.metaAccountId) ? p : { ...p, metaAccountId: defaultMetaAccountId }));
+        }
         if (metaAdAccountId) {
           setCampaign((p) => (normalizeNonEmptyString(p.metaAdAccountId) ? p : { ...p, metaAdAccountId }));
         }
-        const pageId = normalizeNonEmptyString(res?.user?.metaPageId);
         if (pageId) {
           setCreative((p) => (normalizeNonEmptyString(p.pageId) ? p : { ...p, pageId }));
         }
@@ -348,6 +357,23 @@ export default function CampaignFlow() {
     };
   }, []);
 
+  useEffect(() => {
+    let alive = true;
+    listMetaAccounts()
+      .then((res) => {
+        if (!alive) return;
+        const list = Array.isArray(res?.metaAccounts) ? res.metaAccounts : [];
+        setMetaAccounts(list);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setMetaAccounts([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   const operationalCountriesMissing = batchEnabled && operationalCountryCodes.length === 0;
   const countryLanguagesMissing = batchEnabled && operationalCountryCodes.length > 0 && Object.keys(countryLanguageByCode || {}).length === 0;
 
@@ -357,6 +383,42 @@ export default function CampaignFlow() {
     const presets = safeJsonParse(localStorage.getItem(STORAGE_PRESETS_KEY));
     if (Array.isArray(presets)) setQuickPresets(presets);
   }, []);
+
+  const metaAccountOptions = useMemo(() => {
+    const base = [{ value: "", label: metaAccounts.length ? "Selecione..." : "Nenhuma conta cadastrada", disabled: true }];
+    return base.concat(
+      metaAccounts.map((a) => ({
+        value: String(a.id),
+        label: `${a.name}${a.isDefault ? " • padrão" : ""}${a.isActive ? "" : " • inativa"}`,
+        disabled: false,
+      }))
+    );
+  }, [metaAccounts]);
+
+  const selectedMetaAccount = useMemo(() => {
+    const id = normalizeNonEmptyString(campaign.metaAccountId);
+    if (!id) return null;
+    return metaAccounts.find((a) => String(a.id) === id) ?? null;
+  }, [campaign.metaAccountId, metaAccounts]);
+
+  useEffect(() => {
+    const acc = selectedMetaAccount;
+    if (!acc) return;
+    const accAdAccountId = normalizeNonEmptyString(acc.metaAdAccountId);
+    const accPageId = normalizeNonEmptyString(acc.metaPageId);
+    const accIg = normalizeNonEmptyString(acc.metaInstagramActorId);
+
+    if (accAdAccountId) {
+      setCampaign((p) => ({ ...p, metaAdAccountId: accAdAccountId }));
+    }
+    if (accPageId || accIg) {
+      setCreative((p) => ({
+        ...p,
+        ...(accPageId ? { pageId: accPageId } : null),
+        ...(accIg ? { instagramActorId: accIg } : null),
+      }));
+    }
+  }, [selectedMetaAccount]);
 
   useEffect(() => {
     if (autoApplied) return;
@@ -523,6 +585,7 @@ export default function CampaignFlow() {
     if (normalizeNonEmptyString(creative.destinationUrl)) params.set("destinationUrl", creative.destinationUrl);
     if (normalizeNonEmptyString(generatedCampaignId)) params.set("generatedCampaignId", generatedCampaignId);
     if (normalizeNonEmptyString(countryCode)) params.set("countryCode", String(countryCode).toUpperCase());
+    if (normalizeNonEmptyString(campaign.metaAccountId)) params.set("metaAccountId", campaign.metaAccountId);
     const resolvedMode = normalizeNonEmptyString(mode) || campaign.mode;
     if (normalizeNonEmptyString(resolvedMode)) params.set("mode", resolvedMode);
     navigate(`/meta-test?${params.toString()}`);
@@ -561,6 +624,10 @@ export default function CampaignFlow() {
       name: normalizeNonEmptyString(nextCampaign?.name)
         ? `${String(nextCampaign.name)}${nameSuffix || ""}`
         : p.name,
+      metaAccountId:
+        normalizeNonEmptyString(nextCampaign?.metaAccountId) ||
+        normalizeNonEmptyString(p.metaAccountId) ||
+        "",
       metaAdAccountId:
         normalizeNonEmptyString(nextCampaign?.metaAdAccountId) ||
         normalizeNonEmptyString(p.metaAdAccountId) ||
@@ -774,6 +841,18 @@ export default function CampaignFlow() {
         return;
       }
 
+      if (
+        campaign.mode === "REAL" &&
+        !normalizeNonEmptyString(campaign.metaAccountId) &&
+        !normalizeNonEmptyString(campaign.metaAdAccountId)
+      ) {
+        setSubmitting(false);
+        setNotice("");
+        setError("Configure ou selecione uma Conta Meta antes de executar em REAL.");
+        setStep(0);
+        return;
+      }
+
       if (batchEnabled) {
         const rawCodes = Array.from(new Set((selectedCountryCodes || []).map((c) => String(c || "").trim()).filter(Boolean)));
         const codes = (() => {
@@ -939,6 +1018,7 @@ export default function CampaignFlow() {
               name: normalizeCampaignNameForCountry(campaign.name, countryCode),
               objective: campaign.objective,
               metaAdAccountId: campaign.metaAdAccountId,
+              metaAccountId: normalizeNonEmptyString(campaign.metaAccountId) || null,
               countryCode,
               mode: campaign.mode,
             });
@@ -956,6 +1036,7 @@ export default function CampaignFlow() {
               billingEvent: adSet.billingEvent,
               optimizationGoal: adSet.optimizationGoal,
               mode: campaign.mode,
+              metaAccountId: normalizeNonEmptyString(campaign.metaAccountId) || null,
             });
 
             const cc = String(countryCode || "").trim().toUpperCase();
@@ -1017,6 +1098,7 @@ export default function CampaignFlow() {
                     pageId: normalizeNonEmptyString(creative.pageId) || null,
                     instagramActorId: normalizeNonEmptyString(creative.instagramActorId) || null,
                     force: false,
+                    metaAccountId: normalizeNonEmptyString(campaign.metaAccountId) || null,
                   });
                 }
 
@@ -1026,6 +1108,7 @@ export default function CampaignFlow() {
                   name: `Ad • ${cc} — ${k}`,
                   creativeDraftId,
                   mode: campaign.mode,
+                  metaAccountId: normalizeNonEmptyString(campaign.metaAccountId) || null,
                 });
 
                 perAds.push({
@@ -1149,6 +1232,7 @@ export default function CampaignFlow() {
           name: campaign.name,
           objective: campaign.objective,
           metaAdAccountId: campaign.metaAdAccountId,
+          metaAccountId: normalizeNonEmptyString(campaign.metaAccountId) || null,
           countryCode: campaign.countryCode,
           mode: campaign.mode,
         });
@@ -1165,6 +1249,7 @@ export default function CampaignFlow() {
           billingEvent: adSet.billingEvent,
           optimizationGoal: adSet.optimizationGoal,
           mode: campaign.mode,
+          metaAccountId: normalizeNonEmptyString(campaign.metaAccountId) || null,
         });
 
         const translationsRequired = creative?.translationsRequired === true;
@@ -1209,6 +1294,7 @@ export default function CampaignFlow() {
                 pageId: normalizeNonEmptyString(creative.pageId) || null,
                 instagramActorId: normalizeNonEmptyString(creative.instagramActorId) || null,
                 force: false,
+                metaAccountId: normalizeNonEmptyString(campaign.metaAccountId) || null,
               });
             }
             const adRes = await createMetaAd({
@@ -1216,6 +1302,7 @@ export default function CampaignFlow() {
               name: `Ad • ${cc} — ${k}`,
               creativeDraftId,
               mode: campaign.mode,
+              metaAccountId: normalizeNonEmptyString(campaign.metaAccountId) || null,
             });
             perAds.push({
               ok: true,
@@ -1666,16 +1753,40 @@ export default function CampaignFlow() {
                 />
               </Field>
               <Field
-                label="Meta Ad Account ID"
-                hint="Opcional: se vazio, o backend tenta usar o valor salvo no Perfil."
+                label="Conta Meta"
+                hint="Esta conta será usada no REAL. Se vazio, o sistema usa a conta padrão do usuário."
               >
-                <InputLike
-                  placeholder="act_259174718403969"
-                  value={campaign.metaAdAccountId}
-                  onChange={(e) => setCampaign((p) => ({ ...p, metaAdAccountId: e.target.value }))}
+                <SelectLike
+                  value={campaign.metaAccountId || ""}
+                  onChange={(e) => setCampaign((p) => ({ ...p, metaAccountId: e.target.value }))}
                   disabled={submitting}
+                  options={metaAccountOptions}
                 />
+                {selectedMetaAccount ? (
+                  <div className="muted" style={{ marginTop: 6, fontWeight: 800, fontSize: 12 }}>
+                    Conta selecionada: <b>{selectedMetaAccount.name}</b> • Ad Account:{" "}
+                    <b>{selectedMetaAccount.metaAdAccountId || "—"}</b> • Page: <b>{selectedMetaAccount.metaPageId || "—"}</b>
+                    {selectedMetaAccount.isActive === false ? (
+                      <span style={{ color: "#b45309" }}> • inativa</span>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="muted" style={{ marginTop: 6, fontWeight: 800, fontSize: 12 }}>
+                    Dica: selecione uma conta para evitar depender de fallback do perfil.
+                  </div>
+                )}
               </Field>
+
+              <AdvancedDisclosure summary="Avançado (override de IDs)" defaultOpen={false}>
+                <Field label="Meta Ad Account ID" hint="Opcional: override manual (use apenas se necessário).">
+                  <InputLike
+                    placeholder="act_259174718403969"
+                    value={campaign.metaAdAccountId}
+                    onChange={(e) => setCampaign((p) => ({ ...p, metaAdAccountId: e.target.value }))}
+                    disabled={submitting}
+                  />
+                </Field>
+              </AdvancedDisclosure>
               <Field label="Objective" required>
                 <SelectLike
                   value={campaign.objective}
@@ -2007,6 +2118,7 @@ export default function CampaignFlow() {
                 <div style={{ fontWeight: 950, marginBottom: 10 }}>Campanha</div>
                 <div style={{ display: "grid", gap: 10 }}>
                   <SummaryRow label="Nome" value={campaign.name || "—"} />
+                  <SummaryRow label="Conta Meta" value={selectedMetaAccount?.name || (campaign.metaAccountId ? "Conta selecionada" : "Padrão do usuário")} />
                   <SummaryRow label="Conta de anúncios" value={campaign.metaAdAccountId || "—"} />
                   <SummaryRow label="Objetivo" value={campaign.objective || "—"} />
                   <SummaryRow

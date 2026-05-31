@@ -15,6 +15,7 @@ import { countryTemplatesRouter } from './countryTemplates.js'
 import { campaignTemplatesRouter } from './campaignTemplates.js'
 import { authRouter } from './auth.js'
 import { flowTemplatesRouter } from './flowTemplates.js'
+import { metaAccountsRouter } from './metaAccounts.js'
 
 export function apiRouter() {
   const router = Router()
@@ -25,6 +26,7 @@ export function apiRouter() {
 
   router.use('/countries', countriesRouter())
   router.use('/auth', authRouter())
+  router.use('/meta-accounts', metaAccountsRouter())
   router.use('/objectives', objectivesRouter())
   router.use('/campaigns', campaignsRouter())
   router.use('/generated-campaigns', generatedCampaignsRouter())

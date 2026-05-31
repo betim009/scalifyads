@@ -43,6 +43,72 @@ function normalizeNonEmptyString(value) {
   return trimmed ? trimmed : null
 }
 
+async function resolveMetaAccountContext(pool, req, { metaAccountId } = {}) {
+  if (!pool) return null
+  const userId = req.auth?.userId
+  if (!userId || !isUuid(userId)) return null
+
+  const requested = normalizeNonEmptyString(metaAccountId) ?? normalizeNonEmptyString(req.body?.metaAccountId)
+  if (requested) {
+    if (!isUuid(requested)) return null
+    const { rows, rowCount } = await pool.query(
+      `
+        SELECT
+          id,
+          name,
+          meta_ad_account_id,
+          meta_page_id,
+          meta_access_token,
+          meta_instagram_actor_id,
+          is_active
+        FROM user_meta_accounts
+        WHERE id = $1::uuid AND user_id = $2::uuid
+        LIMIT 1
+      `,
+      [requested, userId]
+    )
+    if (rowCount === 0) return null
+    const row = rows[0]
+    if (!row.is_active) return null
+    return {
+      metaAccountId: row.id,
+      metaAccountName: row.name ?? null,
+      metaAdAccountId: row.meta_ad_account_id ?? null,
+      metaPageId: row.meta_page_id ?? null,
+      metaInstagramActorId: row.meta_instagram_actor_id ?? null,
+      accessToken: coerceAccessToken(row.meta_access_token)
+    }
+  }
+
+  const { rows, rowCount } = await pool.query(
+    `
+      SELECT
+        id,
+        name,
+        meta_ad_account_id,
+        meta_page_id,
+        meta_access_token,
+        meta_instagram_actor_id,
+        is_active
+      FROM user_meta_accounts
+      WHERE user_id = $1::uuid AND is_default = true
+      LIMIT 1
+    `,
+    [userId]
+  )
+  if (rowCount === 0) return null
+  const row = rows[0]
+  if (!row.is_active) return null
+  return {
+    metaAccountId: row.id,
+    metaAccountName: row.name ?? null,
+    metaAdAccountId: row.meta_ad_account_id ?? null,
+    metaPageId: row.meta_page_id ?? null,
+    metaInstagramActorId: row.meta_instagram_actor_id ?? null,
+    accessToken: coerceAccessToken(row.meta_access_token)
+  }
+}
+
 function normalizeMetaAdAccountId(value) {
   const raw = normalizeNonEmptyString(value)
   if (!raw) return null
@@ -204,6 +270,7 @@ export function metaRouter() {
             cd.status,
             cd.meta_creative_id,
             gc.meta_ad_account_id,
+            gc.meta_account_id,
             ca.stored_name AS asset_stored_name,
             ca.original_name AS asset_original_name,
             ca.mime_type AS asset_mime_type,
@@ -234,8 +301,12 @@ export function metaRouter() {
         return jsonError(res, 400, 'Missing meta_ad_account_id on generated campaign (create Campaign first)')
       }
 
+      const metaAccount = await resolveMetaAccountContext(pool, req, {
+        metaAccountId: normalizeNonEmptyString(draft.meta_account_id) ?? req.body?.metaAccountId
+      })
       const pageId =
         normalizeNonEmptyString(req.body?.pageId) ??
+        normalizeNonEmptyString(metaAccount?.metaPageId) ??
         normalizeNonEmptyString(req.auth?.metaPageId) ??
         normalizeNonEmptyString(process.env.META_PAGE_ID)
       if (!pageId) {
@@ -244,6 +315,7 @@ export function metaRouter() {
 
       const instagramActorId =
         normalizeNonEmptyString(req.body?.instagramActorId) ??
+        normalizeNonEmptyString(metaAccount?.metaInstagramActorId) ??
         normalizeNonEmptyString(process.env.META_INSTAGRAM_ACTOR_ID)
 
       const destinationUrl = normalizeNonEmptyString(draft.destination_url)
@@ -396,6 +468,10 @@ export function metaRouter() {
             action: 'creative.publish',
             ok: true,
             details: {
+              meta_account_id: metaAccount?.metaAccountId ?? null,
+              meta_account_name: metaAccount?.metaAccountName ?? null,
+              meta_ad_account_id: metaAdAccountId,
+              meta_page_id: pageId,
               creative_draft_id: creativeDraftId,
               generated_campaign_id: draft.generated_campaign_id,
               meta_creative_id: normalizeNonEmptyString(created?.id) ?? null,
@@ -420,6 +496,10 @@ export function metaRouter() {
           ok: false,
           error: err?.message ? String(err.message) : 'Meta ad creative creation failed',
           details: {
+            meta_account_id: metaAccount?.metaAccountId ?? null,
+            meta_account_name: metaAccount?.metaAccountName ?? null,
+            meta_ad_account_id: metaAdAccountId,
+            meta_page_id: pageId ?? null,
             creative_draft_id: creativeDraftId,
             generated_campaign_id: draft.generated_campaign_id,
             status,
@@ -508,6 +588,7 @@ export function metaRouter() {
 
       const dbEnabled = Boolean(req.app.locals.dbEnabled)
       const pool = dbEnabled ? getPool() : null
+      const metaAccount = dbEnabled && pool ? await resolveMetaAccountContext(pool, req, { metaAccountId: req.query?.metaAccountId }) : null
       const accessToken = dbEnabled
         ? await resolveAccessToken(pool, req)
         : coerceAccessToken(process.env.META_ACCESS_TOKEN)
@@ -517,7 +598,9 @@ export function metaRouter() {
       }
 
       const metaAdAccountId =
-        normalizeMetaAdAccountId(req.query?.metaAdAccountId) ?? normalizeMetaAdAccountId(req.auth?.metaAdAccountId)
+        normalizeMetaAdAccountId(req.query?.metaAdAccountId) ??
+        normalizeMetaAdAccountId(metaAccount?.metaAdAccountId) ??
+        normalizeMetaAdAccountId(req.auth?.metaAdAccountId)
       const limit = normalizeLimit(req.query?.limit, { fallback: 50, min: 1, max: 200 })
 
       try {
@@ -712,6 +795,7 @@ export function metaRouter() {
 
       const dbEnabled = Boolean(req.app.locals.dbEnabled)
       const pool = dbEnabled ? getPool() : null
+      const metaAccount = dbEnabled && pool ? await resolveMetaAccountContext(pool, req) : null
       const accessToken = dbEnabled
         ? await resolveAccessToken(pool, req)
         : coerceAccessToken(process.env.META_ACCESS_TOKEN)
@@ -721,11 +805,25 @@ export function metaRouter() {
         db_enabled: dbEnabled,
         provider: process.env.META_SYNC_PROVIDER ?? null,
         graph_version: process.env.META_GRAPH_VERSION ?? null,
+        meta_account: metaAccount
+          ? {
+              id: metaAccount.metaAccountId,
+              name: metaAccount.metaAccountName,
+              meta_ad_account_id: metaAccount.metaAdAccountId ?? null,
+              meta_page_id: metaAccount.metaPageId ?? null,
+              meta_instagram_actor_id: metaAccount.metaInstagramActorId ?? null
+            }
+          : null,
         has_access_token: Boolean(accessToken),
         has_page_id: Boolean(
-          normalizeNonEmptyString(req.auth?.metaPageId) ?? normalizeNonEmptyString(process.env.META_PAGE_ID)
+          normalizeNonEmptyString(metaAccount?.metaPageId) ??
+            normalizeNonEmptyString(req.auth?.metaPageId) ??
+            normalizeNonEmptyString(process.env.META_PAGE_ID)
         ),
-        has_instagram_actor_id: Boolean(normalizeNonEmptyString(process.env.META_INSTAGRAM_ACTOR_ID))
+        has_instagram_actor_id: Boolean(
+          normalizeNonEmptyString(metaAccount?.metaInstagramActorId) ??
+            normalizeNonEmptyString(process.env.META_INSTAGRAM_ACTOR_ID)
+        )
       })
     })
   )
@@ -831,14 +929,16 @@ export function metaRouter() {
         return jsonError(res, 400, 'Invalid generatedCampaignId')
       }
 
-      const metaAdAccountId = normalizeMetaAdAccountId(req.body?.metaAdAccountId)
+      const pool = getPool()
+      const metaAccount = await resolveMetaAccountContext(pool, req, { metaAccountId: req.body?.metaAccountId })
+
+      const metaAdAccountId =
+        normalizeMetaAdAccountId(metaAccount?.metaAdAccountId) ?? normalizeMetaAdAccountId(req.body?.metaAdAccountId)
       if (!metaAdAccountId) {
         return jsonError(res, 400, 'Invalid metaAdAccountId (expected act_<digits>)')
       }
 
-      const pool = getPool()
-
-      const accessToken = await resolveAccessToken(pool, req)
+      const accessToken = metaAccount?.accessToken ?? (await resolveAccessToken(pool, req))
       if (!accessToken) {
         return jsonError(
           res,
@@ -907,6 +1007,7 @@ export function metaRouter() {
               meta_campaign_id = $2,
               meta_run_mode = 'REAL',
               meta_ad_account_id = $3,
+              meta_account_id = $8,
               meta_user_id = $4,
               meta_status = $5,
               meta_effective_status = $6,
@@ -922,6 +1023,7 @@ export function metaRouter() {
               meta_campaign_id,
               meta_run_mode,
               meta_ad_account_id,
+              meta_account_id,
               meta_user_id,
               meta_status,
               meta_effective_status,
@@ -937,12 +1039,30 @@ export function metaRouter() {
             metaUserId,
             normalizeNonEmptyString(created?.status),
             normalizeNonEmptyString(created?.effective_status),
-            normalizeNonEmptyString(created?.objective)
+            normalizeNonEmptyString(created?.objective),
+            metaAccount?.metaAccountId ?? null
           ]
         )
 
+        void insertOpsLogBestEffort(pool, {
+          source: 'meta-test',
+          entity: 'generated_campaigns',
+          action: 'campaign.create',
+          ok: true,
+          details: {
+            meta_account_id: metaAccount?.metaAccountId ?? null,
+            meta_account_name: metaAccount?.metaAccountName ?? null,
+            meta_ad_account_id: metaAdAccountId,
+            meta_run_mode: 'REAL',
+            generated_campaign_id: generatedCampaignId
+          }
+        })
+
         return res.status(201).json({
           ok: true,
+          meta_account: metaAccount
+            ? { id: metaAccount.metaAccountId, name: metaAccount.metaAccountName, meta_ad_account_id: metaAdAccountId }
+            : null,
           meta_campaign: created,
           generated_campaign: updated.rows[0]
         })
@@ -978,8 +1098,13 @@ export function metaRouter() {
         return jsonError(res, 400, 'Invalid countryCode (expected ISO-2)')
       }
 
+      const pool = getPool()
+      const metaAccount = await resolveMetaAccountContext(pool, req, { metaAccountId: req.body?.metaAccountId })
+
       const metaAdAccountId =
-        normalizeMetaAdAccountId(req.body?.metaAdAccountId) ?? normalizeMetaAdAccountId(req.auth?.metaAdAccountId)
+        normalizeMetaAdAccountId(metaAccount?.metaAdAccountId) ??
+        normalizeMetaAdAccountId(req.body?.metaAdAccountId) ??
+        normalizeMetaAdAccountId(req.auth?.metaAdAccountId)
       if (!metaAdAccountId) {
         return jsonError(res, 400, 'Invalid metaAdAccountId (expected act_<digits>)')
       }
@@ -987,8 +1112,7 @@ export function metaRouter() {
       const modeRaw = normalizeNonEmptyString(req.body?.mode)
       const mode = modeRaw === 'STUB' ? 'STUB' : 'REAL'
 
-      const pool = getPool()
-      const accessToken = await resolveAccessToken(pool, req)
+      const accessToken = metaAccount?.accessToken ?? (await resolveAccessToken(pool, req))
 
       if (mode === 'REAL' && !accessToken) {
         return jsonError(
@@ -1089,6 +1213,7 @@ export function metaRouter() {
               meta_campaign_id = $2,
               meta_run_mode = $8,
               meta_ad_account_id = $3,
+              meta_account_id = $9,
               meta_user_id = $4,
               meta_status = $5,
               meta_effective_status = $6,
@@ -1104,6 +1229,7 @@ export function metaRouter() {
               meta_campaign_id,
               meta_run_mode,
               meta_ad_account_id,
+              meta_account_id,
               meta_user_id,
               meta_status,
               meta_effective_status,
@@ -1120,14 +1246,37 @@ export function metaRouter() {
             normalizeNonEmptyString(created?.status),
             normalizeNonEmptyString(created?.effective_status),
             normalizeNonEmptyString(created?.objective),
-            mode
+            mode,
+            metaAccount?.metaAccountId ?? null
           ]
         )
+
+        await insertOpsLogBestEffort(pool, {
+          source: 'campaign-flow',
+          entity: 'generated_campaigns',
+          action: 'campaign.create.simple',
+          ok: true,
+          details: {
+            meta_account_id: metaAccount?.metaAccountId ?? null,
+            meta_account_name: metaAccount?.metaAccountName ?? null,
+            meta_ad_account_id: metaAdAccountId,
+            meta_page_id: metaAccount?.metaPageId ?? null,
+            meta_run_mode: mode
+          }
+        })
 
         await client.query('COMMIT')
         return res.status(201).json({
           ok: true,
           mode,
+          meta_account: metaAccount
+            ? {
+                id: metaAccount.metaAccountId,
+                name: metaAccount.metaAccountName,
+                meta_ad_account_id: metaAdAccountId,
+                meta_page_id: metaAccount.metaPageId ?? null
+              }
+            : null,
           meta_campaign: created,
           campaign,
           generated_campaign: updated.rows[0]
@@ -1193,6 +1342,7 @@ export function metaRouter() {
             country_code,
             meta_campaign_id,
             meta_ad_account_id,
+            meta_account_id,
             meta_adset_id
           FROM generated_campaigns
           WHERE id = $1
@@ -1218,7 +1368,10 @@ export function metaRouter() {
         return jsonError(res, 400, 'Missing metaAdAccountId (expected act_<digits>)')
       }
 
-      const accessToken = await resolveAccessToken(pool, req)
+      const metaAccount = await resolveMetaAccountContext(pool, req, {
+        metaAccountId: normalizeNonEmptyString(gc.meta_account_id) ?? req.body?.metaAccountId
+      })
+      const accessToken = metaAccount?.accessToken ?? (await resolveAccessToken(pool, req))
       if (mode === 'REAL' && !accessToken) {
         return jsonError(
           res,
@@ -1319,7 +1472,25 @@ export function metaRouter() {
           )
 
           await client.query('COMMIT')
-          return res.status(201).json({ ok: true, mode, meta_adset: created, generated_campaign: updated.rows[0] })
+          await insertOpsLogBestEffort(pool, {
+            source: 'campaign-flow',
+            entity: 'generated_campaigns',
+            action: 'adset.create',
+            ok: true,
+            details: {
+              meta_account_id: metaAccount?.metaAccountId ?? null,
+              meta_account_name: metaAccount?.metaAccountName ?? null,
+              meta_ad_account_id: metaAdAccountId,
+              meta_run_mode: mode
+            }
+          })
+          return res.status(201).json({
+            ok: true,
+            mode,
+            meta_account: metaAccount ? { id: metaAccount.metaAccountId, name: metaAccount.metaAccountName } : null,
+            meta_adset: created,
+            generated_campaign: updated.rows[0]
+          })
         } catch (err) {
           await client.query('ROLLBACK')
           throw err
@@ -1369,6 +1540,7 @@ export function metaRouter() {
           SELECT
             id,
             meta_ad_account_id,
+            meta_account_id,
             meta_adset_id
           FROM generated_campaigns
           WHERE id = $1
@@ -1426,7 +1598,10 @@ export function metaRouter() {
         )
       }
 
-      const accessToken = await resolveAccessToken(pool, req)
+      const metaAccount = await resolveMetaAccountContext(pool, req, {
+        metaAccountId: normalizeNonEmptyString(gc.meta_account_id) ?? req.body?.metaAccountId
+      })
+      const accessToken = metaAccount?.accessToken ?? (await resolveAccessToken(pool, req))
       if (mode === 'REAL' && !accessToken) {
         return jsonError(
           res,
@@ -1532,9 +1707,27 @@ export function metaRouter() {
           )
 
           await client.query('COMMIT')
-          return res
-            .status(201)
-            .json({ ok: true, mode, creative_id_source: creativeIdSource, meta_ad: created, generated_campaign: updated.rows[0] })
+          await insertOpsLogBestEffort(pool, {
+            source: 'campaign-flow',
+            entity: 'generated_campaigns',
+            action: 'ad.create',
+            ok: true,
+            details: {
+              meta_account_id: metaAccount?.metaAccountId ?? null,
+              meta_account_name: metaAccount?.metaAccountName ?? null,
+              meta_ad_account_id: metaAdAccountId,
+              meta_run_mode: mode,
+              creative_id_source: creativeIdSource
+            }
+          })
+          return res.status(201).json({
+            ok: true,
+            mode,
+            meta_account: metaAccount ? { id: metaAccount.metaAccountId, name: metaAccount.metaAccountName } : null,
+            creative_id_source: creativeIdSource,
+            meta_ad: created,
+            generated_campaign: updated.rows[0]
+          })
         } catch (err) {
           await client.query('ROLLBACK')
           throw err

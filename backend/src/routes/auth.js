@@ -55,18 +55,35 @@ export function authRouter() {
       }))
       const operationalCountryCodes = operationalCountries.map((r) => r.countryCode).filter(Boolean)
 
-      const { rows } = await pool.query(
+      const { rows: metaAccountRows } = await pool.query(
         `
-          SELECT access_token, created_at
-          FROM meta_tokens
-          WHERE user_id = $1
-          ORDER BY created_at DESC
+          SELECT id, name, meta_ad_account_id, meta_page_id, meta_access_token, is_active, updated_at
+          FROM user_meta_accounts
+          WHERE user_id = $1::uuid AND is_default = true
           LIMIT 1
         `,
         [auth.userId]
       )
-      const latest = rows?.[0] ?? null
-      const tokenMeta = maskToken(latest?.access_token)
+      const defaultMetaAccount = metaAccountRows?.[0] ?? null
+      const defaultMetaToken = maskToken(defaultMetaAccount?.meta_access_token)
+
+      // Legacy fallback: meta_tokens (kept for compatibility during migration).
+      let legacyLatest = null
+      let legacyTokenMeta = { hasToken: false, last4: null }
+      if (!defaultMetaAccount) {
+        const { rows } = await pool.query(
+          `
+            SELECT access_token, created_at
+            FROM meta_tokens
+            WHERE user_id = $1
+            ORDER BY created_at DESC
+            LIMIT 1
+          `,
+          [auth.userId]
+        )
+        legacyLatest = rows?.[0] ?? null
+        legacyTokenMeta = maskToken(legacyLatest?.access_token)
+      }
 
       return res.json({
         ok: true,
@@ -79,11 +96,21 @@ export function authRouter() {
           operationalCountryCodes,
           operationalCountries,
           metaAccessToken: {
-            saved: tokenMeta.hasToken,
-            last4: tokenMeta.last4,
-            createdAt: latest?.created_at ?? null
+            saved: defaultMetaAccount ? defaultMetaToken.hasToken : legacyTokenMeta.hasToken,
+            last4: defaultMetaAccount ? defaultMetaToken.last4 : legacyTokenMeta.last4,
+            createdAt: defaultMetaAccount ? defaultMetaAccount.updated_at ?? null : legacyLatest?.created_at ?? null
+          },
+          defaultMetaAccount: defaultMetaAccount
+            ? {
+                id: defaultMetaAccount.id,
+                name: defaultMetaAccount.name,
+                metaAdAccountId: defaultMetaAccount.meta_ad_account_id ?? null,
+                metaPageId: defaultMetaAccount.meta_page_id ?? null,
+                isActive: Boolean(defaultMetaAccount.is_active),
+                metaAccessToken: { saved: defaultMetaToken.hasToken, last4: defaultMetaToken.last4 }
+              }
+            : null
           }
-        }
       })
     })
   )
@@ -227,6 +254,50 @@ export function authRouter() {
         `,
         [auth.userId, metaAdAccountId, metaPageId]
       )
+
+      // P29 compatibility: also persist into user's default Meta Account (if exists), or create one.
+      const { rows: defaultRows } = await pool.query(
+        `
+          SELECT id
+          FROM user_meta_accounts
+          WHERE user_id = $1::uuid AND is_default = true
+          LIMIT 1
+        `,
+        [auth.userId]
+      )
+      const defaultId = defaultRows?.[0]?.id ?? null
+      if (defaultId) {
+        await pool.query(
+          `
+            UPDATE user_meta_accounts
+            SET
+              meta_ad_account_id = $2,
+              meta_page_id = $3,
+              meta_access_token = COALESCE($4, meta_access_token),
+              is_active = true,
+              updated_at = now()
+            WHERE id = $1::uuid AND user_id = $5::uuid
+          `,
+          [defaultId, metaAdAccountId, metaPageId, accessToken || null, auth.userId]
+        )
+      } else if (metaAdAccountId || metaPageId || accessToken) {
+        // If user has no default, create a "Conta principal".
+        await pool.query(
+          `
+            INSERT INTO user_meta_accounts (
+              user_id,
+              name,
+              meta_ad_account_id,
+              meta_page_id,
+              meta_access_token,
+              is_default,
+              is_active
+            )
+            VALUES ($1::uuid, 'Conta principal', $2, $3, $4, true, true)
+          `,
+          [auth.userId, metaAdAccountId, metaPageId, accessToken || null]
+        )
+      }
 
       if (accessToken) {
         // Never return or log the token; only insert.

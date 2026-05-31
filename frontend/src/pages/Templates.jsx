@@ -14,6 +14,7 @@ import {
 import { getAuthMe } from "../services/auth.js";
 import { generateCreativeAssetThumbnail, listCreativeAssets, uploadCreativeAsset } from "../services/creativeAssets.js";
 import { getBackendBaseUrl } from "../services/http.js";
+import { listMetaAccounts } from "../services/metaAccounts.js";
 
 const STORAGE_LAST_EXECUTION_KEY = "campaignFlow:lastExecution:v1";
 const TAB_CREATE = "create";
@@ -296,6 +297,7 @@ function buildPayloadFromForm(form) {
   });
   const adA = normalizedVariants[0] ?? { primaryText: "", headline: "", description: "" };
   return {
+    metaAccountId: normalizeNonEmptyString(form?.metaAccountId) || null,
     objective: normalizeNonEmptyString(form.objective) || "OUTCOME_TRAFFIC",
     countryCodes: uniqueCountryCodes(form.countryCodes),
     dailyBudgetCents: Number(form.dailyBudgetCents) || 1000,
@@ -346,8 +348,8 @@ export default function Templates() {
 
   const [profileCountryCodes, setProfileCountryCodes] = useState([]);
   const [profileCountryLanguageByCode, setProfileCountryLanguageByCode] = useState({});
-  const [profileMetaAdAccountId, setProfileMetaAdAccountId] = useState("");
-  const [profileMetaPageId, setProfileMetaPageId] = useState("");
+  const [metaAccounts, setMetaAccounts] = useState([]);
+  const [defaultMetaAccountId, setDefaultMetaAccountId] = useState("");
 
   const [editingTranslationsByCountry, setEditingTranslationsByCountry] = useState({});
   const [translationsDraftByCountry, setTranslationsDraftByCountry] = useState({});
@@ -361,6 +363,7 @@ export default function Templates() {
 
   const [form, setForm] = useState({
     name: "",
+    metaAccountId: "",
     objective: "OUTCOME_TRAFFIC",
     countryCodes: "BR",
     dailyBudgetCents: 1000,
@@ -378,6 +381,23 @@ export default function Templates() {
     if (!q) return templates;
     return (templates || []).filter((t) => String(t?.name || "").toLowerCase().includes(q));
   }, [templates, listQuery]);
+
+  const metaAccountOptions = useMemo(() => {
+    const base = [{ value: "", label: metaAccounts.length ? "Selecione..." : "Nenhuma conta cadastrada", disabled: true }];
+    return base.concat(
+      metaAccounts.map((a) => ({
+        value: String(a.id),
+        label: `${a.name}${a.isDefault ? " • padrão" : ""}${a.isActive ? "" : " • inativa"}`,
+        disabled: false,
+      }))
+    );
+  }, [metaAccounts]);
+
+  const selectedMetaAccount = useMemo(() => {
+    const id = normalizeNonEmptyString(form.metaAccountId);
+    if (!id) return null;
+    return metaAccounts.find((a) => String(a.id) === id) ?? null;
+  }, [form.metaAccountId, metaAccounts]);
 
   useEffect(() => {
     let alive = true;
@@ -433,20 +453,44 @@ export default function Templates() {
               .map((i) => [String(i.countryCode).toUpperCase(), i.primaryLanguage ?? null])
           )
         );
-        setProfileMetaAdAccountId(res?.user?.metaAdAccountId ?? "");
-        setProfileMetaPageId(res?.user?.metaPageId ?? "");
+        const def = res?.user?.defaultMetaAccount;
+        setDefaultMetaAccountId(def?.id ? String(def.id) : "");
       })
       .catch(() => {
         if (!alive) return;
         setProfileCountryCodes([]);
         setProfileCountryLanguageByCode({});
-        setProfileMetaAdAccountId("");
-        setProfileMetaPageId("");
+        setDefaultMetaAccountId("");
       });
     return () => {
       alive = false;
     };
   }, []);
+
+  useEffect(() => {
+    let alive = true;
+    listMetaAccounts()
+      .then((res) => {
+        if (!alive) return;
+        const list = Array.isArray(res?.metaAccounts) ? res.metaAccounts : [];
+        setMetaAccounts(list);
+        const preferred = list.find((a) => a?.isDefault) ?? null;
+        const nextDefault = preferred?.id ? String(preferred.id) : "";
+        if (nextDefault) setDefaultMetaAccountId(nextDefault);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setMetaAccounts([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!defaultMetaAccountId) return;
+    setForm((p) => (normalizeNonEmptyString(p.metaAccountId) ? p : { ...p, metaAccountId: defaultMetaAccountId }));
+  }, [defaultMetaAccountId]);
 
   async function refresh() {
     const res = await listFlowTemplates({ limit: 200 });
@@ -458,6 +502,7 @@ export default function Templates() {
     setEditingTranslationsByCountry({});
     setForm({
       name: "",
+      metaAccountId: defaultMetaAccountId || "",
       objective: "OUTCOME_TRAFFIC",
       countryCodes: useProfileCountries && profileCountryCodes.length ? profileCountryCodes.join(",") : "BR",
       dailyBudgetCents: 1000,
@@ -472,10 +517,12 @@ export default function Templates() {
 
   function fillFormFromTemplate(tpl) {
     const payload = tpl?.payload && typeof tpl.payload === "object" ? tpl.payload : {};
+    const metaAccountId = normalizeNonEmptyString(payload?.metaAccountId) || normalizeNonEmptyString(payload?.meta_account_id) || "";
     setEditingId(String(tpl?.id || ""));
     setEditingTranslationsByCountry(getTranslationsByCountryFromPayload(payload));
     setForm({
       name: tpl?.name ?? "",
+      metaAccountId: metaAccountId || defaultMetaAccountId || "",
       objective: payload.objective ?? "OUTCOME_TRAFFIC",
       countryCodes: Array.isArray(payload.countryCodes) ? payload.countryCodes.join(",") : "BR",
       dailyBudgetCents: payload.dailyBudgetCents ?? 1000,
@@ -853,10 +900,17 @@ export default function Templates() {
     }
     const payload = tpl?.payload && typeof tpl.payload === "object" ? tpl.payload : {};
     const countryCodes = uniqueCountryCodes(payload.countryCodes);
+    const metaAccountId =
+      normalizeNonEmptyString(payload?.metaAccountId) ||
+      normalizeNonEmptyString(payload?.meta_account_id) ||
+      normalizeNonEmptyString(form.metaAccountId) ||
+      normalizeNonEmptyString(defaultMetaAccountId) ||
+      "";
     const base = {
       campaign: {
         name: tpl.name ?? "",
-        metaAdAccountId: normalizeNonEmptyString(profileMetaAdAccountId) || "",
+        metaAccountId,
+        metaAdAccountId: "",
         objective: payload.objective ?? "OUTCOME_TRAFFIC",
         countryCode: countryCodes[0] ?? "BR",
         mode: "REAL",
@@ -874,7 +928,7 @@ export default function Templates() {
         translationsByCountry: getTranslationsByCountryFromPayload(payload),
         translationsRequired: true,
         mediaByCountry: normalizeMediaByCountry(getMediaByCountryFromPayload(payload)),
-        pageId: normalizeNonEmptyString(profileMetaPageId) || "",
+        pageId: "",
         instagramActorId: "",
       },
       ad: {
@@ -1008,6 +1062,21 @@ export default function Templates() {
                 <div style={{ display: "grid", gap: 12 }}>
                   <Field label="Nome do template" hint="Ex: Padrão LATAM • Tráfego">
                     <InputLike value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
+                  </Field>
+                  <Field
+                    label="Conta Meta"
+                    hint="Esta conta será usada quando o template for aplicado no Fluxo de campanha."
+                  >
+                    <SelectLike
+                      value={form.metaAccountId || ""}
+                      onChange={(e) => setForm((p) => ({ ...p, metaAccountId: e.target.value }))}
+                      options={metaAccountOptions}
+                    />
+                    {selectedMetaAccount && selectedMetaAccount.isActive === false ? (
+                      <div className="muted" style={{ marginTop: 6, fontWeight: 850, color: "#b45309" }}>
+                        Atenção: a conta vinculada está inativa. Selecione outra conta antes de usar no fluxo.
+                      </div>
+                    ) : null}
                   </Field>
                   <Field label="Objetivo">
                     <SelectLike
@@ -1566,6 +1635,10 @@ export default function Templates() {
               ) : (
                 (() => {
                   const payload = selectedTemplate?.payload && typeof selectedTemplate.payload === "object" ? selectedTemplate.payload : {};
+                  const metaAccId =
+                    normalizeNonEmptyString(payload?.metaAccountId) || normalizeNonEmptyString(payload?.meta_account_id) || "";
+                  const metaAcc = metaAccId ? metaAccounts.find((a) => String(a.id) === metaAccId) ?? null : null;
+                  const metaAccLabel = metaAcc ? metaAcc.name : metaAccId ? "Conta Meta (não encontrada)" : "Conta Meta padrão";
                   const countries = uniqueCountryCodes(payload.countryCodes);
                   const status = computeTranslationsStatus(payload);
                   const mediaStatus = computeMediaStatus(payload);
@@ -1602,6 +1675,17 @@ export default function Templates() {
                                 {c}
                               </span>
                             ))}
+                            <span className="templatesSep">·</span>
+                            <span
+                              className="templatesVarBadge"
+                              title={metaAccId ? `ID: ${metaAccId}` : "Usa a conta padrão do usuário"}
+                              style={{
+                                background: metaAcc && metaAcc.isActive === false ? "#ffedd5" : undefined,
+                                borderColor: metaAcc && metaAcc.isActive === false ? "#fed7aa" : undefined,
+                              }}
+                            >
+                              {metaAccLabel}
+                            </span>
                             <span className="templatesSep">·</span>
                             <span className="templatesVarBadge">{adCount} ad(s)</span>
                             <span className="templatesSep">·</span>
