@@ -423,11 +423,11 @@ export default function NovaCampanha() {
                 <InfoLine
                   icon={<InfoOutlinedIcon fontSize="small" style={{ color: "#f97316" }} />}
                   tone="#92400e"
-                  text="Para operação Meta Ads (REAL/STUB), troubleshooting e evidência operacional, use o console /meta-test."
+                  text="Para operação Meta Ads, troubleshooting e evidência operacional, use o diagnóstico técnico."
                 />
               </div>
               <button type="button" className="pillOutline" onClick={() => navigate(metaTestDeepLink)}>
-                Abrir /meta-test
+                Abrir diagnóstico técnico
               </button>
             </div>
           </section>

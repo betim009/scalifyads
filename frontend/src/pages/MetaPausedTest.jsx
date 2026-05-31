@@ -1043,7 +1043,7 @@ export default function MetaPausedTest() {
     <PageShell
       title="Meta (lab): Campaign → AdSet → Ad"
       subtitle="Fluxo progressivo operacional — criação REAL sempre PAUSED"
-      backFallbackTo="/configuracoes"
+      backFallbackTo="/"
     >
       <div className="metaTestLayout">
         <div className="metaTestSidebar">

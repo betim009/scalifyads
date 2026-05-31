@@ -1,11 +1,12 @@
 import { NavLink } from "react-router-dom";
 import {
-  AttachMoneyIcon,
-  CalendarMonthIcon,
   DescriptionIcon,
+  LogoutIcon,
   PersonOutlineIcon,
+  PercentIcon,
   PublicIcon,
-  SettingsIcon,
+  RocketLaunchIcon,
+  ScienceIcon,
 } from "../styles/icons.js";
 
 function TopPillLink({ to, icon, children }) {
@@ -38,23 +39,46 @@ export default function Header() {
             </div>
           </div>
 
-          <nav className="topNav" aria-label="Navegação principal">
-            <TopPillLink to="/profile" icon={<PersonOutlineIcon fontSize="small" />}>
-              Perfil
-            </TopPillLink>
-            <TopPillLink to="/mensal" icon={<CalendarMonthIcon fontSize="small" />}>
-              Mensal
-            </TopPillLink>
-            <TopPillLink to="/financeiro" icon={<AttachMoneyIcon fontSize="small" />}>
-              Financeiro
-            </TopPillLink>
-            <TopPillLink to="/templates" icon={<DescriptionIcon fontSize="small" />}>
-              Templates
-            </TopPillLink>
-            <TopPillLink to="/configuracoes" icon={<SettingsIcon fontSize="small" />}>
-              Configurações
-            </TopPillLink>
-          </nav>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", justifyContent: "flex-end" }}>
+            <nav className="topNav" aria-label="Navegação principal">
+              <TopPillLink to="/templates" icon={<DescriptionIcon fontSize="small" />}>
+                Templates
+              </TopPillLink>
+              <TopPillLink to="/campaign-flow" icon={<RocketLaunchIcon fontSize="small" />}>
+                Fluxo de campanha
+              </TopPillLink>
+              <TopPillLink to="/roi-operacional" icon={<PercentIcon fontSize="small" />}>
+                ROI operacional
+              </TopPillLink>
+              <TopPillLink to="/profile" icon={<PersonOutlineIcon fontSize="small" />}>
+                Perfil
+              </TopPillLink>
+              <TopPillLink to="/logout" icon={<LogoutIcon fontSize="small" />}>
+                Sair
+              </TopPillLink>
+            </nav>
+
+            <NavLink
+              to="/meta-test"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                textDecoration: "none",
+                color: "#6b7280",
+                fontWeight: 850,
+                fontSize: 13,
+                padding: "8px 10px",
+                borderRadius: 12,
+                border: "1px solid #e5e7eb",
+                background: "#ffffff",
+              }}
+              title="Área técnica/diagnóstico"
+            >
+              <ScienceIcon fontSize="small" />
+              Diagnóstico técnico
+            </NavLink>
+          </div>
         </div>
       </div>
     </header>

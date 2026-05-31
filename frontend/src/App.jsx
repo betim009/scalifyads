@@ -14,6 +14,7 @@ import RequireAuth from "./components/RequireAuth.jsx";
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import Profile from "./pages/Profile.jsx";
+import Logout from "./pages/Logout.jsx";
 import PoliticaPrivacidade from "./pages/PoliticaPrivacidade.jsx";
 import TermosDeUso from "./pages/TermosDeUso.jsx";
 import ExclusaoDados from "./pages/ExclusaoDados.jsx";
@@ -23,11 +24,39 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/mensal" element={<Mensal />} />
+        <Route
+          path="/"
+          element={
+            <RequireAuth>
+              <Dashboard />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/mensal"
+          element={
+            <RequireAuth>
+              <Mensal />
+            </RequireAuth>
+          }
+        />
         <Route path="/dashboard" element={<Navigate to="/" replace />} />
-        <Route path="/nova-campanha" element={<NovaCampanha />} />
-        <Route path="/roi-ontem" element={<RoiOntem />} />
+        <Route
+          path="/nova-campanha"
+          element={
+            <RequireAuth>
+              <NovaCampanha />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/roi-ontem"
+          element={
+            <RequireAuth>
+              <RoiOntem />
+            </RequireAuth>
+          }
+        />
         <Route
           path="/roi-operacional"
           element={
@@ -36,13 +65,56 @@ export default function App() {
             </RequireAuth>
           }
         />
-        <Route path="/campanhas/:id" element={<CampanhaDetalhes />} />
-        <Route path="/campanhas/:id/duplicar" element={<CampanhaDuplicar />} />
-        <Route path="/financeiro" element={<Financeiro />} />
-        <Route path="/configuracoes" element={<Configuracoes />} />
+        <Route
+          path="/campanhas/:id"
+          element={
+            <RequireAuth>
+              <CampanhaDetalhes />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/campanhas/:id/duplicar"
+          element={
+            <RequireAuth>
+              <CampanhaDuplicar />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/financeiro"
+          element={
+            <RequireAuth>
+              <Financeiro />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/configuracoes"
+          element={
+            <RequireAuth>
+              <Configuracoes />
+            </RequireAuth>
+          }
+        />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/profile" element={<Profile />} />
+        <Route
+          path="/profile"
+          element={
+            <RequireAuth>
+              <Profile />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/logout"
+          element={
+            <RequireAuth>
+              <Logout />
+            </RequireAuth>
+          }
+        />
         <Route
           path="/meta-test"
           element={

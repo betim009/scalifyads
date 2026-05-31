@@ -1928,6 +1928,98 @@ Evidências:
 - [2026-05-29 15:06] `cd frontend && npm run build` (OK) após P27.6 (polimento visual global: cards/bordas + previews de vídeo compactos).
 - [2026-05-29 15:30] `cd frontend && npm run build` (OK) após redesign operacional completo do `/templates` + revisão do `/campaign-flow` (P27.6.1–P27.6.5 parcial).
 
+### P28 — Limpeza operacional de STUB, mocks e telas legadas
+
+Última atualização: [2026-05-31 08:46]
+
+Objetivo:
+reduzir poluição visual, esconder o que é técnico e deixar o cliente vendo apenas o fluxo operacional real (sem quebrar o sistema).
+
+Regras (obrigatórias):
+
+- Não remover o `/meta-test` (permanece como diagnóstico técnico).
+- Não quebrar: `/templates`, `/campaign-flow`, `/profile`, `/roi-operacional`, login/logout e fluxo REAL.
+- Toda criação REAL continua obrigatoriamente `PAUSED` (nunca `ACTIVE`).
+- Token Meta nunca deve ir para o frontend.
+- Não fazer refactor massivo / não remover backend STUB.
+
+#### P28.1 — Auditoria de rotas e telas (frontend)
+
+Classificação (rotas declaradas em `frontend/src/App.jsx`):
+
+| Rota | Tela | Classe | Ação |
+| --- | --- | --- | --- |
+| `/` | Dashboard/Home | (1) Operacional real | Mantida como entrada; cards limpos + fluxo recomendado. |
+| `/templates` | Templates | (1) Operacional real | Mantida como caminho principal. |
+| `/campaign-flow` | Campaign Flow | (1) Operacional real | Mantida como caminho principal; STUB escondido em “Avançado”. |
+| `/roi-operacional` | ROI Operacional | (1) Operacional real | Mantida como caminho principal; textos menos técnicos. |
+| `/profile` | Perfil | (1) Operacional real | Mantida como configurações; textos menos técnicos + logout disponível. |
+| `/logout` | Logout | (1) Operacional real | Adicionada para navegação principal “Sair”. |
+| `/login` | Login | (1) Operacional real | Mantida. |
+| `/register` | Register | (1) Operacional real | Mantida (pode ser desativada futuramente se necessário). |
+| `/meta-test` | Diagnóstico técnico | (2) Técnico/debug | Mantida e acessível, mas secundária. |
+| `/mensal` | Mensal | (3) Legado | Mantida (compat); removida da navegação principal; agora requer auth. |
+| `/financeiro` | Financeiro | (4) Mock/STUB | Mantida (compat); removida da navegação principal; agora requer auth. |
+| `/configuracoes` | Configurações | (5) Estática/incompleta | Mantida (compat); removida da navegação principal; agora requer auth. |
+| `/nova-campanha` | Nova Campanha | (3) Legado | Mantida (compat); removida da navegação principal; agora requer auth. |
+| `/roi-ontem` | ROI Ontem | (3) Legado | Mantida (compat); removida da navegação principal; agora requer auth. |
+| `/campanhas/:id` | Detalhes Campanha | (3) Legado | Mantida (compat); removida da navegação principal; agora requer auth. |
+| `/campanhas/:id/duplicar` | Duplicar Campanha | (3) Legado | Mantida (compat); removida da navegação principal; agora requer auth. |
+| `/politica-de-privacidade` | Política de Privacidade | (6) Legal/institucional | Mantida. |
+| `/termos-de-uso` | Termos de Uso | (6) Legal/institucional | Mantida. |
+| `/exclusao-de-dados` | Exclusão de Dados | (6) Legal/institucional | Mantida. |
+
+#### P28.2 — Navegação oficial do cliente
+
+- [x] Navegação principal agora prioriza: Templates, Fluxo de campanha, ROI operacional, Perfil, Sair.
+- [x] `/meta-test` permanece acessível, mas como link secundário “Diagnóstico técnico”.
+- [x] Evitar textos tipo “/meta-test” e “/campaign-flow” na navegação e botões principais.
+
+#### P28.3 — Dashboard/Home limpo
+
+- [x] Removido card de ROI “fake” (mock) do dashboard.
+- [x] Removidos do dashboard atalhos em destaque para legado (Nova Campanha, Financeiro, ROI Ontem).
+- [x] Dashboard agora reforça fluxo recomendado: Perfil → Templates → Fluxo de campanha → ROI → Diagnóstico.
+
+#### P28.4 — STUB escondido da experiência principal
+
+- [x] No `/campaign-flow`, o seletor de modo (REAL/STUB) foi movido para “Avançado (modo de teste)”.
+- [x] REAL é apresentado como “Operacional (REAL — sempre PAUSED)”.
+
+#### P28.5 — Fluxos legados isolados (sem remover código arriscado)
+
+- [x] Rotas legadas/mocks permanecem, mas foram removidas da navegação principal.
+- [x] Rotas legadas/mocks agora requerem autenticação (reduz exposição/confusão).
+
+#### P28.6 — Dados fake removidos/escondidos
+
+- [x] Dashboard: removido `mockRoiOntem`.
+- [ ] Financeiro ainda contém filtros e hooks de mock (`frontend/src/mocks/*`) — manter como legado e esconder do cliente (próximo passo: revisar/arquivar).
+
+#### P28.7 — Mensagens menos técnicas
+
+- [x] Troca de rótulos “Abrir /meta-test (debug)” → “Abrir diagnóstico técnico”.
+- [x] Evitar expor caminhos/termos técnicos em botões primários.
+
+#### P28.8 — Área técnica preservada
+
+- [x] `/meta-test` permanece como área técnica/diagnóstico, acessível sem destaque no fluxo principal.
+
+Registro (o que mudou):
+
+- Mantido (operacional): `/templates`, `/campaign-flow`, `/profile`, `/roi-operacional`, login/logout, `/meta-test`.
+- Escondido da navegação principal: `/mensal`, `/financeiro`, `/configuracoes`, `/nova-campanha`, `/roi-ontem`, `/campanhas/*`.
+- Removido do dashboard: cards/atalhos que pareciam operação principal mas eram legado/mock.
+
+Validação obrigatória (P28):
+
+- [x] `cd frontend && npm run build`
+- [ ] Validação manual: login → dashboard → profile → templates → campaign-flow → roi-operacional → meta-test (ainda acessível)
+
+Evidências:
+
+- [2026-05-31 08:48] `cd frontend && npm run build` (OK) após limpeza operacional (P28).
+
 ## Decision Log (Ativo)
 
 Última atualização: [2026-05-26 12:10]

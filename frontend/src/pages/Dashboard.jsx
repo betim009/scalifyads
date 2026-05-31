@@ -3,19 +3,17 @@ import ActionCard from "../components/ActionCard.jsx";
 import CampaignCard from "../components/CampaignCard.jsx";
 import MetricCard from "../components/MetricCard.jsx";
 import { useNavigate } from "react-router-dom";
-import { mockRoiOntem } from "../data/mockRoiOntem.js";
 import useCampaignFilters from "../mocks/useCampaignFilters.js";
 import { useEffect, useMemo, useState } from "react";
 import { getCountries } from "../services/reference.js";
 import { listCampaigns } from "../services/campaigns.js";
 import {
-  AddIcon,
-  BarChartIcon,
   BoltIcon,
   DescriptionIcon,
   FilterListIcon,
   LanguageIcon,
   PercentIcon,
+  PersonOutlineIcon,
   RocketLaunchIcon,
   SortIcon,
 } from "../styles/icons.js";
@@ -78,92 +76,52 @@ export default function Dashboard() {
               }
             />
             <MetricCard label="Rascunhos" value={String(totals.drafts)} />
-            <MetricCard
-              label="ROI (Ontem)"
-              value={mockRoiOntem.summary.roiOverall}
-              valueTone="green"
-              hint={
-                <span style={{ fontWeight: 700 }}>
-                  Baseado em faturamento vs gasto
-                </span>
-              }
-            />
             <MetricCard label="Países configurados" value={String(countriesCount)} />
           </section>
 
           <section className="gridActions" aria-label="Ações">
             <ActionCard
-              title="Fluxo guiado Meta"
-              description="Fluxo operacional limpo (guiado) — cria Campaign → AdSet → Creative → Ad"
+              title="Fluxo de campanha"
+              description="Fluxo operacional guiado — cria Campaign → AdSet → Creative → Ads (sempre PAUSED no REAL)"
               items={[
-                { icon: <RocketLaunchIcon fontSize="small" />, text: "Sem payloads técnicos por padrão" },
-                { icon: <BoltIcon fontSize="small" />, text: "REAL sempre PAUSED (guardrail)" },
+                { icon: <RocketLaunchIcon fontSize="small" />, text: "Operação REAL com guardrails" },
+                { icon: <BoltIcon fontSize="small" />, text: "Sem expor detalhes técnicos por padrão" },
               ]}
               buttonVariant="primary"
               buttonIcon={<RocketLaunchIcon fontSize="small" />}
-              buttonText="Abrir fluxo guiado"
+              buttonText="Abrir fluxo de campanha"
               onButtonClick={() => navigate("/campaign-flow")}
             />
             <ActionCard
-              title="Console Meta (/meta-test)"
-              description="Fluxo operacional progressivo (Campaign → AdSet → Ad) + troubleshooting sem expor token"
+              title="Templates"
+              description="Gerencie templates operacionais para usar no fluxo de campanha"
               items={[
-                {
-                  icon: <RocketLaunchIcon fontSize="small" />,
-                  text: "Operação REAL/STUB (sempre PAUSED no REAL)",
-                },
-                { icon: <BoltIcon fontSize="small" />, text: "Graph + persistência + evidência operacional" },
-              ]}
-              buttonVariant="primary"
-              buttonIcon={<RocketLaunchIcon fontSize="small" />}
-              buttonText="Abrir /meta-test"
-              onButtonClick={() => navigate("/meta-test")}
-            />
-            <ActionCard
-              title="Criar Nova Campanha (Legado)"
-              description="Fluxo legado de geração global (mantido por compatibilidade)"
-              items={[
-                { icon: <BoltIcon fontSize="small" />, text: "Automação completa" },
-                {
-                  icon: <LanguageIcon fontSize="small" />,
-                  text: `${countriesCount} países simultâneos`,
-                },
+                { icon: <DescriptionIcon fontSize="small" />, text: "Campos mínimos e variações A–E por país" },
+                { icon: <RocketLaunchIcon fontSize="small" />, text: "Aplicar no fluxo guiado com 1 clique" },
               ]}
               buttonVariant="secondary"
-              buttonIcon={<AddIcon fontSize="small" />}
-              buttonText="Nova Campanha"
-              onButtonClick={() => navigate("/nova-campanha")}
+              buttonIcon={<DescriptionIcon fontSize="small" />}
+              buttonText="Abrir Templates"
+              onButtonClick={() => navigate("/templates")}
             />
             <ActionCard
-              title="Financeiro & Relatórios"
-              description="Acompanhe gastos, performance e métricas em tempo real"
+              title="Perfil e credenciais"
+              description="Configure credenciais Meta e países operacionais do seu usuário"
               items={[
-                { icon: <BarChartIcon fontSize="small" />, text: "Dados da Meta Ads API" },
-                { icon: <BarChartIcon fontSize="small" />, text: "Análises detalhadas" },
+                { icon: <PersonOutlineIcon fontSize="small" />, text: "Credenciais por usuário (token nunca é exibido)" },
+                { icon: <LanguageIcon fontSize="small" />, text: "Países e idioma primário por país" },
               ]}
               buttonVariant="secondary"
-              buttonIcon={<BarChartIcon fontSize="small" />}
-              buttonText="Ver Financeiro"
-              onButtonClick={() => navigate("/financeiro")}
+              buttonIcon={<PersonOutlineIcon fontSize="small" />}
+              buttonText="Abrir Perfil"
+              onButtonClick={() => navigate("/profile")}
             />
             <ActionCard
-              title="ROI - Dia Anterior"
-              description="Visão D-1 (legado) — sem dashboard avançado nesta fase"
-              items={[
-                { icon: <PercentIcon fontSize="small" />, text: "ROI por campanha" },
-                { icon: <BoltIcon fontSize="small" />, text: "Otimização 1 clique" },
-              ]}
-              buttonVariant="secondary"
-              buttonIcon={<PercentIcon fontSize="small" />}
-              buttonText="Ver ROI (Ontem)"
-              onButtonClick={() => navigate("/roi-ontem")}
-            />
-            <ActionCard
-              title="ROI operacional (mínimo)"
+              title="ROI operacional"
               description="Gasto (Meta) + receita manual → lucro/prejuízo e ações seguras"
               items={[
                 { icon: <PercentIcon fontSize="small" />, text: "Receita manual por campanha" },
-                { icon: <BoltIcon fontSize="small" />, text: "Pausar negativos com confirmação" },
+                { icon: <BoltIcon fontSize="small" />, text: "Ações seguras e confirmadas" },
               ]}
               buttonVariant="secondary"
               buttonIcon={<PercentIcon fontSize="small" />}
@@ -171,16 +129,16 @@ export default function Dashboard() {
               onButtonClick={() => navigate("/roi-operacional")}
             />
             <ActionCard
-              title="Templates"
-              description="Gerencie templates operacionais para aplicar no /campaign-flow"
+              title="Diagnóstico técnico"
+              description="Área técnica para troubleshooting e validação (não é fluxo principal)"
               items={[
-                { icon: <DescriptionIcon fontSize="small" />, text: "Campos mínimos (objective, países, budget, copy, CTA)" },
-                { icon: <RocketLaunchIcon fontSize="small" />, text: "Aplicar no fluxo guiado" },
+                { icon: <RocketLaunchIcon fontSize="small" />, text: "Verificar status, logs e evidências" },
+                { icon: <BoltIcon fontSize="small" />, text: "Manter operação REAL sempre PAUSED" },
               ]}
               buttonVariant="secondary"
-              buttonIcon={<DescriptionIcon fontSize="small" />}
-              buttonText="Abrir Templates"
-              onButtonClick={() => navigate("/templates")}
+              buttonIcon={<BoltIcon fontSize="small" />}
+              buttonText="Abrir diagnóstico"
+              onButtonClick={() => navigate("/meta-test")}
             />
           </section>
 

@@ -33,3 +33,5 @@ export { default as AutoAwesomeIcon } from "@mui/icons-material/AutoAwesome";
 export { default as InfoOutlinedIcon } from "@mui/icons-material/InfoOutlined";
 export { default as PushPinIcon } from "@mui/icons-material/PushPin";
 export { default as RocketLaunchIcon } from "@mui/icons-material/RocketLaunch";
+export { default as LogoutIcon } from "@mui/icons-material/Logout";
+export { default as ScienceIcon } from "@mui/icons-material/Science";

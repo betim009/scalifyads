@@ -1782,17 +1782,23 @@ export default function CampaignFlow() {
                   />
                 </Field>
               )}
-              <Field label="Modo de execução" required hint="REAL sempre cria PAUSED (nunca ACTIVE).">
-                <SelectLike
-                  value={campaign.mode}
-                  onChange={(e) => setCampaign((p) => ({ ...p, mode: e.target.value }))}
-                  disabled={submitting}
-                  options={[
-                    { value: "STUB", label: "STUB (recomendado)", disabled: false },
-                    { value: "REAL", label: "REAL (sempre PAUSED)", disabled: false },
-                  ]}
-                />
-              </Field>
+              <AdvancedDisclosure summary="Avançado (modo de teste)" defaultOpen={false}>
+                <Field
+                  label="Modo de execução"
+                  required
+                  hint="Operacional (REAL) cria tudo como PAUSED. STUB é apenas para testes (simula IDs, sem chamadas ao Graph)."
+                >
+                  <SelectLike
+                    value={campaign.mode}
+                    onChange={(e) => setCampaign((p) => ({ ...p, mode: e.target.value }))}
+                    disabled={submitting}
+                    options={[
+                      { value: "REAL", label: "Operacional (REAL — sempre PAUSED)", disabled: false },
+                      { value: "STUB", label: "Modo de teste (STUB)", disabled: false },
+                    ]}
+                  />
+                </Field>
+              </AdvancedDisclosure>
             </div>
           </section>
         ) : null}
@@ -2362,7 +2368,7 @@ export default function CampaignFlow() {
                 <div style={{ marginTop: 6, fontWeight: 750 }}>{error}</div>
                 <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
                   <button type="button" className="pillOutline" onClick={() => openMetaTest()}>
-                    Abrir /meta-test (debug)
+                    Abrir diagnóstico técnico
                   </button>
                   <button type="button" className="pillOutline" onClick={() => setStep(0)}>
                     Recomeçar
@@ -2378,7 +2384,7 @@ export default function CampaignFlow() {
                     <div className="card" style={{ padding: 16 }}>
                       <div style={{ fontWeight: 950, marginBottom: 10 }}>IDs criados</div>
                       <div style={{ display: "grid", gap: 10 }}>
-                        <SummaryRow label="mode" value={result.mode || "—"} />
+                        <SummaryRow label="Modo" value={result.mode || "—"} />
                         <SummaryRow label="countryCode" value={result.countryCode || "—"} />
                         <SummaryRow label="generatedCampaignId" value={result.generatedCampaignId ?? "—"} />
                         <SummaryRow label="metaCampaignId" value={result.metaCampaignId ?? "—"} />
@@ -2408,7 +2414,7 @@ export default function CampaignFlow() {
                           })
                         }
                       >
-                        Abrir /meta-test (debug)
+                        Abrir diagnóstico técnico
                       </button>
                       <button
                         type="button"
@@ -2455,7 +2461,7 @@ export default function CampaignFlow() {
                     <div className="card" style={{ padding: 16 }}>
                       <div style={{ fontWeight: 950, marginBottom: 10 }}>Resumo do lote</div>
                       <div style={{ display: "grid", gap: 10 }}>
-                        <SummaryRow label="mode" value={result.mode || "—"} />
+                        <SummaryRow label="Modo" value={result.mode || "—"} />
                         <SummaryRow
                           label="success"
                           value={String((result.perCountry || []).filter((r) => r.ok).length)}
@@ -2530,7 +2536,7 @@ export default function CampaignFlow() {
                                     })
                                   }
                                 >
-                                  Abrir /meta-test
+                                  Abrir diagnóstico técnico
                                 </button>
                               ) : null}
                               {r.ok && r.generatedCampaignId ? (

@@ -226,7 +226,7 @@ export default function RoiOperacional() {
         ok: true,
         details: { date, count: negativeRows.length },
       });
-      setNotice("Pausa em massa solicitada (continue no /meta-test se houver falhas).");
+      setNotice("Pausa em massa solicitada (use o diagnóstico técnico se houver falhas).");
     } catch (err) {
       await logOps({
         entity: "meta_campaign",
@@ -326,7 +326,7 @@ export default function RoiOperacional() {
           Pausar negativos ({negativeRows.length})
         </button>
         <button type="button" className="pillOutline" disabled={busy} onClick={() => openMetaTest({})}>
-          Abrir /meta-test (debug)
+          Abrir diagnóstico técnico
         </button>
       </section>
 
@@ -428,7 +428,7 @@ export default function RoiOperacional() {
                             disabled={busy}
                             onClick={() => openMetaTest({ generatedCampaignId: r.generated_campaign_id })}
                           >
-                            /meta-test
+                            Diagnóstico técnico
                           </button>
                           <button
                             type="button"

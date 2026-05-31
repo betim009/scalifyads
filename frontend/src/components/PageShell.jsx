@@ -4,7 +4,7 @@ export default function PageShell({
   title,
   subtitle,
   backLabel = "Voltar",
-  backFallbackTo = "/mensal",
+  backFallbackTo = "/",
   headerRight = null,
   align = "left",
   titleStyle,

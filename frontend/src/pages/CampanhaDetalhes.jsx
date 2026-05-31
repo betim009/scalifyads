@@ -192,7 +192,7 @@ export default function CampanhaDetalhes() {
                               navigate(`/meta-test?${params.toString()}`);
                             }}
                           >
-                            Abrir /meta-test
+                            Abrir diagnóstico técnico
                           </button>
                         </div>
 
@@ -310,7 +310,7 @@ export default function CampanhaDetalhes() {
                             navigate(`/meta-test?${params.toString()}`);
                           }}
                         >
-                          Abrir /meta-test
+                          Abrir diagnóstico técnico
                         </button>
                       </div>
                     )}

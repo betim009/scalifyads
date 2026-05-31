@@ -238,13 +238,13 @@ export default function Profile() {
                     Voltar para Home
                   </button>
                   <button type="button" className="pillOutline" onClick={() => navigate("/campaign-flow")}>
-                    Abrir /campaign-flow
+                    Abrir fluxo de campanha
                   </button>
                   <button type="button" className="pillOutline" onClick={() => navigate("/roi-operacional")}>
                     Abrir /roi-operacional
                   </button>
                   <button type="button" className="pillOutline" onClick={() => navigate("/meta-test")}>
-                    Abrir /meta-test
+                    Abrir diagnóstico técnico
                   </button>
                   <button type="button" className="pillOutline" onClick={onLogout}>
                     Logout
@@ -256,7 +256,7 @@ export default function Profile() {
             <section className="card" style={{ marginTop: 16, padding: 20 }}>
               <div style={{ fontWeight: 950, fontSize: 18 }}>Países e idiomas da operação</div>
               <p style={{ marginTop: 6, marginBottom: 0, color: "#6b7280", fontWeight: 750 }}>
-                O `/campaign-flow` prioriza estes países como base para seleção em lote.
+                O fluxo de campanha prioriza estes países como base para seleção em lote.
               </p>
 
               <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
