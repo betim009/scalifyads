@@ -71,6 +71,13 @@ psql_in_container() {
   psql_try "$DB_PORT_SELECTED" "$@"
 }
 
+sql_quote_literal() {
+  # Escape single quotes for SQL string literal: ' -> ''
+  local s="$1"
+  s="${s//\'/\'\'}"
+  printf "'%s'" "$s"
+}
+
 echo "[migrate.sh] usando container: $POSTGRES_CONTAINER"
 echo "[migrate.sh] db: $DB_NAME user: $DB_USER"
 echo "[migrate.sh] port: $DB_PORT_SELECTED"
@@ -85,7 +92,8 @@ if [[ "${#files[@]}" -eq 0 ]]; then
 fi
 
 for name in "${files[@]}"; do
-  already="$(psql_in_container -tA -v "name=$name" -c "SELECT 1 FROM ${MIGRATIONS_TABLE} WHERE name = :'name' LIMIT 1;" || true)"
+  name_lit="$(sql_quote_literal "$name")"
+  already="$(psql_in_container -tA -c "SELECT 1 FROM ${MIGRATIONS_TABLE} WHERE name = ${name_lit} LIMIT 1;" || true)"
   if [[ "$already" == "1" ]]; then
     continue
   fi
@@ -93,7 +101,7 @@ for name in "${files[@]}"; do
   echo "[migrate.sh] applying $name"
   # Apply as-is. If a migration needs to be atomic, it should include its own BEGIN/COMMIT.
   psql_in_container < "$MIGRATIONS_DIR/$name" >/dev/null
-  psql_in_container -v "name=$name" -c "INSERT INTO ${MIGRATIONS_TABLE} (name) VALUES (:'name');" >/dev/null
+  psql_in_container -c "INSERT INTO ${MIGRATIONS_TABLE} (name) VALUES (${name_lit});" >/dev/null
 done
 
 echo "[migrate.sh] done"
