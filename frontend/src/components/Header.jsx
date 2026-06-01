@@ -60,19 +60,7 @@ export default function Header() {
 
             <NavLink
               to="/meta-test"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                textDecoration: "none",
-                color: "#6b7280",
-                fontWeight: 850,
-                fontSize: 13,
-                padding: "8px 10px",
-                borderRadius: 12,
-                border: "1px solid #e5e7eb",
-                background: "#ffffff",
-              }}
+              className="techLink"
               title="Área técnica/diagnóstico"
             >
               <ScienceIcon fontSize="small" />

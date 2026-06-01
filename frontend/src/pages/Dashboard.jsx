@@ -1,5 +1,4 @@
 import Header from "../components/Header.jsx";
-import ActionCard from "../components/ActionCard.jsx";
 import CampaignCard from "../components/CampaignCard.jsx";
 import MetricCard from "../components/MetricCard.jsx";
 import { useNavigate } from "react-router-dom";
@@ -7,13 +6,9 @@ import useCampaignFilters from "../mocks/useCampaignFilters.js";
 import { useEffect, useMemo, useState } from "react";
 import { getCountries } from "../services/reference.js";
 import { listCampaigns } from "../services/campaigns.js";
+import { listFlowTemplates } from "../services/flowTemplates.js";
 import {
-  BoltIcon,
-  DescriptionIcon,
   FilterListIcon,
-  LanguageIcon,
-  PercentIcon,
-  PersonOutlineIcon,
   RocketLaunchIcon,
   SortIcon,
 } from "../styles/icons.js";
@@ -22,19 +17,22 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [countries, setCountries] = useState([]);
   const [campaignsData, setCampaignsData] = useState([]);
+  const [templatesCount, setTemplatesCount] = useState(null);
 
   useEffect(() => {
     let alive = true;
-    Promise.all([getCountries(), listCampaigns()])
-      .then(([countriesRes, campaignsRes]) => {
+    Promise.all([getCountries(), listCampaigns(), listFlowTemplates({ limit: 500 }).catch(() => null)])
+      .then(([countriesRes, campaignsRes, templatesRes]) => {
         if (!alive) return;
         setCountries(countriesRes.countries ?? []);
         setCampaignsData(campaignsRes.campaigns ?? []);
+        setTemplatesCount(templatesRes?.flowTemplates ? templatesRes.flowTemplates.length : null);
       })
       .catch(() => {
         if (!alive) return;
         setCountries([]);
         setCampaignsData([]);
+        setTemplatesCount(null);
       });
 
     return () => {
@@ -62,6 +60,54 @@ export default function Dashboard() {
       <Header />
       <main className="page">
         <div className="container">
+          <section className="card" style={{ padding: 22 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: 22, fontWeight: 900 }}>Entrada operacional</h2>
+                <p className="muted" style={{ marginTop: 8, marginBottom: 0, fontWeight: 750, color: "var(--text-secondary)" }}>
+                  Próximo passo recomendado: abrir o fluxo de campanha e criar tudo como <b>PAUSED</b> no REAL.
+                </p>
+              </div>
+              <button type="button" className="pillPrimary" onClick={() => navigate("/campaign-flow")}>
+                <RocketLaunchIcon fontSize="small" /> Abrir fluxo de campanha
+              </button>
+            </div>
+
+            <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>
+              <div className="card" style={{ padding: 14, background: "var(--surface-2)" }}>
+                <div style={{ fontWeight: 900, color: "var(--text-secondary)", fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                  Fluxo recomendado
+                </div>
+                <ol style={{ margin: "10px 0 0", paddingLeft: 18, color: "var(--text)", fontWeight: 750 }}>
+                  <li>Configurar perfil e contas Meta</li>
+                  <li>Criar/gerenciar templates</li>
+                  <li>Executar no fluxo de campanha</li>
+                  <li>Acompanhar ROI operacional</li>
+                  <li>Usar diagnóstico só se der erro</li>
+                </ol>
+              </div>
+
+              <div className="card" style={{ padding: 14, background: "var(--surface-2)" }}>
+                <div style={{ fontWeight: 900, color: "var(--text-secondary)", fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                  Acessos rápidos
+                </div>
+                <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <button type="button" className="pillOutline" onClick={() => navigate("/templates")}>Templates</button>
+                  <button type="button" className="pillOutline" onClick={() => navigate("/roi-operacional")}>ROI operacional</button>
+                  <button type="button" className="pillOutline" onClick={() => navigate("/profile")}>Perfil</button>
+                  <button
+                    type="button"
+                    className="pillGhost"
+                    onClick={() => navigate("/meta-test")}
+                    title="Área técnica/diagnóstico"
+                  >
+                    Diagnóstico técnico
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <section className="gridMetrics" aria-label="Métricas">
             <MetricCard label="Total de campanhas" value={String(totals.campaigns)} />
             <MetricCard
@@ -77,69 +123,7 @@ export default function Dashboard() {
             />
             <MetricCard label="Rascunhos" value={String(totals.drafts)} />
             <MetricCard label="Países configurados" value={String(countriesCount)} />
-          </section>
-
-          <section className="gridActions" aria-label="Ações">
-            <ActionCard
-              title="Fluxo de campanha"
-              description="Fluxo operacional guiado — cria Campaign → AdSet → Creative → Ads (sempre PAUSED no REAL)"
-              items={[
-                { icon: <RocketLaunchIcon fontSize="small" />, text: "Operação REAL com guardrails" },
-                { icon: <BoltIcon fontSize="small" />, text: "Sem expor detalhes técnicos por padrão" },
-              ]}
-              buttonVariant="primary"
-              buttonIcon={<RocketLaunchIcon fontSize="small" />}
-              buttonText="Abrir fluxo de campanha"
-              onButtonClick={() => navigate("/campaign-flow")}
-            />
-            <ActionCard
-              title="Templates"
-              description="Gerencie templates operacionais para usar no fluxo de campanha"
-              items={[
-                { icon: <DescriptionIcon fontSize="small" />, text: "Campos mínimos e variações A–E por país" },
-                { icon: <RocketLaunchIcon fontSize="small" />, text: "Aplicar no fluxo guiado com 1 clique" },
-              ]}
-              buttonVariant="secondary"
-              buttonIcon={<DescriptionIcon fontSize="small" />}
-              buttonText="Abrir Templates"
-              onButtonClick={() => navigate("/templates")}
-            />
-            <ActionCard
-              title="Perfil e credenciais"
-              description="Configure credenciais Meta e países operacionais do seu usuário"
-              items={[
-                { icon: <PersonOutlineIcon fontSize="small" />, text: "Credenciais por usuário (token nunca é exibido)" },
-                { icon: <LanguageIcon fontSize="small" />, text: "Países e idioma primário por país" },
-              ]}
-              buttonVariant="secondary"
-              buttonIcon={<PersonOutlineIcon fontSize="small" />}
-              buttonText="Abrir Perfil"
-              onButtonClick={() => navigate("/profile")}
-            />
-            <ActionCard
-              title="ROI operacional"
-              description="Gasto (Meta) + receita manual → lucro/prejuízo e ações seguras"
-              items={[
-                { icon: <PercentIcon fontSize="small" />, text: "Receita manual por campanha" },
-                { icon: <BoltIcon fontSize="small" />, text: "Ações seguras e confirmadas" },
-              ]}
-              buttonVariant="secondary"
-              buttonIcon={<PercentIcon fontSize="small" />}
-              buttonText="Abrir ROI operacional"
-              onButtonClick={() => navigate("/roi-operacional")}
-            />
-            <ActionCard
-              title="Diagnóstico técnico"
-              description="Área técnica para troubleshooting e validação (não é fluxo principal)"
-              items={[
-                { icon: <RocketLaunchIcon fontSize="small" />, text: "Verificar status, logs e evidências" },
-                { icon: <BoltIcon fontSize="small" />, text: "Manter operação REAL sempre PAUSED" },
-              ]}
-              buttonVariant="secondary"
-              buttonIcon={<BoltIcon fontSize="small" />}
-              buttonText="Abrir diagnóstico"
-              onButtonClick={() => navigate("/meta-test")}
-            />
+            <MetricCard label="Templates" value={templatesCount === null ? "—" : String(templatesCount)} />
           </section>
 
           <div className="sectionTitleRow">

@@ -1,22 +1,49 @@
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Roboto:wght@400;500;700;900&family=Syne:wght@600;700;800&display=swap");
+
 :root {
   color-scheme: light;
-  --bg: #ffffff;
-  --text: #111827;
-  --muted: #6b7280;
-  --border: #e5e7eb;
+
+  /* Colors (P29 Design System) */
+  --bg: #f1f3f8;
   --surface: #ffffff;
-  --surface-muted: #f9fafb;
-  --shadow-sm: 0 1px 1px rgba(17, 24, 39, 0.05);
-  --radius-lg: 14px;
-  --radius-md: 12px;
+  --surface-2: #f8f9fc;
+  --surface-3: #eef0f6;
+  --border: #e3e7ef;
+
+  --text: #0f1624;
+  --text-secondary: #4a5568;
+  --muted: #94a3b8;
+
+  --accent: #0f1624;
+  --green: #0d9467;
+  --blue: #2563eb;
+  --orange: #c2730a;
+  --red: #dc2626;
+
+  /* Backward-compat aliases */
+  --surface-muted: var(--surface-2);
+
+  /* Typography */
+  --font-ui: "Roboto", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial;
+  --font-display: "Syne", "Roboto", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
   --fs-body: 14px;
-  --fs-h1: 22px;
+  --fs-h1: 24px;
   --fs-h2: 18px;
   --fs-h3: 15px;
   --fs-secondary: 12px;
   --fs-label: 11px;
 
+  /* Radius / Shadows */
+  --radius-xl: 18px;
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-sm: 10px;
+  --shadow-sm: 0 1px 1px rgba(15, 22, 36, 0.04);
+  --shadow-md: 0 10px 18px rgba(15, 22, 36, 0.06);
+
+  /* Spacing */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 16px;
@@ -31,8 +58,7 @@ body {
 
 body {
   margin: 0;
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  font-family: var(--font-ui);
   font-size: var(--fs-body);
   line-height: 1.45;
   color: var(--text);
@@ -41,17 +67,20 @@ body {
 
 h1 {
   font-size: var(--fs-h1);
-  font-weight: 600;
+  font-weight: 800;
+  font-family: var(--font-display);
 }
 
 h2 {
   font-size: var(--fs-h2);
-  font-weight: 600;
+  font-weight: 800;
+  font-family: var(--font-display);
 }
 
 h3 {
   font-size: var(--fs-h3);
-  font-weight: 500;
+  font-weight: 700;
+  font-family: var(--font-display);
 }
 
 * {
@@ -71,6 +100,111 @@ button:disabled,
 
 button {
   font-family: inherit;
+}
+
+.mono,
+code,
+pre,
+.monoTag {
+  font-family: var(--font-mono);
+}
+
+.monoTag {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.badge {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.badgeGreen {
+  background: rgba(13, 148, 103, 0.12);
+  border-color: rgba(13, 148, 103, 0.28);
+  color: var(--green);
+}
+
+.badgeBlue {
+  background: rgba(37, 99, 235, 0.12);
+  border-color: rgba(37, 99, 235, 0.28);
+  color: var(--blue);
+}
+
+.badgeOrange {
+  background: rgba(194, 115, 10, 0.12);
+  border-color: rgba(194, 115, 10, 0.28);
+  color: var(--orange);
+}
+
+.badgeRed {
+  background: rgba(220, 38, 38, 0.12);
+  border-color: rgba(220, 38, 38, 0.28);
+  color: var(--red);
+}
+
+.pillPrimary {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #ffffff;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  box-shadow: var(--shadow-sm);
+}
+
+.pillPrimary:hover {
+  filter: brightness(1.03);
+}
+
+.pillPrimary:disabled {
+  opacity: 0.7;
+}
+
+.pillDanger {
+  border-color: var(--red);
+  background: var(--red);
+}
+
+.pillGhost {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  font-weight: 850;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.pillGhost:hover {
+  background: var(--surface-3);
 }
 
 .backLink {
@@ -96,7 +230,8 @@ button {
 
 .appHeader {
   border-bottom: 1px solid var(--border);
-  background: var(--bg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .appHeaderInner {
@@ -118,7 +253,7 @@ button {
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: #0b0b0d;
+  background: var(--accent);
   display: grid;
   place-items: center;
   flex: 0 0 auto;
@@ -134,7 +269,7 @@ button {
 
 .brandSubtitle {
   margin: 4px 0 0;
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: var(--fs-secondary);
   font-weight: 600;
 }
@@ -147,19 +282,38 @@ button {
   flex-wrap: wrap;
 }
 
+.techLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: var(--text-secondary);
+  font-weight: 900;
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.techLink:hover {
+  background: var(--surface-3);
+}
+
 .pillButton {
   height: 40px;
   padding: 0 16px;
   border-radius: 999px;
   border: 1px solid var(--border);
-  background: #ffffff;
-  color: #111827;
+  background: var(--surface);
+  color: var(--text);
   display: inline-flex;
   align-items: center;
   gap: 8px;
   font-size: 14px;
   font-weight: 700;
-  box-shadow: 0 1px 0 rgba(17, 24, 39, 0.02);
+  box-shadow: var(--shadow-sm);
 }
 
 .pillButtonIcon {
@@ -169,21 +323,21 @@ button {
 }
 
 .pillButton:hover {
-  background: #f3f4f6;
+  background: var(--surface-3);
 }
 
 .pillButtonActive:hover {
-  background: #0b0b0d;
+  background: var(--accent);
 }
 
 .pillButtonActive {
-  background: #0b0b0d;
-  border-color: #0b0b0d;
+  background: var(--accent);
+  border-color: var(--accent);
   color: #ffffff;
 }
 
 .page {
-  background: var(--surface-muted);
+  background: var(--bg);
   min-height: calc(100vh - 88px);
   padding: 32px 0 48px;
 }
@@ -192,13 +346,13 @@ button {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
 }
 
 .card .card {
   box-shadow: none;
-  background: var(--surface-muted);
-  border-color: rgba(229, 231, 235, 0.65);
+  background: var(--surface-2);
+  border-color: rgba(227, 231, 239, 0.75);
   border-radius: var(--radius-md);
 }
 
@@ -464,8 +618,9 @@ button {
   font-size: var(--fs-label);
   font-weight: 800;
   letter-spacing: 0.08em;
-  color: #6b7280;
+  color: var(--text-secondary);
   text-transform: uppercase;
+  font-family: var(--font-display);
 }
 
 .metricValue {
@@ -476,7 +631,7 @@ button {
 }
 
 .metricValueGreen {
-  color: #22c55e;
+  color: var(--green);
 }
 
 .metricHintRow {
@@ -552,8 +707,8 @@ button {
   width: 100%;
   height: 52px;
   border-radius: 14px;
-  border: 1px solid #0b0b0d;
-  background: #0b0b0d;
+  border: 1px solid var(--accent);
+  background: var(--accent);
   color: #ffffff;
   font-weight: 800;
   font-size: 14px;
@@ -561,6 +716,7 @@ button {
   align-items: center;
   justify-content: center;
   gap: 12px;
+  box-shadow: var(--shadow-sm);
 }
 
 .primaryButton:hover {
@@ -572,18 +728,19 @@ button {
   height: 52px;
   border-radius: 14px;
   border: 1px solid var(--border);
-  background: #ffffff;
-  color: #111827;
+  background: var(--surface);
+  color: var(--text);
   font-weight: 800;
   font-size: 14px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
+  box-shadow: var(--shadow-sm);
 }
 
 .secondaryButton:hover {
-  background: #f9fafb;
+  background: var(--surface-3);
 }
 
 .pillOutline {
@@ -591,8 +748,8 @@ button {
   padding: 0 14px;
   border-radius: 999px;
   border: 1px solid var(--border);
-  background: #ffffff;
-  color: #111827;
+  background: var(--surface);
+  color: var(--text);
   font-weight: 700;
   display: inline-flex;
   align-items: center;
@@ -601,7 +758,7 @@ button {
 }
 
 .pillOutline:hover {
-  background: #f9fafb;
+  background: var(--surface-3);
 }
 
 .statusBadge {
@@ -653,7 +810,7 @@ button {
   display: flex;
   align-items: center;
   gap: 20px;
-  color: #6b7280;
+  color: var(--text-secondary);
   font-weight: 700;
   flex-wrap: wrap;
   font-size: var(--fs-secondary);
@@ -872,13 +1029,14 @@ button {
   padding: 0 18px;
   border-radius: 14px;
   border: 1px solid var(--border);
-  background: #ffffff;
+  background: var(--surface);
   font-weight: 900;
-  color: #374151;
+  color: var(--text-secondary);
   display: inline-flex;
   align-items: center;
   gap: 10px;
   font-size: 14px;
+  box-shadow: var(--shadow-sm);
 }
 
 .dataTable {
@@ -891,10 +1049,13 @@ button {
 .dataTable thead th {
   text-align: left;
   padding: 16px 14px;
-  color: #374151;
+  color: var(--text-secondary);
   font-size: var(--fs-label);
   font-weight: 900;
   border-bottom: 1px solid var(--border);
+  font-family: var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .dataTable tbody td {
@@ -902,7 +1063,7 @@ button {
   border-bottom: 1px solid var(--border);
   font-size: 14px;
   font-weight: 700;
-  color: #111827;
+  color: var(--text);
 }
 
 .dataTable tbody tr:last-child td {
@@ -919,26 +1080,27 @@ button {
   height: 34px;
   padding: 0 14px;
   border-radius: 999px;
-  background: #dcfce7;
-  color: #16a34a;
+  background: rgba(13, 148, 103, 0.12);
+  color: var(--green);
   font-weight: 900;
   display: inline-flex;
   align-items: center;
   gap: 10px;
   font-size: var(--fs-label);
+  border: 1px solid rgba(13, 148, 103, 0.28);
 }
 
 .statusPillYellow {
   height: 34px;
   padding: 0 14px;
   border-radius: 999px;
-  background: #fef9c3;
-  color: #a16207;
+  background: rgba(194, 115, 10, 0.12);
+  color: var(--orange);
   font-weight: 900;
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  border: 1px solid #fde68a;
+  border: 1px solid rgba(194, 115, 10, 0.28);
   font-size: var(--fs-label);
 }
 

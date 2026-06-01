@@ -13,7 +13,7 @@ export default function PageShell({
 }) {
   return (
     <>
-      <main style={{ background: "#ffffff" }}>
+      <main style={{ background: "transparent" }}>
         <div className="container" style={{ paddingTop: 16 }}>
           <BackLink fallbackTo={backFallbackTo} label={backLabel} />
 

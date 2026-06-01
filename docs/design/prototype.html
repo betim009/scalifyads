@@ -1,0 +1,1597 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Campaign Builder — Design System</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Roboto:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   DESIGN TOKENS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+:root {
+  --bg:           #f1f3f8;
+  --surface:      #ffffff;
+  --surface-2:    #f8f9fc;
+  --surface-3:    #eef0f6;
+  --border:       #e3e7ef;
+  --border-mid:   #cdd2de;
+  --border-strong:#9aa3b8;
+  --text-1:       #0f1624;
+  --text-2:       #4a5568;
+  --text-3:       #94a3b8;
+  --text-4:       #cbd5e0;
+  --accent:       #0f1624;
+  --accent-glow:  rgba(15,22,36,.07);
+  --green:        #0d9467;
+  --green-soft:   #ecfdf5;
+  --blue:         #2563eb;
+  --blue-soft:    #eff6ff;
+  --orange:       #c2730a;
+  --orange-soft:  #fffbeb;
+  --orange-border:#fcd34d;
+  --red:          #dc2626;
+  --red-soft:     #fef2f2;
+
+  --r-xs: 5px;
+  --r-sm: 8px;
+  --r-md: 11px;
+  --r-lg: 14px;
+  --r-xl: 18px;
+
+  --shadow-xs: 0 1px 2px rgba(15,22,36,.05);
+  --shadow-sm: 0 1px 4px rgba(15,22,36,.06), 0 1px 2px rgba(15,22,36,.04);
+  --shadow-md: 0 4px 16px rgba(15,22,36,.07), 0 1px 4px rgba(15,22,36,.04);
+  --shadow-ring: 0 0 0 3px var(--accent-glow);
+
+  --ease: cubic-bezier(.16,1,.3,1);
+  --t: 150ms;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   RESET
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+*, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
+body {
+  font-family: 'Roboto', sans-serif;
+  background: var(--bg);
+  color: var(--text-1);
+  font-size: 13px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   TOPBAR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.topbar {
+  position: sticky; top: 0; z-index: 200;
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  height: 56px;
+  display: flex;
+  align-items: center;
+  padding: 0 28px;
+  gap: 32px;
+  box-shadow: var(--shadow-xs);
+}
+.topbar-brand {
+  display: flex; align-items: center; gap: 10px;
+  flex-shrink: 0; cursor: pointer;
+  text-decoration: none;
+}
+.brand-logo {
+  width: 32px; height: 32px;
+  background: var(--text-1);
+  border-radius: 9px;
+  display: grid; place-items: center;
+  flex-shrink: 0;
+}
+.brand-logo svg { width: 16px; height: 16px; }
+.brand-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 15px; font-weight: 700;
+  color: var(--text-1); letter-spacing: -.2px;
+  line-height: 1;
+}
+.brand-sub {
+  font-size: 11px; color: var(--text-3);
+  font-weight: 400; margin-top: 1px;
+  letter-spacing: .01em;
+}
+.topbar-nav {
+  display: flex; align-items: center; gap: 2px;
+  flex: 1;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 12px;
+  border-radius: var(--r-sm);
+  font-size: 12.5px; font-weight: 600;
+  color: var(--text-3);
+  cursor: pointer; border: none; background: none;
+  font-family: 'Roboto', sans-serif;
+  transition: all var(--t); letter-spacing: .01em;
+  white-space: nowrap;
+}
+.nav-item svg { width: 14px; height: 14px; flex-shrink: 0; }
+.nav-item:hover { color: var(--text-1); background: var(--surface-3); }
+.nav-item.active { color: var(--text-1); background: var(--surface-3); }
+.nav-item.active svg { opacity: 1; }
+.topbar-right {
+  display: flex; align-items: center; gap: 8px;
+  margin-left: auto; flex-shrink: 0;
+}
+.nav-item-diag {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  font-size: 12px; font-weight: 600;
+  color: var(--text-2); cursor: pointer;
+  background: var(--surface);
+  font-family: 'Roboto', sans-serif;
+  box-shadow: var(--shadow-xs);
+  transition: all var(--t);
+}
+.nav-item-diag:hover { color: var(--text-1); border-color: var(--border-mid); }
+.nav-item-diag svg { width: 13px; height: 13px; }
+.nav-item-exit {
+  display: flex; align-items: center; gap: 5px;
+  padding: 6px 12px;
+  border-radius: var(--r-sm);
+  font-size: 12px; font-weight: 600;
+  color: var(--text-3); cursor: pointer;
+  background: none; border: none;
+  font-family: 'Roboto', sans-serif;
+  transition: color var(--t);
+}
+.nav-item-exit:hover { color: var(--text-1); }
+.nav-item-exit svg { width: 13px; height: 13px; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   PAGE SWITCHER (prototype only)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.page { display: none; }
+.page.active { display: block; animation: pgIn .22s var(--ease) both; }
+@keyframes pgIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   SHELL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.shell { max-width: 1140px; margin: 0 auto; padding: 32px 28px 80px; }
+.shell-sm { max-width: 860px; margin: 0 auto; padding: 32px 28px 80px; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   BACK LINK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.back {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 500; color: var(--text-3);
+  cursor: pointer; margin-bottom: 24px;
+  transition: color var(--t); border: none; background: none;
+  font-family: 'Roboto', sans-serif; padding: 0;
+}
+.back:hover { color: var(--text-2); }
+.back svg { width: 14px; height: 14px; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   PAGE HEADER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.page-hd {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 28px; gap: 16px;
+}
+.page-hd h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: 26px; font-weight: 700;
+  letter-spacing: -.5px; color: var(--text-1);
+  margin-bottom: 4px;
+}
+.page-hd p { font-size: 12.5px; color: var(--text-3); max-width: 480px; line-height: 1.6; }
+.page-hd-right { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ROUTE CHIPS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.route-chip {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px; font-weight: 500;
+  padding: 5px 11px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  color: var(--text-3); background: var(--surface);
+  cursor: pointer; transition: all var(--t);
+  box-shadow: var(--shadow-xs);
+  letter-spacing: .01em;
+}
+.route-chip:hover { color: var(--text-1); border-color: var(--border-mid); }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   BUTTONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 18px;
+  border-radius: var(--r-sm);
+  font-family: 'Roboto', sans-serif;
+  font-size: 12.5px; font-weight: 600;
+  cursor: pointer; border: none;
+  transition: all var(--t); letter-spacing: .01em;
+  white-space: nowrap;
+}
+.btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+.btn-primary {
+  background: var(--accent); color: #fff;
+  box-shadow: 0 1px 3px rgba(15,22,36,.2), 0 1px 2px rgba(15,22,36,.1);
+}
+.btn-primary:hover { opacity: .88; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(15,22,36,.18); }
+
+.btn-secondary {
+  background: var(--surface); color: var(--text-2);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-xs);
+}
+.btn-secondary:hover { color: var(--text-1); border-color: var(--border-mid); background: var(--surface-2); }
+
+.btn-ghost {
+  background: none; color: var(--text-3); border: none;
+  padding: 9px 12px;
+}
+.btn-ghost:hover { color: var(--red); }
+
+.btn-danger-soft {
+  background: var(--surface); color: var(--text-2);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-xs);
+}
+.btn-danger-soft:hover { color: var(--red); border-color: #fca5a5; background: var(--red-soft); box-shadow: none; }
+
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn-xs { padding: 4px 9px; font-size: 11px; gap: 5px; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   CARDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-sm);
+}
+.card-pad { padding: 22px; }
+.card-section-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .14em;
+  color: var(--text-3); margin-bottom: 18px;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   TABS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.tabs-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.tabs {
+  display: flex; gap: 2px;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 3px; box-shadow: var(--shadow-xs);
+}
+.tab-btn {
+  padding: 7px 18px;
+  border-radius: 9px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 12.5px; font-weight: 600;
+  cursor: pointer; border: none; background: transparent;
+  color: var(--text-3); transition: all var(--t); letter-spacing: .01em;
+}
+.tab-btn.active {
+  background: var(--surface); color: var(--text-1);
+  box-shadow: 0 1px 4px rgba(15,22,36,.1), 0 0 0 1px var(--border);
+}
+.tab-btn:hover:not(.active) { color: var(--text-2); }
+.count-pill {
+  font-size: 11.5px; color: var(--text-3);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 20px; padding: 4px 12px; font-weight: 500;
+  box-shadow: var(--shadow-xs);
+}
+.count-pill strong { color: var(--text-2); font-weight: 600; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   FORM FIELDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.field { margin-bottom: 14px; }
+.field:last-child { margin-bottom: 0; }
+.field-label {
+  display: block;
+  font-size: 11.5px; font-weight: 600;
+  color: var(--text-2); margin-bottom: 5px; letter-spacing: .01em;
+}
+.field-hint { display: block; font-size: 11px; color: var(--text-3); margin-bottom: 5px; }
+.field-note {
+  font-size: 11px; color: var(--text-3);
+  margin-top: 5px; line-height: 1.5;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 8px 11px;
+}
+
+input[type="text"], input[type="number"], textarea, select {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 9px 11px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 12.5px; color: var(--text-1);
+  outline: none;
+  transition: border-color var(--t), box-shadow var(--t);
+  appearance: none; -webkit-appearance: none;
+  box-shadow: var(--shadow-xs);
+}
+input:focus, textarea:focus, select:focus {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-ring), var(--shadow-xs);
+}
+input::placeholder, textarea::placeholder { color: var(--text-4); }
+textarea { resize: vertical; min-height: 72px; line-height: 1.55; }
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 11px center;
+  padding-right: 32px; cursor: pointer; color: var(--text-2);
+}
+.input-unit { position: relative; }
+.input-unit input { padding-right: 60px; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+.unit-label {
+  position: absolute; right: 11px; top: 50%; transform: translateY(-50%);
+  font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+  color: var(--text-3); pointer-events: none;
+}
+.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   BADGES / TAGS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .04em;
+  text-transform: uppercase; padding: 3px 8px; border-radius: 20px;
+}
+.badge-green { color: var(--green); background: var(--green-soft); }
+.badge-blue  { color: var(--blue);  background: var(--blue-soft);  }
+.badge-orange{ color: var(--orange);background: var(--orange-soft);}
+.badge-gray  { color: var(--text-2);background: var(--surface-3); border: 1px solid var(--border); }
+.badge svg   { width: 10px; height: 10px; }
+
+.mono-tag {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px; font-weight: 500;
+  padding: 2px 7px;
+  background: var(--surface-3);
+  border: 1px solid var(--border-mid);
+  border-radius: 5px; color: var(--text-2);
+  letter-spacing: .03em;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   STAT CARDS  (Home)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px; margin-bottom: 24px;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 20px 22px;
+  box-shadow: var(--shadow-sm);
+}
+.stat-label {
+  font-family: 'Syne', sans-serif;
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .14em;
+  color: var(--text-3); margin-bottom: 10px;
+}
+.stat-value {
+  font-family: 'Roboto', sans-serif;
+  font-size: 34px; font-weight: 700;
+  letter-spacing: -1px; color: var(--text-1);
+  line-height: 1;
+}
+.stat-value.green { color: var(--green); }
+.stat-sub { font-size: 11.5px; color: var(--text-3); margin-top: 6px; display: flex; align-items: center; gap: 5px; }
+.dot-green { width: 6px; height: 6px; border-radius: 50%; background: var(--green); display: inline-block; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   FEATURE CARDS (Home)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px; margin-bottom: 32px;
+}
+.feature-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  display: flex; flex-direction: column;
+  transition: box-shadow var(--t), border-color var(--t);
+  cursor: pointer;
+}
+.feature-card:hover { box-shadow: var(--shadow-md); border-color: var(--border-mid); }
+.feature-card-primary { border-color: var(--border-mid); }
+.feature-card h2 {
+  font-family: 'Syne', sans-serif;
+  font-size: 16px; font-weight: 700;
+  color: var(--text-1); margin-bottom: 6px; letter-spacing: -.2px;
+}
+.feature-card p { font-size: 12.5px; color: var(--text-3); line-height: 1.6; margin-bottom: 16px; }
+.feature-list { list-style: none; margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
+.feature-list li {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 12px; color: var(--text-2);
+}
+.feature-list li svg { width: 13px; height: 13px; flex-shrink: 0; margin-top: 1px; color: var(--text-3); }
+.feature-card-footer { margin-top: auto; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   CAMPAIGN LIST (Home)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.list-header-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.list-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 15px; font-weight: 700;
+  color: var(--text-1); letter-spacing: -.2px;
+}
+.campaign-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 18px 22px;
+  margin-bottom: 8px;
+  box-shadow: var(--shadow-xs);
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  transition: border-color var(--t), box-shadow var(--t);
+  cursor: pointer;
+}
+.campaign-item:hover { border-color: var(--border-mid); box-shadow: var(--shadow-sm); }
+.campaign-item-left { flex: 1; min-width: 0; }
+.campaign-name {
+  font-size: 13.5px; font-weight: 600;
+  color: var(--text-1); margin-bottom: 6px; letter-spacing: -.1px;
+  display: flex; align-items: center; gap: 10px;
+}
+.campaign-meta {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11.5px; color: var(--text-3);
+}
+.campaign-meta svg { width: 12px; height: 12px; }
+.campaign-meta-sep { color: var(--text-4); }
+.campaign-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   TEMPLATES — CREATE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.create-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px; margin-bottom: 12px;
+}
+.form-footer-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 13px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+  margin-top: 12px;
+}
+.footer-label { font-size: 11.5px; color: var(--text-3); font-style: italic; }
+.btn-group { display: flex; align-items: center; gap: 4px; }
+
+/* Accordion */
+.accordion-item {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  margin-bottom: 8px; overflow: hidden;
+  background: var(--surface);
+}
+.accordion-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 13px 16px;
+  font-size: 13px; font-weight: 600;
+  color: var(--text-1); cursor: pointer;
+  background: var(--surface);
+  transition: background var(--t);
+  border: none; width: 100%; text-align: left; font-family: 'Roboto', sans-serif;
+}
+.accordion-header:hover { background: var(--surface-2); }
+.accordion-body { padding: 0 16px 16px; border-top: 1px solid var(--border); display: none; }
+.accordion-body.open { display: block; padding-top: 14px; }
+.accordion-icon { width: 16px; height: 16px; color: var(--text-3); transition: transform var(--t); }
+
+/* Video slot */
+.video-grid { display: flex; flex-direction: column; gap: 6px; }
+.video-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+.video-thumb {
+  width: 48px; height: 32px;
+  background: var(--text-1);
+  border-radius: 5px;
+  display: grid; place-items: center; flex-shrink: 0;
+}
+.video-thumb svg { width: 13px; height: 13px; color: #fff; }
+.video-name { font-size: 12px; font-weight: 500; color: var(--text-2); flex: 1; min-width: 0; truncate: ellipsis; }
+.video-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 0; }
+
+.dropzone {
+  border: 2px dashed var(--border-mid);
+  border-radius: var(--r-lg);
+  padding: 20px;
+  text-align: center;
+  color: var(--text-3);
+  font-size: 12.5px;
+  margin-bottom: 14px;
+  background: var(--surface-2);
+  transition: border-color var(--t), background var(--t);
+  cursor: pointer;
+}
+.dropzone:hover { border-color: var(--border-strong); background: var(--surface); }
+.dropzone p { margin-top: 4px; font-size: 11.5px; }
+
+/* Country-badge section header */
+.section-country-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 16px;
+  background: var(--surface-3);
+  border-bottom: 1px solid var(--border);
+  font-size: 12.5px; font-weight: 600;
+  color: var(--text-1);
+}
+.section-country-header span { color: var(--text-3); font-size: 11.5px; font-weight: 400; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   TEMPLATES — MY TEMPLATES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.my-templates-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 12px; align-items: start;
+}
+.list-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  overflow: hidden; box-shadow: var(--shadow-sm);
+}
+.list-panel-head {
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.list-panel-head h2 {
+  font-family: 'Syne', sans-serif;
+  font-size: 13px; font-weight: 700; color: var(--text-1); margin-bottom: 2px;
+}
+.list-panel-head p { font-size: 11.5px; color: var(--text-3); }
+.list-search { padding: 9px 12px; border-bottom: 1px solid var(--border); background: var(--surface-2); }
+.list-search input { font-family: 'Roboto', sans-serif; }
+.new-tpl-btn {
+  display: flex; align-items: center; gap: 7px;
+  width: 100%; padding: 10px 16px;
+  background: none; border: none; border-bottom: 1px solid var(--border);
+  font-family: 'Roboto', sans-serif; font-size: 12px; font-weight: 600;
+  color: var(--text-3); cursor: pointer; text-align: left;
+  transition: all var(--t);
+}
+.new-tpl-btn:hover { color: var(--text-1); background: var(--surface-2); }
+.new-tpl-btn svg { width: 13px; height: 13px; }
+.tpl-list { list-style: none; }
+.tpl-item {
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background var(--t);
+  position: relative;
+}
+.tpl-item:last-child { border-bottom: none; }
+.tpl-item::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 2.5px; background: transparent; border-radius: 0 2px 2px 0;
+  transition: background var(--t);
+}
+.tpl-item:hover { background: var(--surface-2); }
+.tpl-item.sel { background: var(--surface-3); }
+.tpl-item.sel::before { background: var(--text-1); }
+.tpl-name { font-size: 12.5px; font-weight: 600; color: var(--text-1); margin-bottom: 5px; }
+.tpl-meta { font-size: 11.5px; color: var(--text-3); display: flex; align-items: center; justify-content: space-between; }
+
+.detail-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-xl); overflow: hidden; box-shadow: var(--shadow-sm); }
+.detail-head {
+  padding: 20px 24px 18px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+}
+.detail-name {
+  font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700;
+  letter-spacing: -.4px; margin-bottom: 8px;
+}
+.detail-meta { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.detail-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.detail-body { display: grid; grid-template-columns: 1fr 1fr; }
+.detail-col { padding: 20px 24px; }
+.detail-col + .detail-col { border-left: 1px solid var(--border); background: var(--surface-2); }
+.detail-col-full { padding: 20px 24px; border-top: 1px solid var(--border); }
+.kv { display: flex; gap: 12px; margin-bottom: 9px; }
+.kv:last-child { margin-bottom: 0; }
+.kk { font-size: 11.5px; color: var(--text-3); min-width: 108px; flex-shrink: 0; padding-top: 1px; }
+.vv { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: var(--text-1); font-weight: 500; word-break: break-all; }
+.translations-bar {
+  padding: 16px 24px; border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  background: var(--surface-2);
+}
+.tl-label { font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .14em; color: var(--text-3); margin-bottom: 3px; }
+.tl-hint { font-size: 11.5px; color: var(--text-3); }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   PROFILE PAGE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.profile-stack { display: flex; flex-direction: column; gap: 12px; }
+.profile-section { padding: 24px; }
+.user-row { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+.avatar {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--text-1); display: grid; place-items: center;
+  flex-shrink: 0;
+}
+.avatar span { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 800; color: #fff; }
+.user-name { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; color: var(--text-1); }
+.user-handle { font-size: 12px; color: var(--text-3); font-family: 'JetBrains Mono', monospace; }
+.quick-nav { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.country-table { width: 100%; border-collapse: collapse; }
+.country-table tr { border-bottom: 1px solid var(--border); transition: background var(--t); }
+.country-table tr:last-child { border-bottom: none; }
+.country-table tr:hover { background: var(--surface-2); }
+.country-table td { padding: 11px 16px; font-size: 12.5px; vertical-align: middle; }
+.country-table td:first-child { width: 80px; padding-left: 16px; }
+.country-table td:last-child { text-align: right; padding-right: 14px; }
+.country-table td select { width: 100%; max-width: 180px; }
+.ctry-flag { font-size: 19px; line-height: 1; display: block; }
+.ctry-name { font-size: 12.5px; font-weight: 500; color: var(--text-1); }
+
+.meta-account-card {
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 16px 18px; margin-bottom: 10px;
+  background: var(--surface-2);
+}
+.meta-acc-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.meta-acc-name { font-size: 13px; font-weight: 600; color: var(--text-1); display: flex; align-items: center; gap: 8px; }
+.meta-acc-ids { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-3); margin-bottom: 4px; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ROI PAGE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.guardrail-banner {
+  background: var(--orange-soft);
+  border: 1px solid var(--orange-border);
+  border-radius: var(--r-lg);
+  padding: 12px 18px;
+  font-size: 12.5px; font-weight: 600;
+  color: var(--orange);
+  margin-bottom: 24px;
+  display: flex; align-items: center; gap: 10px;
+}
+.guardrail-banner svg { width: 15px; height: 15px; flex-shrink: 0; }
+.roi-metrics { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 20px; }
+.roi-metric-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 18px 20px; box-shadow: var(--shadow-sm);
+}
+.roi-metric-label { font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .14em; color: var(--text-3); margin-bottom: 10px; }
+.roi-metric-value { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; letter-spacing: -1px; color: var(--text-1); }
+.roi-metric-value.red { color: var(--red); }
+.roi-metric-value.green { color: var(--green); }
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th {
+  font-size: 11.5px; font-weight: 600; color: var(--text-3);
+  padding: 10px 16px; text-align: left;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2); letter-spacing: .01em;
+}
+.data-table td {
+  font-size: 12.5px; color: var(--text-2);
+  padding: 13px 16px; border-bottom: 1px solid var(--border);
+}
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: var(--surface-2); }
+.empty-state { padding: 40px; text-align: center; color: var(--text-3); font-size: 13px; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   CAMPAIGN DETAIL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.status-card { padding: 20px 24px; }
+.status-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.status-block { display: flex; align-items: center; gap: 12px; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   DIVIDER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.divider { height: 1px; background: var(--border); margin: 18px 0; }
+.divider-v { width: 1px; background: var(--border); align-self: stretch; }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════
+     TOPBAR
+════════════════════════════════════════════ -->
+<nav class="topbar">
+  <div class="topbar-brand" onclick="goto('home')">
+    <div class="brand-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 17.5h7M17.5 14v7"/></svg>
+    </div>
+    <div>
+      <div class="brand-name">Campaign Builder</div>
+      <div class="brand-sub">Automação global de campanhas</div>
+    </div>
+  </div>
+
+  <nav class="topbar-nav">
+    <button class="nav-item" onclick="goto('templates-criar')" id="nav-templates">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+      Templates
+    </button>
+    <button class="nav-item" onclick="goto('home')" id="nav-flow">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+      Fluxo de campanha
+    </button>
+    <button class="nav-item" onclick="goto('roi')" id="nav-roi">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      ROI operacional
+    </button>
+    <button class="nav-item" onclick="goto('perfil')" id="nav-perfil">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Perfil
+    </button>
+  </nav>
+
+  <div class="topbar-right">
+    <button class="nav-item-diag" onclick="goto('home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10"/></svg>
+      Diagnóstico técnico
+    </button>
+    <button class="nav-item-exit">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sair
+    </button>
+  </div>
+</nav>
+
+
+<!-- ════════════════════════════════════════════
+     PAGE: HOME
+════════════════════════════════════════════ -->
+<div class="page active" id="page-home">
+  <div class="shell">
+
+    <!-- Stats -->
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total de Campanhas</div>
+        <div class="stat-value">22</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Campanhas Ativas</div>
+        <div class="stat-value green">0</div>
+        <div class="stat-sub"><span class="dot-green"></span> Publicadas</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Rascunhos</div>
+        <div class="stat-value">22</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Países Configurados</div>
+        <div class="stat-value">6</div>
+      </div>
+    </div>
+
+    <!-- Feature Cards -->
+    <div class="feature-grid">
+      <div class="feature-card feature-card-primary" onclick="goto('templates-criar')">
+        <h2>Fluxo de campanha</h2>
+        <p>Fluxo operacional guiado — cria Campaign → AdSet → Creative → Ads (sempre PAUSED no REAL)</p>
+        <ul class="feature-list">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Operação REAL com guardrails</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10"/></svg> Sem expor detalhes técnicos por padrão</li>
+        </ul>
+        <div class="feature-card-footer">
+          <button class="btn btn-primary" style="width:100%">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+            Abrir fluxo de campanha
+          </button>
+        </div>
+      </div>
+
+      <div class="feature-card" onclick="goto('templates-criar')">
+        <h2>Templates</h2>
+        <p>Gerencie templates operacionais para usar no fluxo de campanha</p>
+        <ul class="feature-list">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg> Campos mínimos e variações A–E por país</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Aplicar no fluxo guiado com 1 clique</li>
+        </ul>
+        <div class="feature-card-footer">
+          <button class="btn btn-secondary" style="width:100%">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+            Abrir Templates
+          </button>
+        </div>
+      </div>
+
+      <div class="feature-card" onclick="goto('perfil')">
+        <h2>Perfil e credenciais</h2>
+        <p>Configure credenciais Meta e países operacionais do seu usuário</p>
+        <ul class="feature-list">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Credenciais por usuário (token nunca é exibido)</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> Países e idioma primário por país</li>
+        </ul>
+        <div class="feature-card-footer">
+          <button class="btn btn-secondary" style="width:100%">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            Abrir Perfil
+          </button>
+        </div>
+      </div>
+
+      <div class="feature-card" onclick="goto('roi')">
+        <h2>ROI operacional</h2>
+        <p>Gasto (Meta) + receita manual → lucro/prejuízo e ações seguras</p>
+        <ul class="feature-list">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Receita manual por campanha</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10"/></svg> Ações seguras e confirmadas</li>
+        </ul>
+        <div class="feature-card-footer">
+          <button class="btn btn-secondary" style="width:100%">
+            Abrir ROI operacional
+          </button>
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <h2>Diagnóstico técnico</h2>
+        <p>Área técnica para troubleshooting e validação (não é fluxo principal)</p>
+        <ul class="feature-list">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/></svg> Verificar status, logs e evidências</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10"/></svg> Manter operação REAL sempre PAUSED</li>
+        </ul>
+        <div class="feature-card-footer">
+          <button class="btn btn-secondary" style="width:100%">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10"/></svg>
+            Abrir diagnóstico
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Campaign list -->
+    <div class="list-header-row">
+      <div class="list-title">Suas Campanhas</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary btn-sm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="12" y1="18" x2="12" y2="18" stroke-linecap="round"/></svg>
+          Filtrar
+        </button>
+        <button class="btn btn-secondary btn-sm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="9" y2="18"/></svg>
+          Ordenar
+        </button>
+      </div>
+    </div>
+    <div class="campaign-item" onclick="goto('campanha-detalhe')">
+      <div class="campaign-item-left">
+        <div class="campaign-name">
+          Aprender a Conduzir LATAM · AE
+          <span class="badge badge-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Rascunho</span>
+        </div>
+        <div class="campaign-meta">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          Global
+          <span class="campaign-meta-sep">·</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          1 campanha gerada
+          <span class="campaign-meta-sep">·</span>
+          Criado em 2026-05-29
+          <span class="campaign-meta-sep">·</span>
+          🇦🇪
+        </div>
+      </div>
+      <div class="campaign-actions">
+        <button class="btn btn-secondary btn-sm">Ver Detalhes</button>
+        <button class="btn btn-secondary btn-sm">Duplicar</button>
+      </div>
+    </div>
+    <div class="campaign-item" onclick="goto('campanha-detalhe')">
+      <div class="campaign-item-left">
+        <div class="campaign-name">
+          Aprender a Conduzir LATAM · BR
+          <span class="badge badge-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Rascunho</span>
+        </div>
+        <div class="campaign-meta">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          Global
+          <span class="campaign-meta-sep">·</span>
+          1 campanha gerada
+          <span class="campaign-meta-sep">·</span>
+          Criado em 2026-05-29
+          <span class="campaign-meta-sep">·</span>
+          🇧🇷
+        </div>
+      </div>
+      <div class="campaign-actions">
+        <button class="btn btn-secondary btn-sm">Ver Detalhes</button>
+        <button class="btn btn-secondary btn-sm">Duplicar</button>
+      </div>
+    </div>
+    <div class="campaign-item" onclick="goto('campanha-detalhe')">
+      <div class="campaign-item-left">
+        <div class="campaign-name">
+          Drive Academy Global · AE
+          <span class="badge badge-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Rascunho</span>
+        </div>
+        <div class="campaign-meta">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          Global
+          <span class="campaign-meta-sep">·</span>
+          1 campanha gerada
+          <span class="campaign-meta-sep">·</span>
+          Criado em 2026-05-28
+          <span class="campaign-meta-sep">·</span>
+          🇦🇪
+        </div>
+      </div>
+      <div class="campaign-actions">
+        <button class="btn btn-secondary btn-sm">Ver Detalhes</button>
+        <button class="btn btn-secondary btn-sm">Duplicar</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     PAGE: TEMPLATES — CRIAR
+════════════════════════════════════════════ -->
+<div class="page" id="page-templates-criar">
+  <div class="shell">
+    <button class="back" onclick="goto('home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Voltar
+    </button>
+    <div class="page-hd">
+      <div>
+        <h1>Templates</h1>
+        <p>Crie templates operacionais, traduções e mídia por país. No modo REAL, tudo é criado como PAUSED.</p>
+      </div>
+      <div class="page-hd-right">
+        <span class="route-chip">/campaign-flow</span>
+        <span class="route-chip">/diagnóstico-técnico</span>
+      </div>
+    </div>
+
+    <div class="tabs-row">
+      <div class="tabs">
+        <button class="tab-btn active">Criar template</button>
+        <button class="tab-btn" onclick="goto('templates-meus')">Meus templates</button>
+      </div>
+      <span class="count-pill"><strong>3</strong> template(s)</span>
+    </div>
+
+    <!-- Row 1: Campanha + AdSet -->
+    <div class="create-layout">
+      <div class="card card-pad">
+        <div class="card-section-title">Campanha</div>
+        <div class="field">
+          <span class="field-label">Nome do template</span>
+          <span class="field-hint">Ex: Padrão LATAM · Tráfego</span>
+          <input type="text" placeholder="Digite o nome…">
+        </div>
+        <div class="field">
+          <span class="field-label">Conta Meta</span>
+          <span class="field-hint">Esta conta será usada quando o template for aplicado no Fluxo de campanha.</span>
+          <select><option>Conta principal · padrão</option></select>
+        </div>
+        <div class="field">
+          <span class="field-label">Objetivo</span>
+          <select><option>Tráfego</option><option>Leads</option><option>Alcance</option><option>Vendas</option></select>
+        </div>
+        <div class="field">
+          <span class="field-label">Países do template</span>
+          <span class="field-hint">Códigos separados por vírgula — ex: BR, AR, CL</span>
+          <div style="display:flex;gap:8px">
+            <input type="text" value="BR" style="flex:1">
+            <button class="btn btn-secondary btn-sm" style="white-space:nowrap">Usar perfil (6)</button>
+          </div>
+          <div class="field-note">💡 Idiomas por país são configurados no Perfil. Os textos base são sempre em PT-BR. O Brasil usa o texto original. Os demais países recebem tradução.</div>
+        </div>
+      </div>
+
+      <div class="card card-pad">
+        <div class="card-section-title">AdSet</div>
+        <div class="field">
+          <span class="field-label">Orçamento diário</span>
+          <span class="field-hint">Valor em centavos (ex.: 1000 = R$10,00).</span>
+          <div class="input-unit">
+            <input type="number" value="1000">
+            <span class="unit-label">¢</span>
+          </div>
+        </div>
+        <div class="field">
+          <span class="field-label">Tipo de cobrança</span>
+          <select><option>Impressões</option><option>Cliques no link</option></select>
+        </div>
+        <div class="field">
+          <span class="field-label">Otimização</span>
+          <select><option>Cliques no link</option><option>Alcance</option><option>Visualizações de landing page</option></select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Criativo -->
+    <div class="card" style="margin-bottom:12px">
+      <div style="padding:20px 22px 0">
+        <div class="card-section-title">Criativo (PT-BR)</div>
+        <div style="margin-bottom:14px">
+          <div style="font-size:13px;font-weight:600;color:var(--text-1);margin-bottom:3px">Variações (Ads A–E)</div>
+          <div style="font-size:12px;color:var(--text-3)">PT-BR é a origem fixa. BR sempre usa o texto do template; traduções são apenas para países ≠ BR.</div>
+        </div>
+      </div>
+      <div style="padding:0 22px 8px">
+        <div class="accordion-item">
+          <button class="accordion-header" onclick="toggleAcc(this)">
+            Ad A
+            <svg class="accordion-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div class="accordion-body open">
+            <div class="field"><span class="field-label">Texto principal</span><textarea placeholder="Escreva o texto principal…"></textarea></div>
+            <div class="row-2">
+              <div class="field"><span class="field-label">Título</span><input type="text" placeholder="Título…"></div>
+              <div class="field"><span class="field-label">Descrição</span><input type="text" placeholder="Descrição…"></div>
+            </div>
+          </div>
+        </div>
+        <div class="accordion-item"><button class="accordion-header" onclick="toggleAcc(this)">Ad B<svg class="accordion-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg></button><div class="accordion-body"></div></div>
+        <div class="accordion-item"><button class="accordion-header" onclick="toggleAcc(this)">Ad C<svg class="accordion-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg></button><div class="accordion-body"></div></div>
+        <div class="accordion-item"><button class="accordion-header" onclick="toggleAcc(this)">Ad D<svg class="accordion-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg></button><div class="accordion-body"></div></div>
+        <div class="accordion-item"><button class="accordion-header" onclick="toggleAcc(this)">Ad E<svg class="accordion-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg></button><div class="accordion-body"></div></div>
+      </div>
+      <div style="padding:0 22px 20px">
+        <div class="field"><span class="field-label">URL de destino</span><span class="field-hint">Obrigatório para Creative REAL.</span><input type="text" placeholder="https://example.com/?utm_source=template"></div>
+        <div class="field"><span class="field-label">Chamada (CTA)</span><select><option>Saiba mais</option><option>Comprar agora</option><option>Inscrever-se</option><option>Contate-nos</option></select></div>
+      </div>
+    </div>
+
+    <!-- Vídeos -->
+    <div class="card" style="margin-bottom:0">
+      <div style="padding:20px 22px 16px">
+        <div class="card-section-title">Vídeos por País (A–E)</div>
+        <div class="dropzone">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24" style="margin:0 auto 6px;display:block;color:var(--text-3)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <strong style="color:var(--text-2);font-size:13px">Enviar vídeos em lote</strong>
+          <p>Use nomes como BR1.mp4, BR2.mp4, AE1.mp4. O sistema associa automaticamente país e Ad.</p>
+        </div>
+        <div style="border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden">
+          <div class="section-country-header">BR <span>0/5 vídeos</span></div>
+          <div style="padding:12px 16px">
+            <div class="video-grid">
+              <div class="video-row"><span style="font-size:12px;font-weight:600;color:var(--text-2);min-width:36px">Ad A</span><div class="video-thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5,3 19,12 5,21"/></svg></div><span class="video-name" style="color:var(--text-4)">—</span><div class="video-actions"><span class="badge badge-gray" style="font-size:10px">Sem vídeo</span><button class="btn btn-secondary btn-xs">Trocar / editar</button></div></div>
+              <div class="video-row"><span style="font-size:12px;font-weight:600;color:var(--text-2);min-width:36px">Ad B</span><div class="video-thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5,3 19,12 5,21"/></svg></div><span class="video-name" style="color:var(--text-4)">—</span><div class="video-actions"><span class="badge badge-gray" style="font-size:10px">Sem vídeo</span><button class="btn btn-secondary btn-xs">Trocar / editar</button></div></div>
+              <div class="video-row"><span style="font-size:12px;font-weight:600;color:var(--text-2);min-width:36px">Ad C</span><div class="video-thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5,3 19,12 5,21"/></svg></div><span class="video-name" style="color:var(--text-4)">—</span><div class="video-actions"><span class="badge badge-gray" style="font-size:10px">Sem vídeo</span><button class="btn btn-secondary btn-xs">Trocar / editar</button></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-footer-bar">
+      <span class="footer-label">Novo template</span>
+      <div class="btn-group">
+        <button class="btn btn-ghost">Limpar</button>
+        <button class="btn btn-primary">Salvar template</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     PAGE: TEMPLATES — MEUS
+════════════════════════════════════════════ -->
+<div class="page" id="page-templates-meus">
+  <div class="shell">
+    <button class="back" onclick="goto('home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Voltar
+    </button>
+    <div class="page-hd">
+      <div>
+        <h1>Templates</h1>
+        <p>Crie templates operacionais, traduções e mídia por país. No modo REAL, tudo é criado como PAUSED.</p>
+      </div>
+      <div class="page-hd-right">
+        <span class="route-chip">/campaign-flow</span>
+        <span class="route-chip">/diagnóstico-técnico</span>
+      </div>
+    </div>
+
+    <div class="tabs-row">
+      <div class="tabs">
+        <button class="tab-btn" onclick="goto('templates-criar')">Criar template</button>
+        <button class="tab-btn active">Meus templates</button>
+      </div>
+      <span class="count-pill"><strong>3</strong> template(s)</span>
+    </div>
+
+    <div class="my-templates-layout">
+      <div class="list-panel">
+        <div class="list-panel-head">
+          <h2>Meus templates</h2>
+          <p>Selecione para ver detalhes e operar.</p>
+        </div>
+        <div class="list-search"><input type="text" placeholder="Buscar por nome…" style="box-shadow:none;border-color:var(--border)"></div>
+        <button class="new-tpl-btn" onclick="goto('templates-criar')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Novo template
+        </button>
+        <ul class="tpl-list">
+          <li class="tpl-item sel" onclick="selTpl(this)">
+            <div class="tpl-name">Drive Academy Global</div>
+            <div class="tpl-meta">
+              <span>2 países · 5 ads</span>
+              <span class="badge badge-green" style="font-size:9.5px">Revisado</span>
+            </div>
+          </li>
+          <li class="tpl-item" onclick="selTpl(this)">
+            <div class="tpl-name">Aprender a Conduzir LATAM</div>
+            <div class="tpl-meta">
+              <span>2 países · 5 ads</span>
+              <span class="badge badge-blue" style="font-size:9.5px">Traduzido</span>
+            </div>
+          </li>
+          <li class="tpl-item" onclick="selTpl(this)">
+            <div class="tpl-name">Receitas LATAM Teste 01</div>
+            <div class="tpl-meta">
+              <span>2 países · 1 ads</span>
+              <span class="badge badge-gray" style="font-size:9.5px">Sem mídia</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="detail-panel">
+        <div class="detail-head">
+          <div>
+            <div class="detail-name">Drive Academy Global</div>
+            <div class="detail-meta">
+              <span class="mono-tag">AE</span>
+              <span class="mono-tag">BR</span>
+              <span style="color:var(--text-4);font-size:11px">·</span>
+              <span class="badge badge-green">Revisado</span>
+              <span style="color:var(--text-4);font-size:11px">·</span>
+              <span class="badge badge-blue">5 ad(s)</span>
+              <span style="color:var(--text-4);font-size:11px">·</span>
+              <span class="badge badge-gray">Mídias completas</span>
+              <span style="color:var(--text-4);font-size:11px">·</span>
+              <span class="badge badge-gray">1 variação</span>
+            </div>
+          </div>
+          <div class="detail-actions">
+            <button class="btn btn-primary btn-sm">Usar no fluxo de campanha</button>
+            <button class="btn btn-secondary btn-sm">Editar</button>
+            <button class="btn btn-danger-soft btn-sm">Excluir</button>
+          </div>
+        </div>
+
+        <div class="detail-body">
+          <div class="detail-col">
+            <div class="card-section-title">Campaign</div>
+            <div class="kv"><span class="kk">objective</span><span class="vv">OUTCOME_TRAFFIC</span></div>
+            <div class="kv"><span class="kk">conta Meta</span><span class="vv">Conta principal</span></div>
+          </div>
+          <div class="detail-col">
+            <div class="card-section-title">AdSet</div>
+            <div class="kv"><span class="kk">dailyBudgetCents</span><span class="vv">1000</span></div>
+            <div class="kv"><span class="kk">billingEvent</span><span class="vv">IMPRESSIONS</span></div>
+            <div class="kv"><span class="kk">optimizationGoal</span><span class="vv">LINK_CLICKS</span></div>
+          </div>
+        </div>
+
+        <div class="detail-col-full">
+          <div class="card-section-title">Creative · Ad A</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 24px">
+            <div class="kv"><span class="kk">primaryText</span><span class="vv">Aprender a dirigir não precisa ser complicado…</span></div>
+            <div class="kv"><span class="kk">headline</span><span class="vv">Aprenda a dirigir melhor</span></div>
+            <div class="kv"><span class="kk">description</span><span class="vv">Comece gratuitamente.</span></div>
+            <div class="kv"><span class="kk">destinationUrl</span><span class="vv">https://www.driveacademy.com</span></div>
+            <div class="kv"><span class="kk">ctaType</span><span class="vv">LEARN_MORE</span></div>
+          </div>
+          <div style="margin-top:12px"><button class="btn btn-secondary btn-sm">Ver variações (Ads A–E) ↓</button></div>
+        </div>
+
+        <div class="detail-col-full" style="background:var(--surface-2)">
+          <div class="card-section-title">Vídeos por País (A–E)</div>
+          <div style="border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden">
+            <div class="section-country-header">AE <span>5/5 vídeos</span></div>
+            <div style="padding:10px 14px;display:flex;flex-direction:column;gap:6px">
+              <div class="video-row"><span style="font-size:12px;font-weight:600;color:var(--text-2);min-width:36px">Ad A</span><div class="video-thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5,3 19,12 5,21"/></svg></div><span class="video-name">videoAE1.mp4</span><div class="video-actions"><span class="badge badge-green" style="font-size:9.5px">Pronto</span><button class="btn btn-secondary btn-xs">Abrir</button></div></div>
+              <div class="video-row"><span style="font-size:12px;font-weight:600;color:var(--text-2);min-width:36px">Ad B</span><div class="video-thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5,3 19,12 5,21"/></svg></div><span class="video-name">videoAE2.mp4</span><div class="video-actions"><span class="badge badge-green" style="font-size:9.5px">Pronto</span><button class="btn btn-secondary btn-xs">Abrir</button></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="translations-bar">
+          <div>
+            <div class="tl-label">Traduções</div>
+            <div class="tl-hint">Gere via LibreTranslate e revise/edite por país antes de usar no lote.</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary btn-sm">Gerar traduções</button>
+            <button class="btn btn-secondary btn-sm">Revisar traduções</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     PAGE: PERFIL
+════════════════════════════════════════════ -->
+<div class="page" id="page-perfil">
+  <div class="shell-sm">
+    <button class="back" onclick="goto('home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Voltar
+    </button>
+    <div class="page-hd">
+      <div>
+        <h1>Perfil</h1>
+        <p>Configuração interna + credenciais Meta por usuário</p>
+      </div>
+    </div>
+
+    <div class="profile-stack">
+      <div class="card">
+        <div class="profile-section">
+          <div class="user-row">
+            <div class="avatar"><span>B</span></div>
+            <div>
+              <div class="user-name">Usuário</div>
+              <div class="user-handle">@beto</div>
+            </div>
+          </div>
+          <div class="quick-nav">
+            <button class="btn btn-secondary btn-sm">Voltar para Home</button>
+            <button class="btn btn-secondary btn-sm">Abrir fluxo de campanha</button>
+            <button class="btn btn-secondary btn-sm">Abrir /roi-operacional</button>
+            <button class="btn btn-secondary btn-sm">Abrir diagnóstico técnico</button>
+            <button class="btn btn-danger-soft btn-sm">Logout</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="profile-section">
+          <div class="card-section-title">Países e Idiomas da Operação</div>
+          <div style="font-size:14px;font-weight:600;color:var(--text-1);margin-bottom:4px">Países e idiomas da operação</div>
+          <div style="font-size:12px;color:var(--green);margin-bottom:20px">O fluxo de campanha prioriza estes países como base para seleção em lote.</div>
+
+          <!-- Add country row -->
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:20px;padding:14px 16px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md)">
+            <select style="max-width:220px;flex:1"><option>BR — Brasil</option><option>AE — Emirados Árabes</option><option>ES — Espanha</option><option>FR — França</option></select>
+            <button class="btn btn-secondary btn-sm">Adicionar país</button>
+            <div style="width:1px;height:24px;background:var(--border);margin:0 2px"></div>
+            <button class="btn btn-secondary btn-sm" style="white-space:nowrap">Criar todos os países possíveis</button>
+          </div>
+
+          <!-- List header -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:0 4px">
+            <div style="font-size:12px;font-weight:600;color:var(--text-2)">Lista do usuário</div>
+            <span style="font-size:11.5px;color:var(--text-3);background:var(--surface-3);border:1px solid var(--border);border-radius:20px;padding:2px 10px;font-weight:500">6 países</span>
+          </div>
+
+          <!-- Country list -->
+          <div style="border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden">
+            <table class="country-table" style="margin:0">
+              <thead>
+                <tr style="background:var(--surface-3);border-bottom:1px solid var(--border)">
+                  <th style="padding:9px 16px;font-size:11px;font-weight:600;color:var(--text-3);text-align:left;letter-spacing:.04em;text-transform:uppercase">País</th>
+                  <th style="padding:9px 16px;font-size:11px;font-weight:600;color:var(--text-3);text-align:left;letter-spacing:.04em;text-transform:uppercase">Idioma</th>
+                  <th style="padding:9px 14px;font-size:11px;font-weight:600;color:var(--text-3);text-align:right;letter-spacing:.04em;text-transform:uppercase">Ação</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <span class="ctry-flag">🇦🇪</span>
+                      <div><div class="ctry-name">Emirados Árabes</div><div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-3);margin-top:1px">AE</div></div>
+                    </div>
+                  </td>
+                  <td><select style="max-width:180px"><option>Inglês</option><option>Árabe</option></select></td>
+                  <td><button class="btn btn-danger-soft btn-xs">Remover</button></td>
+                </tr>
+                <tr>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <span class="ctry-flag">🇧🇷</span>
+                      <div><div class="ctry-name">Brasil</div><div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-3);margin-top:1px">BR</div></div>
+                    </div>
+                  </td>
+                  <td><select style="max-width:180px"><option>Português</option></select></td>
+                  <td><button class="btn btn-danger-soft btn-xs">Remover</button></td>
+                </tr>
+                <tr>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <span class="ctry-flag">🇪🇸</span>
+                      <div><div class="ctry-name">Espanha</div><div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-3);margin-top:1px">ES</div></div>
+                    </div>
+                  </td>
+                  <td><select style="max-width:180px"><option>Espanhol</option></select></td>
+                  <td><button class="btn btn-danger-soft btn-xs">Remover</button></td>
+                </tr>
+                <tr>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <span class="ctry-flag">🇫🇷</span>
+                      <div><div class="ctry-name">França</div><div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-3);margin-top:1px">FR</div></div>
+                    </div>
+                  </td>
+                  <td><select style="max-width:180px"><option>Francês</option></select></td>
+                  <td><button class="btn btn-danger-soft btn-xs">Remover</button></td>
+                </tr>
+                <tr>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <span class="ctry-flag">🇲🇽</span>
+                      <div><div class="ctry-name">México</div><div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-3);margin-top:1px">MX</div></div>
+                    </div>
+                  </td>
+                  <td><select style="max-width:180px"><option>Espanhol</option></select></td>
+                  <td><button class="btn btn-danger-soft btn-xs">Remover</button></td>
+                </tr>
+                <tr>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <span class="ctry-flag">🇦🇷</span>
+                      <div><div class="ctry-name">Argentina</div><div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-3);margin-top:1px">AR</div></div>
+                    </div>
+                  </td>
+                  <td><select style="max-width:180px"><option>Espanhol</option></select></td>
+                  <td><button class="btn btn-danger-soft btn-xs">Remover</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="profile-section">
+          <div class="card-section-title">Contas Meta</div>
+          <div class="meta-account-card">
+            <div class="meta-acc-header">
+              <div class="meta-acc-name">Conta principal <span class="badge badge-green" style="font-size:9px">Padrão</span></div>
+              <div style="display:flex;gap:6px">
+                <button class="btn btn-secondary btn-xs">Editar</button>
+                <button class="btn btn-secondary btn-xs">Definir como padrão</button>
+                <button class="btn btn-secondary btn-xs">Validar conta</button>
+                <button class="btn btn-danger-soft btn-xs">Desativar</button>
+              </div>
+            </div>
+            <div class="meta-acc-ids">Ad Account: act_259174718403969 · Page: 1139210415939326</div>
+            <div style="font-size:11px;color:var(--green)">Token salvo: Sim (final: …ZBUM)</div>
+          </div>
+          <div class="divider"></div>
+          <div style="font-size:13px;font-weight:600;color:var(--text-1);margin-bottom:14px">Nova conta Meta</div>
+          <div class="field"><span class="field-label">Nome interno</span><input type="text" placeholder="Ex: Conta principal / AH Jobs USA / BM Cursos Alemanha"></div>
+          <div class="row-2">
+            <div class="field"><span class="field-label">Meta Ad Account ID</span><input type="text" placeholder="act_…"></div>
+            <div class="field"><span class="field-label">Meta Page ID</span><input type="text" placeholder="123456789012345"></div>
+          </div>
+          <div class="field"><span class="field-label">Meta Access Token</span><input type="text" placeholder="colar aqui (não será exibido depois)"><div class="field-note">⚠️ Depois de salvar, o token não é exibido (apenas o final). Não cole token em prints ou logs.</div></div>
+          <div class="row-2">
+            <div class="field"><span class="field-label">BM/Nicho/Operação (opcional)</span><input type="text" placeholder="Ex: BM Cursos / Jobs / Receitas"></div>
+            <div class="field"><span class="field-label">País principal (opcional)</span><input type="text" placeholder="Ex: BR"></div>
+          </div>
+          <div class="field"><span class="field-label">Observações (opcional)</span><textarea placeholder="Notas internas da operação…"></textarea></div>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:4px">
+            <button class="btn btn-primary">Salvar conta Meta</button>
+            <button class="btn btn-ghost" style="color:var(--blue);padding:9px 0">Voltar ao login</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     PAGE: ROI OPERACIONAL
+════════════════════════════════════════════ -->
+<div class="page" id="page-roi">
+  <div class="shell">
+    <button class="back" onclick="goto('home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Voltar
+    </button>
+    <div class="page-hd">
+      <div>
+        <h1>ROI operacional (mínimo)</h1>
+        <p>Gasto (Meta) + receita manual → lucro/prejuízo e ações seguras (PAUSED).</p>
+      </div>
+    </div>
+
+    <div class="guardrail-banner">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Guardrails: nunca ACTIVE · ações exigem confirmação · toda ação REAL deve ser segura.
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px">
+      <input type="text" value="30/05/2026" style="width:140px">
+      <button class="btn btn-secondary btn-sm">Pausar negativos (0)</button>
+      <button class="btn btn-secondary btn-sm">Abrir diagnóstico técnico</button>
+    </div>
+
+    <div class="roi-metrics">
+      <div class="roi-metric-card"><div class="roi-metric-label">Gasto</div><div class="roi-metric-value red">R$ 0,00</div></div>
+      <div class="roi-metric-card"><div class="roi-metric-label">Receita</div><div class="roi-metric-value">—</div></div>
+      <div class="roi-metric-card"><div class="roi-metric-label">Lucro</div><div class="roi-metric-value green">—</div></div>
+      <div class="roi-metric-card"><div class="roi-metric-label">ROI</div><div class="roi-metric-value green">—</div></div>
+    </div>
+
+    <div class="card" style="overflow:hidden">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Campanha</th>
+            <th>País</th>
+            <th>Gasto</th>
+            <th>Receita (manual)</th>
+            <th>Lucro</th>
+            <th>ROI</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="7"><div class="empty-state">Nenhum dado encontrado para esta data.</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     PAGE: DETALHES DA CAMPANHA
+════════════════════════════════════════════ -->
+<div class="page" id="page-campanha-detalhe">
+  <div class="shell">
+    <button class="back" onclick="goto('home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Voltar
+    </button>
+    <div class="page-hd">
+      <div>
+        <h1>Detalhes da Campanha</h1>
+        <p>Aprender a Conduzir LATAM · AE</p>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:12px">
+      <div class="status-card">
+        <div class="status-header">
+          <div class="card-section-title" style="margin-bottom:0">Status</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary btn-sm">Atualizar</button>
+            <button class="btn btn-secondary btn-sm">Editar rascunho</button>
+            <button class="btn btn-secondary btn-sm">Gerar por país</button>
+          </div>
+        </div>
+        <div style="margin-top:14px;display:flex;align-items:center;gap:10px">
+          <span class="badge badge-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Rascunho</span>
+          <span class="mono-tag">AE</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="overflow:hidden">
+      <div style="padding:18px 22px;border-bottom:1px solid var(--border)">
+        <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--text-1);margin-bottom:2px">Campanhas geradas</div>
+        <div style="font-size:12px;color:var(--text-3)">1 item(ns)</div>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>País</th>
+            <th>Nome</th>
+            <th>Modo</th>
+            <th>Status</th>
+            <th>Meta Campaign ID</th>
+            <th>Status Meta</th>
+            <th>Ação</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="mono-tag">AE</span></td>
+            <td style="font-weight:500;color:var(--text-1)">Aprender a Conduzir LATAM · AE — AE</td>
+            <td><span class="badge badge-gray">REAL</span></td>
+            <td><span class="badge badge-gray">PAUSED</span></td>
+            <td style="font-family:'JetBrains Mono',monospace;font-size:11.5px">120248035139060596</td>
+            <td><span class="badge badge-gray">PAUSED</span></td>
+            <td>
+              <div style="display:flex;gap:6px">
+                <button class="btn btn-secondary btn-xs">Sync métricas</button>
+                <button class="btn btn-secondary btn-xs">Abrir diagnóstico técnico</button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+<script>
+const pages = ['home','templates-criar','templates-meus','perfil','roi','campanha-detalhe'];
+const navMap = { 'home':'nav-flow','templates-criar':'nav-templates','templates-meus':'nav-templates','perfil':'nav-perfil','roi':'nav-roi' };
+
+function goto(id) {
+  pages.forEach(p => {
+    const el = document.getElementById('page-'+p);
+    if (el) el.classList.toggle('active', p === id);
+  });
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const nav = document.getElementById(navMap[id]);
+  if (nav) nav.classList.add('active');
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function selTpl(el) {
+  document.querySelectorAll('.tpl-item').forEach(i => i.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+function toggleAcc(btn) {
+  const body = btn.nextElementSibling;
+  body.classList.toggle('open');
+}
+</script>
+</body>
+</html>

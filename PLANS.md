@@ -2343,3 +2343,268 @@ FALLBACK
 - Toda integração externa deve possuir retry
 - Toda automação deve gerar logs
 - Nenhum token pode ficar no frontend
+
+---
+
+## P29 — Aplicar Design System Global
+
+Última atualização: [2026-06-01 08:45]
+
+Objetivo:
+Aplicar a base visual global do novo design system, sem quebrar lógica existente.
+
+Referências:
+
+- `docs/design/design-system.md` (PENDENTE: arquivo não existe no repo; adicionar manualmente como referência)
+- `docs/design/prototype.html` (PENDENTE: arquivo não existe no repo; adicionar manualmente como referência)
+
+Tarefas:
+
+- [x] Localizar os estilos globais atuais do frontend.
+- [x] Criar ou atualizar tokens CSS globais:
+  - [x] cores
+  - [x] bordas
+  - [x] sombras
+  - [x] border-radius
+  - [x] espaçamentos
+  - [x] tipografia
+- [x] Aplicar a paleta principal:
+  - [x] fundo global `#f1f3f8`
+  - [x] surface `#ffffff`
+  - [x] surface-2 `#f8f9fc`
+  - [x] surface-3 `#eef0f6`
+  - [x] border `#e3e7ef`
+  - [x] text principal `#0f1624`
+  - [x] text secundário `#4a5568`
+  - [x] text muted `#94a3b8`
+  - [x] accent `#0f1624`
+  - [x] verde `#0d9467`
+  - [x] azul `#2563eb`
+  - [x] laranja `#c2730a`
+  - [x] vermelho `#dc2626`
+- [x] Aplicar tipografia:
+  - [x] Syne para títulos e labels de seção
+  - [x] Roboto para textos de interface
+  - [x] JetBrains Mono para IDs, rotas, códigos de país e dados técnicos
+- [x] Criar ou organizar componentes/classes base:
+  - [x] Button primary
+  - [x] Button secondary
+  - [x] Button ghost
+  - [x] Button danger
+  - [x] Card
+  - [x] Badge
+  - [x] MonoTag
+  - [x] PageShell
+  - [ ] PageHeader
+  - [ ] Field/Input
+  - [x] Table
+- [x] Atualizar Header/Topbar para seguir o novo padrão visual.
+- [x] Aplicar o novo padrão visual nos componentes globais possíveis.
+- [x] Garantir que a aplicação compile sem erro.
+- [x] Não alterar regras de negócio.
+- [x] Não remover rotas existentes.
+
+Critérios de aceite:
+
+- [x] Aplicação compila sem erro (build).
+- [x] Header foi remodelado.
+- [x] Botões usam o novo padrão visual.
+- [x] Cards usam borda, radius e sombra do design system.
+- [ ] Inputs seguem o novo padrão visual. (parcial: ainda há inputs com estilos inline)
+- [x] Badges/status usam o novo padrão visual.
+- [x] Nenhuma lógica REAL foi quebrada.
+
+Validação (P29):
+
+- [2026-06-01 08:45] `cd frontend && npm install` (OK). (audit: 2 moderate vulnerabilities; não corrigido nesta P29)
+- [2026-06-01 08:45] `cd frontend && npm run build` (OK).
+- `npm run lint` não existe no `frontend/package.json`.
+- `npm test` não existe no `frontend/package.json`.
+
+---
+
+## P30 — Remodelar Dashboard/Home
+
+Última atualização: [2026-06-01 08:53]
+
+Objetivo:
+Transformar a Home em uma entrada operacional simples e clara.
+
+Tarefas:
+
+- [x] Remodelar a Home usando o design system global.
+- [x] Mostrar cards de resumo:
+  - [x] total de campanhas
+  - [x] campanhas ativas
+  - [x] rascunhos
+  - [x] países configurados
+- [x] Criar destaque principal para abrir o fluxo de campanha.
+- [x] Manter lista de campanhas recentes.
+- [x] Reduzir excesso de atalhos técnicos.
+- [x] Deixar Diagnóstico técnico como acesso secundário.
+- [x] Usar linguagem operacional para cliente final.
+
+Critérios de aceite:
+
+- [x] Home deixa claro o próximo passo do usuário.
+- [x] Fluxo de campanha é a ação principal.
+- [x] Informações técnicas não dominam a tela.
+- [x] Visual segue o design system.
+- [x] Aplicação compila.
+
+Validação (P30):
+
+- [2026-06-01 08:53] `cd frontend && npm run build` (OK).
+
+---
+
+## P31 — Remodelar Templates
+
+Objetivo:
+Transformar `/templates` em área real de criação, gestão, tradução e uso de templates.
+
+Tarefas:
+
+- [ ] Remodelar `/templates` com duas áreas:
+  - [ ] Criar template
+  - [ ] Meus templates
+- [ ] Na criação de template, organizar os blocos:
+  - [ ] 1. Configuração da campanha
+  - [ ] 2. Configuração do conjunto de anúncios
+  - [ ] 3. Textos dos anúncios
+  - [ ] 4. Vídeos por país
+  - [ ] 5. Revisão e salvamento
+- [ ] Garantir que a criação de template suporte variações de Ads A–E.
+- [ ] Manter origem fixa em PT-BR.
+- [ ] Deixar claro que BR usa texto original.
+- [ ] Preparar fluxo visual para países diferentes de BR receberem tradução.
+- [ ] Em Meus templates, exibir:
+  - [ ] lista lateral
+  - [ ] painel de detalhe
+  - [ ] botão Editar
+  - [ ] botão Excluir
+  - [ ] botão Gerar traduções
+  - [ ] botão Revisar traduções
+  - [ ] botão Usar no fluxo de campanha
+- [ ] Manter ou adaptar chamadas existentes ao backend.
+- [ ] Não criar dados mock fingindo que são reais.
+- [ ] Caso alguma integração ainda não exista, criar placeholder visual honesto e seguro.
+
+Critérios de aceite:
+
+- [ ] Cliente entende como criar um template.
+- [ ] Cliente consegue visualizar templates salvos.
+- [ ] Tradução aparece como etapa clara.
+- [ ] Template pode ser usado no fluxo de campanha.
+- [ ] Visual segue o design system.
+- [ ] Aplicação compila.
+
+---
+
+## P32 — Remodelar Perfil
+
+Objetivo:
+Organizar credenciais Meta, países e idiomas da operação.
+
+Tarefas:
+
+- [ ] Remodelar Perfil em cards:
+  - [ ] Usuário
+  - [ ] Países e idiomas
+  - [ ] Contas Meta
+- [ ] Em Países e idiomas:
+  - [ ] listar países do usuário
+  - [ ] permitir adicionar país
+  - [ ] permitir remover país
+  - [ ] permitir definir idioma por país
+  - [ ] mostrar código do país em monospace
+- [ ] Em Contas Meta:
+  - [ ] listar contas cadastradas
+  - [ ] mostrar nome interno
+  - [ ] mostrar Ad Account ID
+  - [ ] mostrar Page ID
+  - [ ] mostrar somente final do token
+  - [ ] permitir cadastrar nova conta
+  - [ ] permitir validar conta, se já existir endpoint
+- [ ] Garantir que o token nunca apareça completo após salvo.
+- [ ] Preservar autenticação existente.
+
+Critérios de aceite:
+
+- [ ] Perfil fica claro para configuração inicial do cliente.
+- [ ] Token continua protegido.
+- [ ] Países e idiomas ficam fáceis de gerenciar.
+- [ ] Visual segue o design system.
+- [ ] Aplicação compila.
+
+---
+
+## P33 — Remodelar Fluxo de Campanha
+
+Objetivo:
+Fazer o fluxo REAL parecer o centro operacional do sistema.
+
+Tarefas:
+
+- [ ] Organizar fluxo em etapas:
+  - [ ] 1. Selecionar template
+  - [ ] 2. Selecionar países
+  - [ ] 3. Revisar campanha
+  - [ ] 4. Gerar campanhas `PAUSED`
+  - [ ] 5. Ver resultado
+- [ ] Priorizar modo REAL.
+- [ ] Deixar STUB em área avançada ou secundária.
+- [ ] Usar linguagem operacional para cliente final.
+- [ ] Não expor detalhes técnicos por padrão.
+- [ ] Manter guardrail: campanhas/anúncios reais sempre `PAUSED`.
+- [ ] Após gerar, mostrar status, país e link para detalhes.
+
+Critérios de aceite:
+
+- [ ] Usuário entende o passo a passo.
+- [ ] REAL é o caminho principal.
+- [ ] STUB não aparece como opção principal.
+- [ ] Resultado mostra status `PAUSED`.
+- [ ] Aplicação compila.
+
+---
+
+## P34 — Remodelar ROI e Detalhes da Campanha
+
+Objetivo:
+Deixar ROI e detalhes com visual operacional e menos técnico.
+
+Tarefas:
+
+- [ ] Remodelar ROI operacional com:
+  - [ ] gasto
+  - [ ] receita manual
+  - [ ] lucro
+  - [ ] ROI
+  - [ ] ações seguras
+- [ ] Criar banner de guardrail informando:
+  - [ ] ações reais exigem confirmação
+  - [ ] campanhas reais permanecem `PAUSED`
+- [ ] Remodelar tabela de ROI.
+- [ ] Remodelar Detalhes da Campanha com:
+  - [ ] status
+  - [ ] país
+  - [ ] modo REAL
+  - [ ] Meta Campaign ID
+  - [ ] status Meta
+  - [ ] ações de sincronização
+- [ ] Deixar diagnóstico técnico como botão secundário.
+- [ ] Usar badges para:
+  - [ ] REAL
+  - [ ] PAUSED
+  - [ ] Rascunho
+  - [ ] Erro
+  - [ ] Sincronizado
+
+Critérios de aceite:
+
+- [ ] ROI fica fácil de ler.
+- [ ] Detalhes mostram o essencial.
+- [ ] Informações técnicas ficam organizadas.
+- [ ] Diagnóstico não domina a tela.
+- [ ] Aplicação compila.

@@ -1549,6 +1549,46 @@ export default function Templates() {
                 )}
               </div>
             </div>
+
+            <div className="templatesCard" style={{ paddingBottom: 16 }}>
+              <div className="templatesCardLabel" style={{ marginBottom: 12 }}>
+                Revisão e salvamento
+              </div>
+              <div style={{ display: "grid", gap: 10 }}>
+                <div className="templatesHintBox">
+                  PT-BR é a origem fixa. BR usa o texto original. Para países ≠ BR, gere traduções e revise antes de usar no fluxo.
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>
+                  <div className="card" style={{ padding: 14, background: "var(--surface-2)" }}>
+                    <div style={{ fontWeight: 900, color: "var(--text-secondary)", fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                      Conta Meta
+                    </div>
+                    <div style={{ marginTop: 8, fontWeight: 900 }}>
+                      {selectedMetaAccount?.name || (defaultMetaAccountId ? "Conta padrão do usuário" : "—")}
+                    </div>
+                    <div className="muted" style={{ marginTop: 6, fontWeight: 800, fontSize: 12 }}>
+                      {selectedMetaAccount?.metaAdAccountId ? `Ad Account: ${selectedMetaAccount.metaAdAccountId}` : "Ad Account: —"}
+                      {" • "}
+                      {selectedMetaAccount?.metaPageId ? `Page: ${selectedMetaAccount.metaPageId}` : "Page: —"}
+                    </div>
+                  </div>
+
+                  <div className="card" style={{ padding: 14, background: "var(--surface-2)" }}>
+                    <div style={{ fontWeight: 900, color: "var(--text-secondary)", fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                      Escopo do template
+                    </div>
+                    <div style={{ marginTop: 8, fontWeight: 900 }}>
+                      {uniqueCountryCodes(form.countryCodes).length} país(es) • {AD_KEYS.length} Ads (A–E)
+                    </div>
+                    <div className="muted" style={{ marginTop: 6, fontWeight: 800, fontSize: 12 }}>
+                      Orçamento diário: {Number(form.dailyBudgetCents) ? `${Number(form.dailyBudgetCents)} centavos` : "—"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="templatesFormFooter">
               <div className="templatesFormFooterLabel">{editingId ? "Editando template" : "Novo template"}</div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
