@@ -18,6 +18,9 @@ popd >/dev/null
 echo "[deploy] subir containers (produção)"
 docker compose -f infra/docker-compose.prod.yml up -d --build
 
+echo "[deploy] rodar migrations (produção)"
+bash backend/scripts/migrate.sh
+
 echo "[deploy] configurar nginx (novo server block)"
 if [[ "$(id -u)" -ne 0 ]]; then
   echo "[deploy] aviso: para instalar config do nginx e ajustar UFW, rode como root"
