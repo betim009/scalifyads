@@ -47,9 +47,12 @@ services:
       META_METRICS_SCHEDULER_INTERVAL_MS: ${META_METRICS_SCHEDULER_INTERVAL_MS:-300000}
       META_METRICS_SCHEDULER_CONCURRENCY: ${META_METRICS_SCHEDULER_CONCURRENCY:-2}
       META_METRICS_SCHEDULER_LIMIT: ${META_METRICS_SCHEDULER_LIMIT:-50}
+      LIBRETRANSLATE_URL: ${LIBRETRANSLATE_URL:-http://scalifyads-libretranslate:5000}
     depends_on:
       postgres:
         condition: service_healthy
+    volumes:
+      - scalifyads_uploads:/app/uploads
     ports:
       - "127.0.0.1:3001:3001"
     networks:
@@ -61,3 +64,4 @@ networks:
 
 volumes:
   campaign_builder_pgdata:
+  scalifyads_uploads:
