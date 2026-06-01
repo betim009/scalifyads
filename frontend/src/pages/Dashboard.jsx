@@ -60,12 +60,13 @@ export default function Dashboard() {
       <Header />
       <main className="page">
         <div className="container">
-          <section className="card" style={{ padding: 22 }}>
+          <section className="card" style={{ padding: 22, marginBottom: 36 }}>
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: 22, fontWeight: 900 }}>Entrada operacional</h2>
-                <p className="muted" style={{ marginTop: 8, marginBottom: 0, fontWeight: 750, color: "var(--text-secondary)" }}>
-                  Próximo passo recomendado: abrir o fluxo de campanha e criar tudo como <b>PAUSED</b> no REAL.
+                <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Entrada operacional</h2>
+                <p className="muted" style={{ marginTop: 8, marginBottom: 0, fontWeight: 400, color: "var(--text-secondary)" }}>
+                  Próximo passo recomendado: abrir o fluxo de campanha e criar tudo como{" "}
+                  <span style={{ fontWeight: 500 }}>PAUSED</span> no REAL.
                 </p>
               </div>
               <button type="button" className="pillPrimary" onClick={() => navigate("/campaign-flow")}>
@@ -75,10 +76,10 @@ export default function Dashboard() {
 
             <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>
               <div className="card" style={{ padding: 14, background: "var(--surface-2)" }}>
-                <div style={{ fontWeight: 900, color: "var(--text-secondary)", fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                <div style={{ fontWeight: 500, color: "var(--text-secondary)", fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase" }}>
                   Fluxo recomendado
                 </div>
-                <ol style={{ margin: "10px 0 0", paddingLeft: 18, color: "var(--text)", fontWeight: 750 }}>
+                <ol style={{ margin: "10px 0 0", paddingLeft: 18, color: "var(--text)", fontWeight: 400 }}>
                   <li>Configurar perfil e contas Meta</li>
                   <li>Criar/gerenciar templates</li>
                   <li>Executar no fluxo de campanha</li>
@@ -88,7 +89,7 @@ export default function Dashboard() {
               </div>
 
               <div className="card" style={{ padding: 14, background: "var(--surface-2)" }}>
-                <div style={{ fontWeight: 900, color: "var(--text-secondary)", fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                <div style={{ fontWeight: 500, color: "var(--text-secondary)", fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase" }}>
                   Acessos rápidos
                 </div>
                 <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>

@@ -522,10 +522,10 @@ export default function CampaignFlow() {
   }, [submitting, step, campaign, adSet, creative]);
 
   const steps = [
-    "1. Campanha",
-    "2. AdSet",
-    "3. Criativo",
-    "4. Revisão",
+    "1. Selecionar template",
+    "2. Selecionar países",
+    "3. Revisar campanha",
+    "4. Gerar (PAUSED)",
     "5. Resultado",
   ];
 
@@ -1573,8 +1573,8 @@ export default function CampaignFlow() {
 
   return (
     <PageShell
-      title="Fluxo guiado Meta"
-      subtitle="Crie Campaign → AdSet → Creative → Ad com guardrails de segurança (sem expor token)."
+      title="Fluxo de campanha"
+      subtitle="Crie campanhas e anúncios com guardrails de segurança. No REAL, tudo é criado como PAUSED."
       align="center"
       backFallbackTo="/"
     >
@@ -1582,24 +1582,24 @@ export default function CampaignFlow() {
         <div className="card" style={{ padding: 18, borderColor: "#fde68a", background: "#fffbeb" }}>
           <div style={{ display: "grid", gap: 6 }}>
             <div style={{ fontWeight: 950, color: "#92400e" }}>{pausedWarning}</div>
-            <div style={{ fontWeight: 750, color: "#92400e", fontSize: 13 }}>
-              {modeIsReal
-                ? "Modo REAL: requer backend com token e Page ID configurado (ou informe Page ID aqui)."
-                : "Modo STUB: cria stubs no backend (sem chamadas ao Graph)."}
-            </div>
+	            <div style={{ fontWeight: 750, color: "#92400e", fontSize: 13 }}>
+	              {modeIsReal
+	                ? "Modo REAL: use uma Conta Meta configurada no Perfil. Tudo será criado como PAUSED."
+	                : "Modo de teste (STUB): simula criação para diagnóstico (sem operação real)."}
+	            </div>
             {templatesInfo ? (
               <div style={{ fontWeight: 750, color: "#92400e", fontSize: 13 }}>{templatesInfo}</div>
             ) : null}
-            {operationalCountriesMissing ? (
-              <div style={{ fontWeight: 800, color: "#92400e", fontSize: 13 }}>
-                Aviso: nenhum “País da operação” configurado no Perfil. Configure em `/profile` para operar lote com base segura.
-              </div>
-            ) : null}
-            {countryLanguagesMissing ? (
-              <div style={{ fontWeight: 800, color: "#92400e", fontSize: 13 }}>
-                Aviso: defina o idioma principal por país no `/profile` (P25) para padronizar operação. (Sem tradução automática.)
-              </div>
-            ) : null}
+	            {operationalCountriesMissing ? (
+	              <div style={{ fontWeight: 800, color: "#92400e", fontSize: 13 }}>
+	                Aviso: nenhum “País da operação” configurado no Perfil. Configure no Perfil para operar lote com base segura.
+	              </div>
+	            ) : null}
+	            {countryLanguagesMissing ? (
+	              <div style={{ fontWeight: 800, color: "#92400e", fontSize: 13 }}>
+	                Aviso: defina o idioma principal por país no Perfil para padronizar operação. (Sem tradução automática.)
+	              </div>
+	            ) : null}
           </div>
         </div>
 
@@ -1617,7 +1617,7 @@ export default function CampaignFlow() {
 
         {step === 0 ? (
           <section className="card" style={{ marginTop: 16, padding: 24 }}>
-            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 950 }}>Etapa 1 — Dados da campanha</h2>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 950 }}>Etapa 1 — Selecionar template</h2>
             <div style={{ marginTop: 18, display: "grid", gap: 16 }}>
               <Field label="Atalhos e templates (opcional)" hint="Use para reduzir cliques e preenchimento manual.">
                 <details style={{ border: "1px solid #e5e7eb", borderRadius: 14, padding: 12, background: "#fff" }}>
@@ -1744,7 +1744,7 @@ export default function CampaignFlow() {
                 </details>
               </Field>
 
-              <Field label="Nome" required>
+              <Field label="Nome da campanha" required>
                 <InputLike
                   placeholder="Ex: DEMO • Campaign Builder • BR • 2026-05-26"
                   value={campaign.name}
@@ -1787,7 +1787,7 @@ export default function CampaignFlow() {
                   />
                 </Field>
               </AdvancedDisclosure>
-              <Field label="Objective" required>
+              <Field label="Objetivo" required>
                 <SelectLike
                   value={campaign.objective}
                   onChange={(e) => setCampaign((p) => ({ ...p, objective: e.target.value }))}
@@ -1799,7 +1799,7 @@ export default function CampaignFlow() {
                   ]}
                 />
               </Field>
-              <Field label="Criação em lote" hint="Ative para criar uma estrutura por país selecionado (P20).">
+              <Field label="Criação em lote" hint="Ative para gerar uma estrutura por país (multi-país).">
                 <label style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 850, color: "#111827" }}>
                   <input
                     type="checkbox"
@@ -1916,7 +1916,7 @@ export default function CampaignFlow() {
 
         {step === 1 ? (
           <section className="card" style={{ marginTop: 16, padding: 24 }}>
-            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 950 }}>Etapa 2 — Configuração do AdSet</h2>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 950 }}>Etapa 2 — Selecionar países</h2>
             <div style={{ marginTop: 18, display: "grid", gap: 16 }}>
               <Field label="Nome" required>
                 <InputLike
@@ -1963,7 +1963,7 @@ export default function CampaignFlow() {
 
         {step === 2 ? (
           <section className="card" style={{ marginTop: 16, padding: 24 }}>
-            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 950 }}>Etapa 3 — Criativo</h2>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 950 }}>Etapa 3 — Revisar campanha</h2>
             <div style={{ marginTop: 18, display: "grid", gap: 16 }}>
               <Field label="Creative Template (opcional)" hint="Preenche automaticamente textos/URL/CTA quando disponível.">
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
@@ -2098,7 +2098,7 @@ export default function CampaignFlow() {
 
         {step === 3 ? (
           <section className="card" style={{ marginTop: 16, padding: 24 }}>
-            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 950 }}>Etapa 4 — Revisão</h2>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 950 }}>Etapa 4 — Gerar campanhas (PAUSED)</h2>
             <p style={{ marginTop: 8, marginBottom: 0, color: "#6b7280", fontWeight: 750 }}>
               Revise os dados antes de criar. Nada aqui permite `ACTIVE`.
             </p>
@@ -2494,193 +2494,269 @@ export default function CampaignFlow() {
                 {result.type === "single" ? (
                   <>
                     <div className="card" style={{ padding: 16 }}>
-                      <div style={{ fontWeight: 950, marginBottom: 10 }}>IDs criados</div>
-                      <div style={{ display: "grid", gap: 10 }}>
-                        <SummaryRow label="Modo" value={result.mode || "—"} />
-                        <SummaryRow label="countryCode" value={result.countryCode || "—"} />
-                        <SummaryRow label="generatedCampaignId" value={result.generatedCampaignId ?? "—"} />
-                        <SummaryRow label="metaCampaignId" value={result.metaCampaignId ?? "—"} />
-                        <SummaryRow label="metaAdSetId" value={result.metaAdSetId ?? "—"} />
-                        <SummaryRow label="creativeDraftId" value={result.creativeDraftId ?? "—"} />
-                        <SummaryRow label="metaCreativeId" value={result.metaCreativeId ?? "—"} />
-                        <SummaryRow label="metaAdId" value={result.metaAdId ?? "—"} />
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                        <div style={{ display: "grid", gap: 6 }}>
+                          <div style={{ fontWeight: 950 }}>Resumo</div>
+                          <div className="muted" style={{ fontWeight: 850, fontSize: 12 }}>
+                            {result.mode === "REAL"
+                              ? "Campanha criada em modo REAL com guardrail: tudo permanece PAUSED."
+                              : "Execução em modo de teste (STUB) — sem chamadas ao Graph."}
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-start" }}>
+                          <StatusPill tone="info">{result.mode === "REAL" ? "REAL" : "STUB"}</StatusPill>
+                          {result.mode === "REAL" ? <StatusPill tone="warn">PAUSED</StatusPill> : <StatusPill tone="muted">SIMULADO</StatusPill>}
+                          <StatusPill tone="muted">{result.countryCode || "—"}</StatusPill>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="card" style={{ padding: 16 }}>
-                      <div style={{ fontWeight: 950, marginBottom: 10 }}>Status (quando disponível)</div>
-                      <div style={{ display: "grid", gap: 10 }}>
-                        <SummaryRow label="ad.effective_status" value={result.metaAdEffectiveStatus ?? "—"} />
-                      </div>
-                    </div>
-
-                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                      <button
-                        type="button"
-                        className="pillOutline"
-                        onClick={() =>
-                          openMetaTest({
-                            generatedCampaignId: result.generatedCampaignId,
-                            countryCode: result.countryCode,
-                            mode: result.mode,
-                          })
-                        }
-                      >
-                        Abrir diagnóstico técnico
-                      </button>
-                      <button
-                        type="button"
-                        className="pillOutline"
-                        onClick={() =>
-                          copySummaryToClipboard({
-                            mode: result.mode,
-                            countryCode: result.countryCode,
-                            generatedCampaignId: result.generatedCampaignId ?? null,
-                            metaCampaignId: result.metaCampaignId ?? null,
-                            metaAdSetId: result.metaAdSetId ?? null,
-                            metaCreativeId: result.metaCreativeId ?? null,
-                            metaAdId: result.metaAdId ?? null,
-                            metaAdEffectiveStatus: result.metaAdEffectiveStatus ?? null,
-                            createdAt: result.createdAt,
-                          })
-                        }
-                      >
-                        Copiar resumo (curto)
-                      </button>
-                      <button type="button" className="pillOutline" onClick={() => copySummaryToClipboard(result)}>
-                        Copiar JSON completo
-                      </button>
-                      {result.generatedCampaignId ? (
+                      <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                        {result.generatedCampaignId ? (
+                          <button
+                            type="button"
+                            className="pillPrimary"
+                            onClick={() => navigate(`/campanhas/${result.generatedCampaignId}`)}
+                          >
+                            Ver detalhes
+                          </button>
+                        ) : null}
                         <button
                           type="button"
                           className="pillOutline"
                           onClick={() =>
-                            saveAsCampaignTemplate(result.generatedCampaignId, {
-                              suggestedName: `${campaign.name || "Template"} • ${result.countryCode || ""}`.trim(),
+                            openMetaTest({
+                              generatedCampaignId: result.generatedCampaignId,
+                              countryCode: result.countryCode,
+                              mode: result.mode,
                             })
                           }
                         >
-                          Salvar como template
+                          Abrir diagnóstico técnico
                         </button>
-                      ) : null}
-                      <button type="button" className="pillOutline" onClick={() => setStep(0)}>
-                        Criar outra
-                      </button>
+                        <button type="button" className="pillOutline" onClick={() => setStep(0)}>
+                          Criar outra
+                        </button>
+                      </div>
+
+                      <AdvancedDisclosure summary="Detalhes técnicos (IDs e JSON)" defaultOpen={false}>
+                        <div style={{ display: "grid", gap: 10 }}>
+                          <SummaryRow label="Modo" value={result.mode || "—"} />
+                          <SummaryRow label="País" value={result.countryCode || "—"} />
+                          <SummaryRow label="ID interno" value={result.generatedCampaignId ?? "—"} />
+                          <SummaryRow label="Meta Campaign ID" value={result.metaCampaignId ?? "—"} />
+                          <SummaryRow label="Meta AdSet ID" value={result.metaAdSetId ?? "—"} />
+                          <SummaryRow label="Creative Draft ID" value={result.creativeDraftId ?? "—"} />
+                          <SummaryRow label="Meta Creative ID" value={result.metaCreativeId ?? "—"} />
+                          <SummaryRow label="Meta Ad ID" value={result.metaAdId ?? "—"} />
+                          <SummaryRow label="Ad status (Meta)" value={result.metaAdEffectiveStatus ?? "—"} />
+                        </div>
+                        <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                          <button
+                            type="button"
+                            className="pillOutline"
+                            onClick={() =>
+                              copySummaryToClipboard({
+                                mode: result.mode,
+                                countryCode: result.countryCode,
+                                generatedCampaignId: result.generatedCampaignId ?? null,
+                                metaCampaignId: result.metaCampaignId ?? null,
+                                metaAdSetId: result.metaAdSetId ?? null,
+                                metaCreativeId: result.metaCreativeId ?? null,
+                                metaAdId: result.metaAdId ?? null,
+                                metaAdEffectiveStatus: result.metaAdEffectiveStatus ?? null,
+                                createdAt: result.createdAt,
+                              })
+                            }
+                          >
+                            Copiar resumo (curto)
+                          </button>
+                          <button type="button" className="pillOutline" onClick={() => copySummaryToClipboard(result)}>
+                            Copiar JSON completo
+                          </button>
+                          {result.generatedCampaignId ? (
+                            <button
+                              type="button"
+                              className="pillOutline"
+                              onClick={() =>
+                                saveAsCampaignTemplate(result.generatedCampaignId, {
+                                  suggestedName: `${campaign.name || "Template"} • ${result.countryCode || ""}`.trim(),
+                                })
+                              }
+                            >
+                              Salvar como template
+                            </button>
+                          ) : null}
+                        </div>
+                      </AdvancedDisclosure>
                     </div>
                   </>
                 ) : (
                   <>
                     <div className="card" style={{ padding: 16 }}>
-                      <div style={{ fontWeight: 950, marginBottom: 10 }}>Resumo do lote</div>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                        <div style={{ display: "grid", gap: 6 }}>
+                          <div style={{ fontWeight: 950 }}>Resumo do lote</div>
+                          <div className="muted" style={{ fontWeight: 850, fontSize: 12 }}>
+                            {result.mode === "REAL"
+                              ? "Lote criado em modo REAL com guardrail: tudo permanece PAUSED."
+                              : "Execução em modo de teste (STUB) — sem chamadas ao Graph."}
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-start" }}>
+                          <StatusPill tone="info">{result.mode === "REAL" ? "REAL" : "STUB"}</StatusPill>
+                          {result.mode === "REAL" ? <StatusPill tone="warn">PAUSED</StatusPill> : <StatusPill tone="muted">SIMULADO</StatusPill>}
+                        </div>
+                      </div>
                       <div style={{ display: "grid", gap: 10 }}>
-                        <SummaryRow label="Modo" value={result.mode || "—"} />
-                        <SummaryRow
-                          label="success"
-                          value={String((result.perCountry || []).filter((r) => r.ok).length)}
-                        />
-                        <SummaryRow
-                          label="failed"
-                          value={String((result.perCountry || []).filter((r) => !r.ok).length)}
-                        />
+                        <SummaryRow label="Sucesso" value={String((result.perCountry || []).filter((r) => r.ok).length)} />
+                        <SummaryRow label="Falhas" value={String((result.perCountry || []).filter((r) => !r.ok).length)} />
                       </div>
                       <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                        <button
-                          type="button"
-                          className="pillOutline"
-                          onClick={() =>
-                            copySummaryToClipboard({
-                              mode: result.mode,
-                              success: (result.perCountry || []).filter((r) => r.ok).length,
-                              failed: (result.perCountry || []).filter((r) => !r.ok).length,
-                              perCountry: (result.perCountry || []).map((r) => ({
-                                ok: r.ok,
-                                countryCode: r.countryCode,
-                                generatedCampaignId: r.generatedCampaignId ?? null,
-                                metaCampaignId: r.metaCampaignId ?? null,
-                                metaAdSetId: r.metaAdSetId ?? null,
-                                metaCreativeId: r.metaCreativeId ?? null,
-                                metaAdId: r.metaAdId ?? null,
-                                error: r.ok ? null : r.error ?? "Falha",
-                              })),
-                              createdAt: result.createdAt,
-                            })
-                          }
-                        >
-                          Copiar resumo (curto)
-                        </button>
-                        <button
-                          type="button"
-                          className="pillOutline"
-                          onClick={() => copySummaryToClipboard(result)}
-                        >
-                          Copiar JSON completo
-                        </button>
+                        <AdvancedDisclosure summary="Ações avançadas (copiar JSON)" defaultOpen={false}>
+                          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                            <button
+                              type="button"
+                              className="pillOutline"
+                              onClick={() =>
+                                copySummaryToClipboard({
+                                  mode: result.mode,
+                                  success: (result.perCountry || []).filter((r) => r.ok).length,
+                                  failed: (result.perCountry || []).filter((r) => !r.ok).length,
+                                  perCountry: (result.perCountry || []).map((r) => ({
+                                    ok: r.ok,
+                                    countryCode: r.countryCode,
+                                    generatedCampaignId: r.generatedCampaignId ?? null,
+                                    metaCampaignId: r.metaCampaignId ?? null,
+                                    metaAdSetId: r.metaAdSetId ?? null,
+                                    metaCreativeId: r.ads?.find?.((a) => a?.ok)?.metaCreativeId ?? r.metaCreativeId ?? null,
+                                    metaAdId: r.ads?.find?.((a) => a?.ok)?.metaAdId ?? r.metaAdId ?? null,
+                                    error: r.ok ? null : r.error ?? "Falha",
+                                  })),
+                                  createdAt: result.createdAt,
+                                })
+                              }
+                            >
+                              Copiar resumo (curto)
+                            </button>
+                            <button type="button" className="pillOutline" onClick={() => copySummaryToClipboard(result)}>
+                              Copiar JSON completo
+                            </button>
+                          </div>
+                        </AdvancedDisclosure>
                         <button type="button" className="pillOutline" onClick={() => setStep(0)}>
                           Novo lote
                         </button>
                       </div>
                     </div>
 
-                    <div style={{ display: "grid", gap: 12 }}>
-                      {(result.perCountry || []).map((r) => (
-                        <div
-                          key={r.countryCode}
-                          className="card"
-                          style={{
-                            padding: 16,
-                            borderColor: r.ok ? "#bbf7d0" : "#fecaca",
-                          }}
-                        >
-                          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                            <div style={{ fontWeight: 950 }}>
-                              {r.label || r.countryCode} — {r.ok ? "OK" : "ERRO"}
-                            </div>
-                            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                              {r.generatedCampaignId ? (
-                                <button
-                                  type="button"
-                                  className="pillOutline"
-                                  onClick={() =>
-                                    openMetaTest({
-                                      generatedCampaignId: r.generatedCampaignId,
-                                      countryCode: r.countryCode,
-                                      mode: result.mode,
-                                    })
-                                  }
-                                >
-                                  Abrir diagnóstico técnico
-                                </button>
-                              ) : null}
-                              {r.ok && r.generatedCampaignId ? (
-                                <button
-                                  type="button"
-                                  className="pillOutline"
-                                  onClick={() =>
-                                    saveAsCampaignTemplate(r.generatedCampaignId, {
-                                      suggestedName: `${campaign.name || "Template"} • ${r.countryCode || ""}`.trim(),
-                                    })
-                                  }
-                                >
-                                  Salvar como template
-                                </button>
-                              ) : null}
-                            </div>
-                          </div>
-
-                          {r.ok ? (
-                            <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
-                              <SummaryRow label="generatedCampaignId" value={r.generatedCampaignId ?? "—"} />
-                              <SummaryRow label="metaCampaignId" value={r.metaCampaignId ?? "—"} />
-                              <SummaryRow label="metaAdSetId" value={r.metaAdSetId ?? "—"} />
-                              <SummaryRow label="creativeDraftId" value={r.creativeDraftId ?? "—"} />
-                              <SummaryRow label="metaCreativeId" value={r.metaCreativeId ?? "—"} />
-                              <SummaryRow label="metaAdId" value={r.metaAdId ?? "—"} />
-                            </div>
-                          ) : (
-                            <div style={{ marginTop: 10, fontWeight: 850, color: "#991b1b" }}>
-                              {r.error || "Falha"}
-                            </div>
-                          )}
+	                    <div style={{ display: "grid", gap: 12 }}>
+	                      {(result.perCountry || []).map((r) => (
+	                        <div
+	                          key={r.countryCode}
+	                          className="card"
+	                          style={{
+	                            padding: 16,
+	                            borderColor: r.ok ? "#bbf7d0" : "#fecaca",
+	                          }}
+	                        >
+	                          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+	                            <div style={{ display: "grid", gap: 6 }}>
+	                              <div style={{ fontWeight: 950 }}>{r.label || r.countryCode}</div>
+	                              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+	                                <StatusPill tone={r.ok ? "good" : "bad"}>{r.ok ? "OK" : "ERRO"}</StatusPill>
+	                                <StatusPill tone="muted">{r.countryCode || "—"}</StatusPill>
+	                                <StatusPill tone="info">{result.mode === "REAL" ? "REAL" : "STUB"}</StatusPill>
+	                                {result.mode === "REAL" ? (
+	                                  <StatusPill tone="warn">PAUSED</StatusPill>
+	                                ) : (
+	                                  <StatusPill tone="muted">SIMULADO</StatusPill>
+	                                )}
+	                              </div>
+	                            </div>
+	                            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
+	                              {r.ok && r.generatedCampaignId ? (
+	                                <button
+	                                  type="button"
+	                                  className="pillPrimary"
+	                                  onClick={() => navigate(`/campanhas/${r.generatedCampaignId}`)}
+	                                >
+	                                  Ver detalhes
+	                                </button>
+	                              ) : null}
+	                              {r.ok && r.generatedCampaignId ? (
+	                                <button
+	                                  type="button"
+	                                  className="pillOutline"
+	                                  onClick={() =>
+	                                    saveAsCampaignTemplate(r.generatedCampaignId, {
+	                                      suggestedName: `${campaign.name || "Template"} • ${r.countryCode || ""}`.trim(),
+	                                    })
+	                                  }
+	                                >
+	                                  Salvar como template
+	                                </button>
+	                              ) : null}
+	                            </div>
+	                          </div>
+	
+	                          {r.ok ? (
+	                            <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+	                              <div className="muted" style={{ fontWeight: 850, fontSize: 12 }}>
+	                                Ads criados: {(Array.isArray(r.ads) ? r.ads : []).filter((a) => a?.ok).length}/
+	                                {(Array.isArray(r.ads) ? r.ads : []).length}
+	                              </div>
+	                              <AdvancedDisclosure summary="Detalhes técnicos (IDs e diagnóstico)" defaultOpen={false}>
+	                                <div style={{ display: "grid", gap: 8 }}>
+	                                  <SummaryRow label="ID interno" value={r.generatedCampaignId ?? "—"} />
+	                                  <SummaryRow label="Meta Campaign ID" value={r.metaCampaignId ?? "—"} />
+	                                  <SummaryRow label="Meta AdSet ID" value={r.metaAdSetId ?? "—"} />
+	                                </div>
+	                                {(Array.isArray(r.ads) ? r.ads : []).length ? (
+	                                  <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
+	                                    {(r.ads || []).map((a) => (
+	                                      <div key={a.key} className="card" style={{ padding: 12 }}>
+	                                        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+	                                          <div style={{ fontWeight: 900 }}>Ad {a.key}</div>
+	                                          <StatusPill tone={a.ok ? "good" : "bad"}>{a.ok ? "OK" : "ERRO"}</StatusPill>
+	                                        </div>
+	                                        {a.ok ? (
+	                                          <div style={{ marginTop: 8, display: "grid", gap: 8 }}>
+	                                            <SummaryRow label="Creative Draft ID" value={a.creativeDraftId ?? "—"} />
+	                                            <SummaryRow label="Meta Creative ID" value={a.metaCreativeId ?? "—"} />
+	                                            <SummaryRow label="Meta Ad ID" value={a.metaAdId ?? "—"} />
+	                                            <SummaryRow label="Ad status (Meta)" value={a.metaAdEffectiveStatus ?? "—"} />
+	                                          </div>
+	                                        ) : (
+	                                          <div style={{ marginTop: 8, fontWeight: 850, color: "#991b1b" }}>{a.error || "Falha"}</div>
+	                                        )}
+	                                      </div>
+	                                    ))}
+	                                  </div>
+	                                ) : null}
+	                                {r.generatedCampaignId ? (
+	                                  <div style={{ marginTop: 10 }}>
+	                                    <button
+	                                      type="button"
+	                                      className="pillOutline"
+	                                      onClick={() =>
+	                                        openMetaTest({
+	                                          generatedCampaignId: r.generatedCampaignId,
+	                                          countryCode: r.countryCode,
+	                                          mode: result.mode,
+	                                        })
+	                                      }
+	                                    >
+	                                      Abrir diagnóstico técnico
+	                                    </button>
+	                                  </div>
+	                                ) : null}
+	                              </AdvancedDisclosure>
+	                            </div>
+	                          ) : (
+	                            <div style={{ marginTop: 10, fontWeight: 850, color: "#991b1b" }}>
+	                              {r.error || "Falha"}
+	                            </div>
+	                          )}
                         </div>
                       ))}
                     </div>

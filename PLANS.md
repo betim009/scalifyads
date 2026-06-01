@@ -2460,151 +2460,181 @@ Validação (P30):
 
 ## P31 — Remodelar Templates
 
+Última atualização: [2026-06-01 09:05]
+
 Objetivo:
 Transformar `/templates` em área real de criação, gestão, tradução e uso de templates.
 
 Tarefas:
 
-- [ ] Remodelar `/templates` com duas áreas:
-  - [ ] Criar template
-  - [ ] Meus templates
-- [ ] Na criação de template, organizar os blocos:
-  - [ ] 1. Configuração da campanha
-  - [ ] 2. Configuração do conjunto de anúncios
-  - [ ] 3. Textos dos anúncios
-  - [ ] 4. Vídeos por país
-  - [ ] 5. Revisão e salvamento
-- [ ] Garantir que a criação de template suporte variações de Ads A–E.
-- [ ] Manter origem fixa em PT-BR.
-- [ ] Deixar claro que BR usa texto original.
-- [ ] Preparar fluxo visual para países diferentes de BR receberem tradução.
-- [ ] Em Meus templates, exibir:
-  - [ ] lista lateral
-  - [ ] painel de detalhe
-  - [ ] botão Editar
-  - [ ] botão Excluir
-  - [ ] botão Gerar traduções
-  - [ ] botão Revisar traduções
-  - [ ] botão Usar no fluxo de campanha
-- [ ] Manter ou adaptar chamadas existentes ao backend.
-- [ ] Não criar dados mock fingindo que são reais.
-- [ ] Caso alguma integração ainda não exista, criar placeholder visual honesto e seguro.
+- [x] Remodelar `/templates` com duas áreas:
+  - [x] Criar template
+  - [x] Meus templates
+- [x] Na criação de template, organizar os blocos:
+  - [x] 1. Configuração da campanha
+  - [x] 2. Configuração do conjunto de anúncios
+  - [x] 3. Textos dos anúncios
+  - [x] 4. Vídeos por país
+  - [x] 5. Revisão e salvamento
+- [x] Garantir que a criação de template suporte variações de Ads A–E.
+- [x] Manter origem fixa em PT-BR.
+- [x] Deixar claro que BR usa texto original.
+- [x] Preparar fluxo visual para países diferentes de BR receberem tradução.
+- [x] Em Meus templates, exibir:
+  - [x] lista lateral
+  - [x] painel de detalhe
+  - [x] botão Editar
+  - [x] botão Excluir
+  - [x] botão Gerar traduções
+  - [x] botão Revisar traduções
+  - [x] botão Usar no fluxo de campanha
+- [x] Manter ou adaptar chamadas existentes ao backend.
+- [x] Não criar dados mock fingindo que são reais.
+- [x] Caso alguma integração ainda não exista, criar placeholder visual honesto e seguro.
 
 Critérios de aceite:
 
-- [ ] Cliente entende como criar um template.
-- [ ] Cliente consegue visualizar templates salvos.
-- [ ] Tradução aparece como etapa clara.
-- [ ] Template pode ser usado no fluxo de campanha.
-- [ ] Visual segue o design system.
-- [ ] Aplicação compila.
+- [x] Cliente entende como criar um template.
+- [x] Cliente consegue visualizar templates salvos.
+- [x] Tradução aparece como etapa clara.
+- [x] Template pode ser usado no fluxo de campanha.
+- [x] Visual segue o design system.
+- [x] Aplicação compila.
+
+Validação (P31):
+
+- [2026-06-01 09:05] `cd frontend && npm run build` (OK).
 
 ---
 
 ## P32 — Remodelar Perfil
+
+Última atualização: [2026-06-01 09:07]
 
 Objetivo:
 Organizar credenciais Meta, países e idiomas da operação.
 
 Tarefas:
 
-- [ ] Remodelar Perfil em cards:
-  - [ ] Usuário
-  - [ ] Países e idiomas
-  - [ ] Contas Meta
-- [ ] Em Países e idiomas:
-  - [ ] listar países do usuário
-  - [ ] permitir adicionar país
-  - [ ] permitir remover país
-  - [ ] permitir definir idioma por país
-  - [ ] mostrar código do país em monospace
-- [ ] Em Contas Meta:
-  - [ ] listar contas cadastradas
-  - [ ] mostrar nome interno
-  - [ ] mostrar Ad Account ID
-  - [ ] mostrar Page ID
-  - [ ] mostrar somente final do token
-  - [ ] permitir cadastrar nova conta
-  - [ ] permitir validar conta, se já existir endpoint
-- [ ] Garantir que o token nunca apareça completo após salvo.
-- [ ] Preservar autenticação existente.
+- [x] Remodelar Perfil em cards:
+  - [x] Usuário
+  - [x] Países e idiomas
+  - [x] Contas Meta
+- [x] Em Países e idiomas:
+  - [x] listar países do usuário
+  - [x] permitir adicionar país
+  - [x] permitir remover país
+  - [x] permitir definir idioma por país
+  - [x] mostrar código do país em monospace
+- [x] Em Contas Meta:
+  - [x] listar contas cadastradas
+  - [x] mostrar nome interno
+  - [x] mostrar Ad Account ID
+  - [x] mostrar Page ID
+  - [x] mostrar somente final do token
+  - [x] permitir cadastrar nova conta
+  - [x] permitir validar conta, se já existir endpoint
+- [x] Garantir que o token nunca apareça completo após salvo.
+- [x] Preservar autenticação existente.
 
 Critérios de aceite:
 
-- [ ] Perfil fica claro para configuração inicial do cliente.
-- [ ] Token continua protegido.
-- [ ] Países e idiomas ficam fáceis de gerenciar.
-- [ ] Visual segue o design system.
-- [ ] Aplicação compila.
+- [x] Perfil fica claro para configuração inicial do cliente.
+- [x] Token continua protegido.
+- [x] Países e idiomas ficam fáceis de gerenciar.
+- [x] Visual segue o design system.
+- [x] Aplicação compila.
+
+Validação (P32):
+
+- [2026-06-01 09:07] `cd frontend && npm run build` (OK).
 
 ---
 
 ## P33 — Remodelar Fluxo de Campanha
+
+Última atualização: [2026-06-01 09:15]
 
 Objetivo:
 Fazer o fluxo REAL parecer o centro operacional do sistema.
 
 Tarefas:
 
-- [ ] Organizar fluxo em etapas:
-  - [ ] 1. Selecionar template
-  - [ ] 2. Selecionar países
-  - [ ] 3. Revisar campanha
-  - [ ] 4. Gerar campanhas `PAUSED`
-  - [ ] 5. Ver resultado
-- [ ] Priorizar modo REAL.
-- [ ] Deixar STUB em área avançada ou secundária.
-- [ ] Usar linguagem operacional para cliente final.
-- [ ] Não expor detalhes técnicos por padrão.
-- [ ] Manter guardrail: campanhas/anúncios reais sempre `PAUSED`.
-- [ ] Após gerar, mostrar status, país e link para detalhes.
+- [x] Organizar fluxo em etapas:
+  - [x] 1. Selecionar template
+  - [x] 2. Selecionar países
+  - [x] 3. Revisar campanha
+  - [x] 4. Gerar campanhas `PAUSED`
+  - [x] 5. Ver resultado
+- [x] Priorizar modo REAL.
+- [x] Deixar STUB em área avançada ou secundária.
+- [x] Usar linguagem operacional para cliente final.
+- [x] Não expor detalhes técnicos por padrão (IDs/JSON em “Detalhes técnicos”).
+- [x] Manter guardrail: campanhas/anúncios reais sempre `PAUSED`.
+- [x] Após gerar, mostrar status, país e link para detalhes (`/campanhas/:id`).
 
 Critérios de aceite:
 
-- [ ] Usuário entende o passo a passo.
-- [ ] REAL é o caminho principal.
-- [ ] STUB não aparece como opção principal.
-- [ ] Resultado mostra status `PAUSED`.
-- [ ] Aplicação compila.
+- [x] Usuário entende o passo a passo.
+- [x] REAL é o caminho principal.
+- [x] STUB não aparece como opção principal.
+- [x] Resultado mostra status `PAUSED`.
+- [x] Aplicação compila.
+
+Validação (P33):
+
+- [2026-06-01 09:15] `cd frontend && npm run build` (OK).
 
 ---
 
 ## P34 — Remodelar ROI e Detalhes da Campanha
+
+Última atualização: [2026-06-01 09:21]
 
 Objetivo:
 Deixar ROI e detalhes com visual operacional e menos técnico.
 
 Tarefas:
 
-- [ ] Remodelar ROI operacional com:
-  - [ ] gasto
-  - [ ] receita manual
-  - [ ] lucro
-  - [ ] ROI
-  - [ ] ações seguras
-- [ ] Criar banner de guardrail informando:
-  - [ ] ações reais exigem confirmação
-  - [ ] campanhas reais permanecem `PAUSED`
-- [ ] Remodelar tabela de ROI.
-- [ ] Remodelar Detalhes da Campanha com:
-  - [ ] status
-  - [ ] país
-  - [ ] modo REAL
-  - [ ] Meta Campaign ID
-  - [ ] status Meta
-  - [ ] ações de sincronização
-- [ ] Deixar diagnóstico técnico como botão secundário.
-- [ ] Usar badges para:
-  - [ ] REAL
-  - [ ] PAUSED
-  - [ ] Rascunho
-  - [ ] Erro
-  - [ ] Sincronizado
+- [x] Remodelar ROI operacional com:
+  - [x] gasto
+  - [x] receita manual
+  - [x] lucro
+  - [x] ROI
+  - [x] ações seguras
+- [x] Criar banner de guardrail informando:
+  - [x] ações reais exigem confirmação
+  - [x] campanhas reais permanecem `PAUSED`
+- [x] Remodelar tabela de ROI (IDs e países em monospace).
+- [x] Remodelar Detalhes da Campanha com:
+  - [x] status
+  - [x] país
+  - [x] modo REAL
+  - [x] Meta Campaign ID
+  - [x] status Meta
+  - [x] ações de sincronização
+- [x] Deixar diagnóstico técnico como botão secundário.
+- [x] Usar badges para:
+  - [x] REAL
+  - [x] PAUSED
+  - [x] Rascunho
+  - [x] Erro
+  - [x] Sincronizado
 
 Critérios de aceite:
 
-- [ ] ROI fica fácil de ler.
-- [ ] Detalhes mostram o essencial.
-- [ ] Informações técnicas ficam organizadas.
-- [ ] Diagnóstico não domina a tela.
-- [ ] Aplicação compila.
+- [x] ROI fica fácil de ler.
+- [x] Detalhes mostram o essencial.
+- [x] Informações técnicas ficam organizadas.
+- [x] Diagnóstico não domina a tela.
+- [x] Aplicação compila.
+
+Validação (P34):
+
+- [2026-06-01 09:21] `cd frontend && npm run build` (OK).
+
+Observação (ajuste visual pós-redesign):
+
+- Tipografia global ajustada para usar somente Roboto (sem Syne/JetBrains Mono).
+- Pesos de fonte suavizados para reduzir excesso de negrito.
+- Home: espaçamento entre “Entrada operacional” e cards ampliado.

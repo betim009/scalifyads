@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Roboto:wght@400;500;700;900&family=Syne:wght@600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap");
 
 :root {
   color-scheme: light;
@@ -24,9 +24,9 @@
   --surface-muted: var(--surface-2);
 
   /* Typography */
-  --font-ui: "Roboto", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial;
-  --font-display: "Syne", "Roboto", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-ui: "Roboto", Arial, sans-serif;
+  --font-display: var(--font-ui);
+  --font-mono: var(--font-ui);
 
   --fs-body: 14px;
   --fs-h1: 24px;
@@ -60,6 +60,7 @@ body {
   margin: 0;
   font-family: var(--font-ui);
   font-size: var(--fs-body);
+  font-weight: 400;
   line-height: 1.45;
   color: var(--text);
   background: var(--bg);
@@ -67,20 +68,20 @@ body {
 
 h1 {
   font-size: var(--fs-h1);
-  font-weight: 800;
-  font-family: var(--font-display);
+  font-weight: 700;
+  font-family: var(--font-ui);
 }
 
 h2 {
   font-size: var(--fs-h2);
-  font-weight: 800;
-  font-family: var(--font-display);
+  font-weight: 600;
+  font-family: var(--font-ui);
 }
 
 h3 {
   font-size: var(--fs-h3);
-  font-weight: 700;
-  font-family: var(--font-display);
+  font-weight: 600;
+  font-family: var(--font-ui);
 }
 
 * {
@@ -102,11 +103,18 @@ button {
   font-family: inherit;
 }
 
+input,
+select,
+textarea,
+button {
+  font-family: var(--font-ui);
+}
+
 .mono,
 code,
 pre,
 .monoTag {
-  font-family: var(--font-mono);
+  font-family: inherit;
 }
 
 .monoTag {
@@ -116,7 +124,7 @@ pre,
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--text);
-  font-weight: 700;
+  font-weight: 500;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -130,7 +138,7 @@ pre,
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text-secondary);
-  font-weight: 800;
+  font-weight: 500;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -168,7 +176,7 @@ pre,
   border: 1px solid var(--accent);
   background: var(--accent);
   color: #ffffff;
-  font-weight: 900;
+  font-weight: 600;
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -196,7 +204,7 @@ pre,
   border: 1px solid transparent;
   background: transparent;
   color: var(--text);
-  font-weight: 850;
+  font-weight: 500;
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -215,7 +223,7 @@ pre,
   align-items: center;
   gap: 8px;
   color: var(--muted);
-  font-weight: 700;
+  font-weight: 500;
   font-size: 14px;
 }
 
@@ -263,7 +271,7 @@ pre,
   font-size: 24px;
   line-height: 1.1;
   margin: 0;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.02em;
 }
 
@@ -271,7 +279,7 @@ pre,
   margin: 4px 0 0;
   color: var(--text-secondary);
   font-size: var(--fs-secondary);
-  font-weight: 600;
+  font-weight: 400;
 }
 
 .topNav {
@@ -288,7 +296,7 @@ pre,
   gap: 8px;
   text-decoration: none;
   color: var(--text-secondary);
-  font-weight: 900;
+  font-weight: 500;
   font-size: 13px;
   padding: 8px 10px;
   border-radius: 12px;
@@ -312,7 +320,7 @@ pre,
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 500;
   box-shadow: var(--shadow-sm);
 }
 
@@ -405,7 +413,7 @@ pre,
   padding: 3px 10px;
   border-radius: 999px;
   font-size: 11px;
-  font-weight: 950;
+  font-weight: 600;
   letter-spacing: 0.02em;
   white-space: nowrap;
 }
@@ -616,16 +624,16 @@ pre,
 
 .metricLabel {
   font-size: var(--fs-label);
-  font-weight: 800;
+  font-weight: 500;
   letter-spacing: 0.08em;
   color: var(--text-secondary);
   text-transform: uppercase;
-  font-family: var(--font-display);
+  font-family: var(--font-ui);
 }
 
 .metricValue {
   font-size: 36px;
-  font-weight: 900;
+  font-weight: 700;
   letter-spacing: -0.03em;
   margin-top: 8px;
 }
@@ -668,7 +676,7 @@ pre,
 
 .actionTitle {
   font-size: 22px;
-  font-weight: 800;
+  font-weight: 600;
   margin: 0;
   letter-spacing: -0.03em;
 }
@@ -1030,7 +1038,7 @@ pre,
   border-radius: 14px;
   border: 1px solid var(--border);
   background: var(--surface);
-  font-weight: 900;
+  font-weight: 500;
   color: var(--text-secondary);
   display: inline-flex;
   align-items: center;
@@ -1051,9 +1059,9 @@ pre,
   padding: 16px 14px;
   color: var(--text-secondary);
   font-size: var(--fs-label);
-  font-weight: 900;
+  font-weight: 500;
   border-bottom: 1px solid var(--border);
-  font-family: var(--font-display);
+  font-family: var(--font-ui);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -1062,7 +1070,7 @@ pre,
   padding: 18px 14px;
   border-bottom: 1px solid var(--border);
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 400;
   color: var(--text);
 }
 
@@ -1205,7 +1213,7 @@ pre,
   border-radius: 16px;
   background: #eff6ff;
   color: #1e40af;
-  font-weight: 900;
+  font-weight: 600;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1219,7 +1227,7 @@ pre,
   align-items: center;
   gap: 14px;
   color: #6b7280;
-  font-weight: 700;
+  font-weight: 400;
   font-size: 14px;
 }
 
@@ -1231,19 +1239,19 @@ pre,
   color: #2563eb;
   display: grid;
   place-items: center;
-  font-weight: 900;
+  font-weight: 600;
 }
 
 .otherRowTitle {
   margin: 0;
   font-size: 15px;
-  font-weight: 900;
+  font-weight: 600;
 }
 
 .otherRowDesc {
   margin: 8px 0 0;
   color: var(--muted);
-  font-weight: 700;
+  font-weight: 400;
   font-size: var(--fs-secondary);
 }
 
@@ -1253,7 +1261,7 @@ pre,
   border-radius: 999px;
   background: #dcfce7;
   color: #166534;
-  font-weight: 900;
+  font-weight: 600;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1271,7 +1279,7 @@ pre,
 
 .sectionTitle {
   font-size: 18px;
-  font-weight: 900;
+  font-weight: 700;
   margin: 0;
   letter-spacing: -0.02em;
 }

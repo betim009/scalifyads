@@ -318,7 +318,7 @@ export default function Profile() {
                     Abrir fluxo de campanha
                   </button>
                   <button type="button" className="pillOutline" onClick={() => navigate("/roi-operacional")}>
-                    Abrir /roi-operacional
+                    Abrir ROI operacional
                   </button>
                   <button type="button" className="pillOutline" onClick={() => navigate("/meta-test")}>
                     Abrir diagnóstico técnico
@@ -386,7 +386,7 @@ export default function Profile() {
                             className="card"
                             style={{ padding: 12, display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", alignItems: "center" }}
                           >
-                            <div style={{ fontWeight: 950 }}>{code}</div>
+                            <span className="monoTag">{code}</span>
                             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
                               <select
                                 value={languageByCountry[code] ?? ""}
@@ -476,7 +476,9 @@ export default function Profile() {
                               ) : null}
                             </div>
                             <div className="muted" style={{ marginTop: 6, fontWeight: 800 }}>
-                              Ad Account: <b>{acc.metaAdAccountId || "—"}</b> • Page: <b>{acc.metaPageId || "—"}</b>
+                              Ad Account:{" "}
+                              <span className="monoTag">{acc.metaAdAccountId || "—"}</span> • Page:{" "}
+                              <span className="monoTag">{acc.metaPageId || "—"}</span>
                               {acc.metaInstagramActorId ? <> • IG Actor: <b>{acc.metaInstagramActorId}</b></> : null}
                             </div>
                             <div className="muted" style={{ marginTop: 6, fontWeight: 800, fontSize: 12 }}>

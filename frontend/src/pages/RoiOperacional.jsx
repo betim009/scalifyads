@@ -5,6 +5,7 @@ import { getFinanceRoiOperational, setFinanceRevenue } from "../services/finance
 import { pauseMetaCampaign } from "../services/metaCampaigns.js";
 import { updateMetaAdSetBudget } from "../services/metaAdSets.js";
 import { createOpsLogs } from "../services/opsLogs.js";
+import StatusPill from "../components/StatusPill.jsx";
 
 function formatCurrencyBRLFromCents(cents) {
   const value = (Number(cents) || 0) / 100;
@@ -281,13 +282,22 @@ export default function RoiOperacional() {
 
   return (
     <PageShell
-      title="ROI operacional (mínimo)"
-      subtitle="Gasto (Meta) + receita manual → lucro/prejuízo e ações seguras (PAUSED)."
+      title="ROI operacional"
+      subtitle="Gasto (Meta) + receita manual → lucro/prejuízo e ações seguras."
       backFallbackTo="/"
     >
       <div className="card" style={{ padding: 16, borderColor: "#fde68a", background: "#fffbeb" }}>
-        <div style={{ fontWeight: 950, color: "#92400e" }}>
-          Guardrails: nunca ACTIVE • ações exigem confirmação • toda ação REAL deve ser segura.
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ display: "grid", gap: 6 }}>
+            <div style={{ fontWeight: 950, color: "#92400e" }}>Segurança operacional</div>
+            <div style={{ fontWeight: 800, color: "#92400e", fontSize: 13 }}>
+              Ações reais exigem confirmação. Nunca colocar campanhas/anúncios em ACTIVE.
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-start" }}>
+            <StatusPill tone="warn">REAL = PAUSED</StatusPill>
+            <StatusPill tone="muted">Nunca ACTIVE</StatusPill>
+          </div>
         </div>
       </div>
 
@@ -376,15 +386,15 @@ export default function RoiOperacional() {
                         background: isNegative ? "#fff1f2" : "transparent",
                       }}
                     >
-                      <td style={{ fontWeight: 900 }}>
-                        {r.campaign_name}
-                        <div className="muted" style={{ fontWeight: 800, fontSize: 12, marginTop: 4 }}>
-                          {r.generated_campaign_id}
-                        </div>
-                      </td>
-                      <td className="muted" style={{ fontWeight: 900 }}>
-                        {r.country_code}
-                      </td>
+	                      <td style={{ fontWeight: 900 }}>
+	                        {r.campaign_name}
+	                        <div style={{ marginTop: 6 }}>
+	                          <span className="monoTag">{r.generated_campaign_id}</span>
+	                        </div>
+	                      </td>
+	                      <td>
+	                        <span className="monoTag">{r.country_code}</span>
+	                      </td>
                       <td className="muted" style={{ fontWeight: 900 }}>
                         {formatCurrencyBRLFromCents(r.spend_cents)}
                       </td>
@@ -422,14 +432,14 @@ export default function RoiOperacional() {
                       <td style={{ fontWeight: 950 }}>{formatPercentOrDash(r.roi_percent)}</td>
                       <td>
                         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                          <button
-                            type="button"
-                            className="pillOutline"
-                            disabled={busy}
-                            onClick={() => openMetaTest({ generatedCampaignId: r.generated_campaign_id })}
-                          >
-                            Diagnóstico técnico
-                          </button>
+	                          <button
+	                            type="button"
+	                            className="pillOutline"
+	                            disabled={busy}
+	                            onClick={() => openMetaTest({ generatedCampaignId: r.generated_campaign_id })}
+	                          >
+	                            Diagnóstico
+	                          </button>
                           <button
                             type="button"
                             className="pillOutline"
