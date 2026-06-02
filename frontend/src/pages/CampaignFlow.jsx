@@ -21,6 +21,7 @@ import {
 import { listCreativeTemplates } from "../services/creativeTemplates.js";
 import { listCreativeAssets, uploadCreativeAsset } from "../services/creativeAssets.js";
 import { listMetaAccounts } from "../services/metaAccounts.js";
+import { formatBrlFromCents, formatBrlInputFromCents, parseBrlToCents } from "../utils/brlMoney.js";
 
 const DEFAULTS = {
   campaign: {
@@ -34,6 +35,7 @@ const DEFAULTS = {
   adSet: {
     name: "AdSet • BR",
     dailyBudgetCents: 1000,
+    dailyBudgetBrl: formatBrlInputFromCents(1000),
     billingEvent: "IMPRESSIONS",
     optimizationGoal: "LINK_CLICKS",
   },
@@ -1746,7 +1748,7 @@ export default function CampaignFlow() {
 
               <Field label="Nome da campanha" required>
                 <InputLike
-                  placeholder="Ex: DEMO • Campaign Builder • BR • 2026-05-26"
+                  placeholder="Ex: DEMO • ScalifyAds • BR • 2026-05-26"
                   value={campaign.name}
                   onChange={(e) => setCampaign((p) => ({ ...p, name: e.target.value }))}
                   disabled={submitting}
@@ -1926,12 +1928,16 @@ export default function CampaignFlow() {
                   disabled={submitting}
                 />
               </Field>
-              <Field label="Daily budget (centavos)" required hint="Ex.: 1000 = R$ 10,00">
+              <Field label="Orçamento diário (R$)" required hint="Digite o valor em reais. Ex.: 10 para R$ 10,00.">
                 <InputLike
-                  type="number"
-                  placeholder="1000"
-                  value={String(adSet.dailyBudgetCents)}
-                  onChange={(e) => setAdSet((p) => ({ ...p, dailyBudgetCents: Number(e.target.value || 0) }))}
+                  inputMode="decimal"
+                  placeholder="10"
+                  value={String(adSet.dailyBudgetBrl ?? formatBrlInputFromCents(adSet.dailyBudgetCents))}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    const cents = parseBrlToCents(raw);
+                    setAdSet((p) => ({ ...p, dailyBudgetBrl: raw, dailyBudgetCents: cents ?? 0 }));
+                  }}
                   disabled={submitting}
                 />
               </Field>
@@ -2137,7 +2143,10 @@ export default function CampaignFlow() {
                 <div style={{ fontWeight: 950, marginBottom: 10 }}>AdSet</div>
                 <div style={{ display: "grid", gap: 10 }}>
                   <SummaryRow label="Nome" value={adSet.name || "—"} />
-                  <SummaryRow label="Orçamento diário (centavos)" value={String(adSet.dailyBudgetCents)} />
+                  <SummaryRow
+                    label="Orçamento diário (R$)"
+                    value={Number(adSet.dailyBudgetCents) ? formatBrlFromCents(adSet.dailyBudgetCents) : "—"}
+                  />
                   <SummaryRow label="Cobrança" value={adSet.billingEvent || "—"} />
                   <SummaryRow label="Otimização" value={adSet.optimizationGoal || "—"} />
                 </div>

@@ -26,7 +26,7 @@ export default function Logout() {
   }, [navigate]);
 
   return (
-    <PageShell title="Saindo..." subtitle="Encerrando sua sessão" align="center" backFallbackTo="/">
+    <PageShell title="Saindo..." subtitle="Encerrando sua sessão" align="center" showHeader={false} backFallbackTo="/">
       {error ? (
         <div className="card" style={{ padding: 18, borderColor: "#fecaca", color: "#991b1b" }}>
           <div style={{ fontWeight: 900 }}>Erro</div>

@@ -15,6 +15,7 @@ import { getAuthMe } from "../services/auth.js";
 import { generateCreativeAssetThumbnail, listCreativeAssets, uploadCreativeAsset } from "../services/creativeAssets.js";
 import { getBackendBaseUrl } from "../services/http.js";
 import { listMetaAccounts } from "../services/metaAccounts.js";
+import { formatBrlFromCents, formatBrlInputFromCents, parseBrlToCents } from "../utils/brlMoney.js";
 
 const STORAGE_LAST_EXECUTION_KEY = "campaignFlow:lastExecution:v1";
 const TAB_CREATE = "create";
@@ -367,6 +368,7 @@ export default function Templates() {
     objective: "OUTCOME_TRAFFIC",
     countryCodes: "BR",
     dailyBudgetCents: 1000,
+    dailyBudgetBrl: formatBrlInputFromCents(1000),
     billingEvent: "IMPRESSIONS",
     optimizationGoal: "LINK_CLICKS",
     destinationUrl: "",
@@ -506,6 +508,7 @@ export default function Templates() {
       objective: "OUTCOME_TRAFFIC",
       countryCodes: useProfileCountries && profileCountryCodes.length ? profileCountryCodes.join(",") : "BR",
       dailyBudgetCents: 1000,
+      dailyBudgetBrl: formatBrlInputFromCents(1000),
       billingEvent: "IMPRESSIONS",
       optimizationGoal: "LINK_CLICKS",
       destinationUrl: "",
@@ -518,6 +521,7 @@ export default function Templates() {
   function fillFormFromTemplate(tpl) {
     const payload = tpl?.payload && typeof tpl.payload === "object" ? tpl.payload : {};
     const metaAccountId = normalizeNonEmptyString(payload?.metaAccountId) || normalizeNonEmptyString(payload?.meta_account_id) || "";
+    const cents = Number(payload.dailyBudgetCents ?? 1000) || 1000;
     setEditingId(String(tpl?.id || ""));
     setEditingTranslationsByCountry(getTranslationsByCountryFromPayload(payload));
     setForm({
@@ -525,7 +529,8 @@ export default function Templates() {
       metaAccountId: metaAccountId || defaultMetaAccountId || "",
       objective: payload.objective ?? "OUTCOME_TRAFFIC",
       countryCodes: Array.isArray(payload.countryCodes) ? payload.countryCodes.join(",") : "BR",
-      dailyBudgetCents: payload.dailyBudgetCents ?? 1000,
+      dailyBudgetCents: cents,
+      dailyBudgetBrl: formatBrlInputFromCents(cents),
       billingEvent: payload.billingEvent ?? "IMPRESSIONS",
       optimizationGoal: payload.optimizationGoal ?? "LINK_CLICKS",
       destinationUrl: payload.destinationUrl ?? "",
@@ -1126,12 +1131,19 @@ export default function Templates() {
                   AdSet
                 </div>
                 <div style={{ display: "grid", gap: 12 }}>
-                  <Field label="Orçamento diário" hint="Valor em centavos (ex.: 1000 = R$10,00).">
+                  <Field
+                    label="Orçamento diário (R$)"
+                    hint="Digite o valor em reais. Ex.: 10 para R$ 10,00."
+                  >
                     <InputLike
-                      type="number"
-                      value={String(form.dailyBudgetCents)}
-                      onChange={(e) => setForm((p) => ({ ...p, dailyBudgetCents: Number(e.target.value || 0) }))}
-                      placeholder="1000"
+                      inputMode="decimal"
+                      value={String(form.dailyBudgetBrl ?? "")}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        const cents = parseBrlToCents(raw);
+                        setForm((p) => ({ ...p, dailyBudgetBrl: raw, dailyBudgetCents: cents ?? 0 }));
+                      }}
+                      placeholder="10"
                     />
                   </Field>
                   <Field label="Tipo de cobrança">
@@ -1582,7 +1594,7 @@ export default function Templates() {
                       {uniqueCountryCodes(form.countryCodes).length} país(es) • {AD_KEYS.length} Ads (A–E)
                     </div>
                     <div className="muted" style={{ marginTop: 6, fontWeight: 800, fontSize: 12 }}>
-                      Orçamento diário: {Number(form.dailyBudgetCents) ? `${Number(form.dailyBudgetCents)} centavos` : "—"}
+                      Orçamento diário: {Number(form.dailyBudgetCents) ? formatBrlFromCents(form.dailyBudgetCents) : "—"}
                     </div>
                   </div>
                 </div>
@@ -1773,9 +1785,11 @@ export default function Templates() {
                         <div className="templatesDetailCol templatesDetailColAlt">
                           <div className="templatesColTitle">AdSet</div>
                           <div className="templatesKv">
-                            <div className="templatesK">Orçamento diário</div>
+                            <div className="templatesK">Orçamento diário (R$)</div>
                             <div className="templatesV">
-                              {payload.dailyBudgetCents !== null && payload.dailyBudgetCents !== undefined ? `${payload.dailyBudgetCents} centavos` : "—"}
+                              {payload.dailyBudgetCents !== null && payload.dailyBudgetCents !== undefined
+                                ? formatBrlFromCents(payload.dailyBudgetCents)
+                                : "—"}
                             </div>
                           </div>
                           <div className="templatesKv">

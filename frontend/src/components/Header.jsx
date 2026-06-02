@@ -29,15 +29,15 @@ export default function Header() {
     <header className="appHeader">
       <div className="container">
         <div className="appHeaderInner">
-          <div className="brand">
+          <NavLink to="/" className="brand" style={{ textDecoration: "none", color: "inherit" }} aria-label="Ir para Home">
             <div className="logoBox" aria-hidden="true">
               <PublicIcon fontSize="medium" style={{ color: "#ffffff" }} />
             </div>
             <div>
-              <h1 className="brandTitle">Campaign Builder</h1>
+              <h1 className="brandTitle">ScalifyAds</h1>
               <p className="brandSubtitle">Automação global de campanhas</p>
             </div>
-          </div>
+          </NavLink>
 
           <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", justifyContent: "flex-end" }}>
             <nav className="topNav" aria-label="Navegação principal">

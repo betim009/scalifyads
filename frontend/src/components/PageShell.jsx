@@ -1,8 +1,11 @@
+import Header from "./Header.jsx";
 import BackLink from "./BackLink.jsx";
 
 export default function PageShell({
   title,
   subtitle,
+  showHeader = true,
+  showBack = false,
   backLabel = "Voltar",
   backFallbackTo = "/",
   headerRight = null,
@@ -13,9 +16,10 @@ export default function PageShell({
 }) {
   return (
     <>
+      {showHeader ? <Header /> : null}
       <main style={{ background: "transparent" }}>
         <div className="container" style={{ paddingTop: 16 }}>
-          <BackLink fallbackTo={backFallbackTo} label={backLabel} />
+          {showBack ? <BackLink fallbackTo={backFallbackTo} label={backLabel} /> : null}
 
           <div
             style={{

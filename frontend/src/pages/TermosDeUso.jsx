@@ -14,13 +14,13 @@ export default function TermosDeUso() {
 
           <h2>1) Aceite</h2>
           <p>
-            Ao acessar e utilizar o Campaign Builder, você concorda com estes
+            Ao acessar e utilizar o ScalifyAds, você concorda com estes
             Termos. Se não concordar, não utilize o serviço.
           </p>
 
-          <h2>2) O que o Campaign Builder faz</h2>
+          <h2>2) O que o ScalifyAds faz</h2>
           <p>
-            O Campaign Builder é uma ferramenta operacional de apoio à criação,
+            O ScalifyAds é uma ferramenta operacional de apoio à criação,
             gestão e acompanhamento de campanhas. Ele pode integrar-se a serviços
             de terceiros (como a Meta) para executar ações e/ou consultar dados
             conforme permissões concedidas.
@@ -45,7 +45,7 @@ export default function TermosDeUso() {
           <h2>4) Integrações externas (Meta e outros)</h2>
           <p>
             O funcionamento de integrações depende de disponibilidade, regras,
-            limites e permissões dos provedores externos. O Campaign Builder não
+            limites e permissões dos provedores externos. O ScalifyAds não
             garante disponibilidade contínua de APIs de terceiros.
           </p>
 
@@ -76,4 +76,3 @@ export default function TermosDeUso() {
     </>
   );
 }
-

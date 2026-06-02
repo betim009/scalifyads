@@ -1,4 +1,4 @@
-import BackLink from "../components/BackLink.jsx";
+import Header from "../components/Header.jsx";
 import RoiLineChart from "../components/RoiLineChart.jsx";
 import { useEffect, useMemo, useState } from "react";
 import { getFinanceMonthly, toFinanceMonthlyViewModel } from "../services/finance.js";
@@ -80,18 +80,17 @@ export default function Mensal() {
 
   return (
     <>
+      <Header />
       <main style={{ background: "#ffffff" }}>
         <div className="container" style={{ paddingTop: 24 }}>
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              justifyContent: "space-between",
+              justifyContent: "flex-end",
               gap: 16,
             }}
           >
-            <BackLink fallbackTo="/" />
-
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <div style={{ position: "relative" }}>
                 <button

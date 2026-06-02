@@ -14,7 +14,7 @@ export default function PoliticaPrivacidade() {
 
           <h2>1) Sobre este documento</h2>
           <p>
-            Esta Política descreve como o Campaign Builder trata dados ao oferecer
+            Esta Política descreve como o ScalifyAds trata dados ao oferecer
             uma interface operacional para criação, gestão e acompanhamento de
             campanhas, incluindo integrações com a Meta (Facebook/Instagram) de
             forma autorizada.
@@ -40,7 +40,7 @@ export default function PoliticaPrivacidade() {
 
           <h2>3) Uso de dados da Meta</h2>
           <p>
-            Quando habilitado, o Campaign Builder pode consultar e/ou criar
+            Quando habilitado, o ScalifyAds pode consultar e/ou criar
             entidades de campanha via API da Meta (de acordo com permissões
             concedidas). Os dados são usados exclusivamente para viabilizar as
             funcionalidades operacionais do produto e fornecer evidência de
@@ -84,4 +84,3 @@ export default function PoliticaPrivacidade() {
     </>
   );
 }
-

@@ -311,9 +311,6 @@ export default function Profile() {
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                  <button type="button" className="pillOutline" onClick={() => navigate("/")}>
-                    Voltar para Home
-                  </button>
                   <button type="button" className="pillOutline" onClick={() => navigate("/campaign-flow")}>
                     Abrir fluxo de campanha
                   </button>

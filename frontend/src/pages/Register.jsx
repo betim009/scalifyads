@@ -15,7 +15,7 @@ export default function Register() {
   const nextPath = useMemo(() => {
     const params = new URLSearchParams(location.search || "");
     const raw = normalizeNonEmptyString(params.get("next"));
-    return raw || "/campaign-flow";
+    return raw || "/";
   }, [location.search]);
 
   const [username, setUsername] = useState("");
@@ -39,7 +39,7 @@ export default function Register() {
   }
 
   return (
-    <PageShell title="Register" subtitle="Criar usuário interno (simples)" align="center" backFallbackTo="/login">
+    <PageShell title="Register" subtitle="Criar usuário interno (simples)" align="center" showHeader={false} showBack backFallbackTo="/login">
       <div style={{ maxWidth: 520, margin: "0 auto" }}>
         <section className="card" style={{ padding: 22 }}>
           <form onSubmit={onSubmit} style={{ display: "grid", gap: 14 }}>
@@ -103,4 +103,3 @@ export default function Register() {
     </PageShell>
   );
 }
-

@@ -9,7 +9,8 @@ const countries = [
   { code: 'MX', name: 'México', languageCode: 'ES' },
   { code: 'AE', name: 'Emirados', languageCode: 'AR' },
   { code: 'FR', name: 'França', languageCode: 'FR' },
-  { code: 'ES', name: 'Espanha', languageCode: 'ES' }
+  { code: 'ES', name: 'Espanha', languageCode: 'ES' },
+  { code: 'DE', name: 'Alemanha', languageCode: 'de' }
 ]
 
 const objectives = [

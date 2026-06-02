@@ -15,7 +15,7 @@ export default function Login() {
   const nextPath = useMemo(() => {
     const params = new URLSearchParams(location.search || "");
     const raw = normalizeNonEmptyString(params.get("next"));
-    return raw || "/campaign-flow";
+    return raw || "/";
   }, [location.search]);
 
   const [username, setUsername] = useState("beto");
@@ -56,6 +56,8 @@ export default function Login() {
       title="Login"
       subtitle="Acesso interno controlado"
       align="center"
+      showHeader={false}
+      showBack
       backFallbackTo="/"
     >
       <div style={{ maxWidth: 520, margin: "0 auto" }}>
@@ -122,4 +124,3 @@ export default function Login() {
     </PageShell>
   );
 }
-

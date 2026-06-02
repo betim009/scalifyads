@@ -4,6 +4,6 @@ export const mockCountries = [
   { name: "México", code: "MX", lang: "ES", flag: "🇲🇽" },
   { name: "Emirados", code: "AE", lang: "AR", flag: "🇦🇪" },
   { name: "França", code: "FR", lang: "FR", flag: "🇫🇷" },
-  { name: "Espanha", code: "ES", lang: "ES", flag: "🇪🇸" }
+  { name: "Espanha", code: "ES", lang: "ES", flag: "🇪🇸" },
+  { name: "Alemanha", code: "DE", lang: "de", flag: "🇩🇪" }
 ];
-

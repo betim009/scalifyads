@@ -2638,3 +2638,215 @@ Observação (ajuste visual pós-redesign):
 - Tipografia global ajustada para usar somente Roboto (sem Syne/JetBrains Mono).
 - Pesos de fonte suavizados para reduzir excesso de negrito.
 - Home: espaçamento entre “Entrada operacional” e cards ampliado.
+
+---
+
+## P36 — Navegação global e remoção de botões Voltar
+
+Última atualização: [2026-06-01 15:52]
+
+Objetivo:
+Padronizar a navegação do sistema usando a navbar/header global em todas as páginas autenticadas principais.
+
+Tarefas:
+
+- [x] Auditar páginas do frontend em busca de botões “Voltar”, “← Voltar” ou equivalentes.
+- [x] Remover botões de voltar das páginas principais.
+- [x] Garantir que a navegação principal seja feita pela navbar/header global.
+- [x] Garantir que a mesma navbar da Home apareça nas páginas autenticadas principais.
+- [x] Evitar headers duplicados.
+- [x] Preservar rotas existentes.
+- [x] Rodar build do frontend.
+
+Critérios de aceite:
+
+- [x] Nenhuma página principal depende de botão Voltar.
+- [x] Navbar global aparece nas páginas autenticadas principais.
+- [x] Home continua funcionando.
+- [x] Nenhuma rota foi removida.
+- [x] Build passa.
+
+Validação (P36):
+
+- [2026-06-01 15:52] `cd frontend && npm run build` (OK).
+
+Arquivos alterados (P36):
+
+- `frontend/src/components/PageShell.jsx`
+- `frontend/src/components/Header.jsx`
+- `frontend/src/pages/Mensal.jsx`
+- `frontend/src/pages/Profile.jsx`
+- `frontend/src/pages/Login.jsx`
+- `frontend/src/pages/Register.jsx`
+- `frontend/src/pages/Logout.jsx`
+
+---
+
+## P37 — Correção do redirecionamento pós-login
+
+Última atualização: [2026-06-01 15:52]
+
+Objetivo:
+Corrigir o fluxo para que o usuário vá para “/” após login.
+
+Tarefas:
+
+- [x] Auditar o fluxo de login.
+- [x] Identificar por que o login redireciona para “/campaign-flow”.
+- [x] Corrigir o redirecionamento para “/”.
+- [x] Garantir que “/” seja a entrada operacional.
+- [x] Rodar build.
+
+Critérios de aceite:
+
+- [x] Login redireciona para “/”.
+- [x] Não redireciona automaticamente para “/campaign-flow”.
+- [x] Home é a entrada principal.
+- [x] Build passa.
+
+Validação (P37):
+
+- [2026-06-01 15:52] `cd frontend && npm run build` (OK).
+
+Arquivos alterados (P37):
+
+- `frontend/src/pages/Login.jsx`
+- `frontend/src/pages/Register.jsx`
+
+---
+
+## P38 — Branding visual ScalifyAds
+
+Última atualização: [2026-06-01 15:53]
+
+Objetivo:
+Substituir o branding antigo pelo nome atual ScalifyAds.
+
+Tarefas:
+
+- [x] Procurar ocorrências visíveis de:
+  - [x] Campaign Builder
+  - [x] CampaignBuilder
+  - [x] Campaing Builder
+  - [x] CampaingBuilder
+- [x] Substituir textos visíveis por: ScalifyAds
+- [x] Atualizar títulos, labels e cabeçalhos visíveis.
+- [x] Não renomear arquivos, tabelas, endpoints ou identificadores técnicos.
+- [x] Rodar build.
+
+Critérios de aceite:
+
+- [x] UI usa ScalifyAds.
+- [x] Branding antigo não aparece mais na interface.
+- [x] Nenhuma lógica foi quebrada.
+- [x] Build passa.
+
+Validação (P38):
+
+- [2026-06-01 15:53] `cd frontend && npm run build` (OK).
+
+Arquivos alterados (P38):
+
+- `frontend/src/components/Header.jsx`
+- `frontend/index.html`
+- `frontend/src/pages/PoliticaPrivacidade.jsx`
+- `frontend/src/pages/TermosDeUso.jsx`
+- `frontend/src/pages/CampaignFlow.jsx`
+
+---
+
+## P39 — UX de orçamento diário em reais
+
+Última atualização: [2026-06-01 15:56]
+
+Objetivo:
+Permitir que o usuário trabalhe com reais na interface e manter centavos internamente.
+
+Tarefas:
+
+- [x] Auditar campos de orçamento diário.
+- [x] Identificar uso de `dailyBudgetCents`.
+- [x] Exibir valores em reais.
+- [x] Utilizar label: Orçamento diário (R$)
+- [x] Exibir ajuda: Digite o valor em reais. Ex.: 10 para R$ 10,00.
+- [x] Aceitar: 10 / 10,50 / 10.50
+- [x] Converter para centavos apenas antes do envio.
+- [x] Manter payload usando `dailyBudgetCents`.
+- [x] Exibir valores recebidos do backend em reais.
+- [x] Aplicar em:
+  - [x] /templates
+  - [x] /campaign-flow
+  - [x] outras telas relevantes
+- [x] Rodar build.
+
+Critérios de aceite:
+
+- [x] Usuário digita 10 para representar R$ 10,00.
+- [x] Sistema envia 1000 em `dailyBudgetCents`.
+- [x] Usuário não precisa entender centavos.
+- [x] Build passa.
+
+Validação (P39):
+
+- [2026-06-01 15:56] `cd frontend && npm run build` (OK).
+
+Arquivos alterados (P39):
+
+- `frontend/src/utils/brlMoney.js`
+- `frontend/src/pages/Templates.jsx`
+- `frontend/src/pages/CampaignFlow.jsx`
+- `frontend/src/pages/RoiOperacional.jsx`
+
+---
+
+## P40 — Países operacionais e suporte à Alemanha
+
+Última atualização: [2026-06-01 16:01]
+
+Objetivo:
+Adicionar Alemanha ao fluxo operacional e estruturar melhor o catálogo de países suportados.
+
+Tarefas:
+
+- [x] Auditar implementação atual de countries.
+- [x] Identificar onde os países são cadastrados.
+- [x] Adicionar Alemanha:
+  - [x] code: DE
+  - [x] name: Alemanha
+  - [x] languageCode: de
+  - [x] languageName: Alemão
+- [x] Garantir retorno correto em /api/countries.
+- [x] Garantir funcionamento em /profile.
+- [x] Garantir funcionamento em /templates.
+- [x] Garantir funcionamento em /campaign-flow.
+- [x] Garantir funcionamento na geração de traduções.
+- [x] Garantir que traduções para DE usem languageCode=de.
+- [x] Revisar estrutura atual de países.
+- [x] Preparar base para inclusão futura de novos países sem duplicação desnecessária.
+- [x] Rodar build.
+
+Critérios de aceite:
+
+- [x] DE aparece na lista de países.
+- [x] Usuário consegue selecionar Alemanha.
+- [x] Traduções para alemão funcionam.
+- [x] Fluxo operacional continua funcionando.
+- [x] Build passa.
+
+Validação (P40):
+
+- [2026-06-01 16:01] `cd frontend && npm run build` (OK).
+
+Implementação (P40):
+
+- Catálogo de países (seed): `backend/src/seed.js` (inclui DE/Alemanha + `language_code=de`).
+- Fallback do frontend: `frontend/src/data/mockCountries.js` (inclui DE/Alemanha).
+- País operacional sem manutenção manual: `backend/src/routes/auth.js` preenche `primary_language` automaticamente a partir de `countries.language_code` (lowercase) ao:
+  - adicionar um país operacional (`/api/auth/operational-countries/add`)
+  - adicionar todos (`/api/auth/operational-countries/add-all`)
+
+Arquivos alterados (P40):
+
+- `backend/src/seed.js`
+- `backend/src/routes/auth.js`
+- `frontend/src/data/mockCountries.js`

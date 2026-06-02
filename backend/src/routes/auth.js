@@ -359,10 +359,13 @@ export function authRouter() {
       const countryCode = normalizeNonEmptyString(req.body?.countryCode)
       if (!countryCode) return jsonError(res, 400, 'Invalid countryCode')
 
-      const { rowCount: exists } = await pool.query(`SELECT 1 FROM countries WHERE code = $1`, [countryCode.toUpperCase()])
-      if (exists === 0) return jsonError(res, 400, 'Invalid countryCode (not found)')
+      const { rows: found } = await pool.query(`SELECT code, language_code FROM countries WHERE code = $1`, [countryCode.toUpperCase()])
+      if (found.length === 0) return jsonError(res, 400, 'Invalid countryCode (not found)')
 
-      const primaryLanguage = normalizeNonEmptyString(req.body?.primaryLanguage)
+      const dbLanguageCode = normalizeNonEmptyString(found[0]?.language_code)
+      const primaryLanguageRequested = normalizeNonEmptyString(req.body?.primaryLanguage)
+      const defaultPrimaryLanguage = dbLanguageCode ? dbLanguageCode.toLowerCase() : null
+      const primaryLanguage = primaryLanguageRequested || defaultPrimaryLanguage
 
       await pool.query(
         `
@@ -379,8 +382,9 @@ export function authRouter() {
             UPDATE user_operational_countries
             SET primary_language = $3
             WHERE user_id = $1::uuid AND country_code = $2
+              AND ($4::boolean OR primary_language IS NULL)
           `,
-          [auth.userId, countryCode.toUpperCase(), primaryLanguage]
+          [auth.userId, countryCode.toUpperCase(), primaryLanguage, Boolean(primaryLanguageRequested)]
         )
       }
 
@@ -423,13 +427,15 @@ export function authRouter() {
       const auth = await resolveAuthUser(pool, req)
       if (!auth) return jsonError(res, 401, 'Login required')
 
-      const { rows: all } = await pool.query(`SELECT code FROM countries ORDER BY code ASC`)
-      const codes = all.map((r) => r.code).filter(Boolean)
+      const { rows: all } = await pool.query(`SELECT code, language_code FROM countries ORDER BY code ASC`)
+      const pairs = all
+        .map((r) => ({ code: r.code, lang: normalizeNonEmptyString(r.language_code) ? String(r.language_code).toLowerCase() : null }))
+        .filter((r) => r.code)
 
       const client = await pool.connect()
       try {
         await client.query('BEGIN')
-        for (const code of codes) {
+        for (const { code, lang } of pairs) {
           await client.query(
             `
               INSERT INTO user_operational_countries (user_id, country_code)
@@ -438,6 +444,17 @@ export function authRouter() {
             `,
             [auth.userId, code]
           )
+
+          if (lang) {
+            await client.query(
+              `
+                UPDATE user_operational_countries
+                SET primary_language = $3
+                WHERE user_id = $1::uuid AND country_code = $2 AND primary_language IS NULL
+              `,
+              [auth.userId, code, lang]
+            )
+          }
         }
         await client.query('COMMIT')
       } catch (err) {
@@ -447,7 +464,7 @@ export function authRouter() {
         client.release()
       }
 
-      return res.status(201).json({ ok: true, count: codes.length })
+      return res.status(201).json({ ok: true, count: pairs.length })
     })
   )
 

@@ -6,6 +6,7 @@ import { pauseMetaCampaign } from "../services/metaCampaigns.js";
 import { updateMetaAdSetBudget } from "../services/metaAdSets.js";
 import { createOpsLogs } from "../services/opsLogs.js";
 import StatusPill from "../components/StatusPill.jsx";
+import { parseBrlToCents as parseBudgetBrlToCents } from "../utils/brlMoney.js";
 
 function formatCurrencyBRLFromCents(cents) {
   const value = (Number(cents) || 0) / 100;
@@ -244,10 +245,10 @@ export default function RoiOperacional() {
 
   async function editBudget(metaAdSetId, { generatedCampaignId } = {}) {
     if (!metaAdSetId) return;
-    const raw = window.prompt("Novo daily budget (centavos). Ex: 1000 = R$10,00", "1000");
+    const raw = window.prompt("Novo orçamento diário (R$). Ex.: 10 para R$ 10,00", "10");
     if (raw === null) return;
-    const n = Number(raw);
-    if (!Number.isFinite(n) || n <= 0) {
+    const cents = parseBudgetBrlToCents(raw);
+    if (!Number.isFinite(Number(cents)) || Number(cents) <= 0) {
       setNotice("Budget inválido.");
       return;
     }
@@ -258,12 +259,12 @@ export default function RoiOperacional() {
     setError("");
     setNotice("");
     try {
-      await updateMetaAdSetBudget(metaAdSetId, { dailyBudgetCents: Math.trunc(n) });
+      await updateMetaAdSetBudget(metaAdSetId, { dailyBudgetCents: Math.trunc(Number(cents)) });
       await logOps({
         entity: "meta_adset",
         action: "meta.adset.budget.update.request",
         ok: true,
-        details: { metaAdSetId, dailyBudgetCents: Math.trunc(n), generatedCampaignId, date },
+        details: { metaAdSetId, dailyBudgetCents: Math.trunc(Number(cents)), generatedCampaignId, date },
       });
       setNotice("Orçamento atualizado (Meta).");
     } catch (err) {
