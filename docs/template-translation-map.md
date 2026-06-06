@@ -248,6 +248,45 @@ Limitação atual:
 - mercados operacionais podem representar país, grupo de países, região ou Worldwide;
 - P44/P45 deve definir uma estrutura por mercado, por exemplo `translationsByMarket.{MARKET_CODE}`, antes de traduzir por mercado.
 
+## Estrutura Adicionada Para Mercado
+
+Formato estrutural preparado no P44:
+
+```json
+{
+  "translationsByMarket": {
+    "ARM": {
+      "adVariants": [
+        {
+          "primaryText": "...",
+          "headline": "...",
+          "description": "..."
+        }
+      ]
+    },
+    "ENCA": {
+      "adVariants": [
+        {
+          "primaryText": "...",
+          "headline": "...",
+          "description": "..."
+        }
+      ]
+    }
+  }
+}
+```
+
+Validação mínima:
+
+- `translationsByMarket` deve ser objeto quando existir.
+- Cada chave deve ser um `marketCode` oficial.
+- `adVariants`, quando existir, deve ser array.
+- Cada item de `adVariants` deve ser objeto.
+- `primaryText`, `headline` e `description`, quando existirem, devem ser strings.
+
+Essa estrutura é apenas persistência/validação. Ela não executa tradução automática, não publica Meta e não altera `translationsByCountry`.
+
 ## Regras Recomendadas Para P44/P45
 
 1. Não traduzir tracking, URL, IDs, targeting ou mídia.
@@ -256,10 +295,10 @@ Limitação atual:
    - `headline`
    - `description`
 3. Preservar `ctaType` técnico. Se necessário, traduzir apenas label visual.
-4. Criar saída por mercado:
-   - `translationsByMarket.{MARKET_CODE}.ads.{AD_KEY}.primaryText`
-   - `translationsByMarket.{MARKET_CODE}.ads.{AD_KEY}.headline`
-   - `translationsByMarket.{MARKET_CODE}.ads.{AD_KEY}.description`
+4. Usar saída por mercado:
+   - `translationsByMarket.{MARKET_CODE}.adVariants[].primaryText`
+   - `translationsByMarket.{MARKET_CODE}.adVariants[].headline`
+   - `translationsByMarket.{MARKET_CODE}.adVariants[].description`
 5. Manter `translationsByCountry` por compatibilidade.
 6. Antes de publicar Meta REAL, exigir revisão humana das traduções por mercado.
 

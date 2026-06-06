@@ -5,6 +5,7 @@ import { jsonError, parseLimit } from '../lib/http.js'
 import { slugify } from '../lib/slugify.js'
 import { isUuid } from '../lib/validate.js'
 import { normalizeMarketPersistenceInput } from '../lib/marketTargeting.js'
+import { validateCampaignTemplatePayload } from '../lib/campaignTemplateTranslations.js'
 
 function normalizeNonEmptyString(value, { maxLen } = {}) {
   if (typeof value !== 'string') return null
@@ -111,8 +112,9 @@ export function campaignTemplatesRouter() {
       }
 
       const payload = req.body?.payload
-      if (payload != null && typeof payload !== 'object') {
-        return jsonError(res, 400, 'Invalid payload (expected object)')
+      const payloadValidation = validateCampaignTemplatePayload(payload)
+      if (!payloadValidation.ok) {
+        return jsonError(res, 400, 'Invalid payload', { errors: payloadValidation.errors })
       }
 
       const pool = getPool()

@@ -4712,3 +4712,93 @@ Pendências finais (P43):
 
 - P44: definir schema `translationsByMarket.{MARKET_CODE}` mantendo compatibilidade com `translationsByCountry`.
 - P44/P45: implementar apenas preview/tradução operacional revisável antes de qualquer publicação real.
+
+## P44 — Suporte Estrutural a `translationsByMarket`
+
+Última atualização: [2026-06-06 16:31; 2026-06-06 16:44]
+
+Objetivo:
+Adicionar suporte estrutural para `translationsByMarket` em Campaign Templates, preparando traduções por mercado sem criar tela completa, sem migration e sem alteração de publicação.
+
+Contexto:
+
+- P43 mapeou campos traduzíveis em `docs/template-translation-map.md`.
+- Campos traduzíveis principais:
+  - `adVariants[].primaryText`;
+  - `adVariants[].headline`;
+  - `adVariants[].description`.
+- `campaign_templates.payload` já é `jsonb`, então o campo pode ser persistido no payload sem migration.
+
+Regras:
+
+- Não chamar Meta REAL.
+- Não criar Campaign.
+- Não criar AdSet.
+- Não criar Ad.
+- Não alterar scheduler.
+- Não alterar publicação.
+- Não alterar `ACTIVE`.
+- Não quebrar templates existentes.
+- Não fazer refatoração grande.
+
+Tarefas:
+
+- [x] Permitir `payload.translationsByMarket`.
+- [x] Validar que `translationsByMarket` é objeto quando existir.
+- [x] Validar que cada chave é um `marketCode` oficial.
+- [x] Validar que `adVariants`, se existir, é array.
+- [x] Validar que `primaryText`, `headline` e `description` são strings quando existirem.
+- [x] Preservar templates antigos sem `translationsByMarket`.
+- [x] Evitar migration.
+- [x] Criar script de validação com rollback.
+- [x] Testar criação/leitura de template com `translationsByMarket`.
+- [x] Testar rejeição de `marketCode` inválido.
+- [x] Rodar build frontend.
+
+Critérios de aceite:
+
+- [x] Template pode armazenar `translationsByMarket`.
+- [x] Templates antigos continuam funcionando.
+- [x] Validação mínima funcionando.
+- [x] Nenhuma chamada Meta REAL.
+- [x] Nenhum `ACTIVE`.
+- [x] Build frontend passando.
+- [x] Commit final criado com resumo.
+
+Implementação (P44):
+
+- Criado `backend/src/lib/campaignTemplateTranslations.js`.
+- `validateCampaignTemplatePayload` valida `payload.translationsByMarket` apenas quando o campo existe.
+- `POST /api/campaign-templates` passou a rejeitar payload inválido.
+- Não foi criada migration, pois `campaign_templates.payload` já é `jsonb`.
+- Templates antigos sem `translationsByMarket` continuam válidos.
+- Criado `backend/scripts/validate-template-translations-by-market.js`.
+- Atualizado `docs/template-translation-map.md` com o formato estrutural por mercado.
+
+Validação (P44):
+
+- [2026-06-06 16:39] `node --check backend/src/lib/campaignTemplateTranslations.js && node --check backend/src/routes/campaignTemplates.js && node --check backend/scripts/validate-template-translations-by-market.js` (OK).
+- [2026-06-06 16:39] `DATABASE_URL='postgres://postgres:postgres@localhost:5433/campaign_builder' node backend/scripts/validate-template-translations-by-market.js` (OK; `rolledBack: true`; validou `ARM`, `ENCA`; rejeitou `ZZZZ`; rejeitou `primaryText` não string).
+- [2026-06-06 16:39] `npm --prefix frontend run build` (OK; aviso Vite de chunk grande mantido).
+- [2026-06-06 16:43] `POST /api/campaign-templates` com `translationsByMarket.ARM` e `translationsByMarket.ENCA` (OK; persistido no payload).
+- [2026-06-06 16:43] `POST /api/campaign-templates` com `translationsByMarket.ZZZZ` (rejeitado com `Invalid payload`).
+- Confirmado:
+  - nenhuma chamada Meta REAL;
+  - nenhuma Campaign criada por fluxo Meta;
+  - nenhum AdSet criado;
+  - nenhum Ad criado;
+  - nenhuma alteração de scheduler/publicação;
+  - nenhum `ACTIVE`.
+
+Arquivos alterados (P44):
+
+- `PLANS.md`
+- `docs/template-translation-map.md`
+- `backend/src/lib/campaignTemplateTranslations.js`
+- `backend/src/routes/campaignTemplates.js`
+- `backend/scripts/validate-template-translations-by-market.js`
+
+Pendências finais (P44):
+
+- P45: criar preview/edição operacional de `translationsByMarket` sem tradução automática destrutiva.
+- P45/P46: decidir se `adVariants` por mercado deve carregar índice/chave explícita para mapear A-E com mais clareza.
