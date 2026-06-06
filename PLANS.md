@@ -4961,3 +4961,76 @@ Pendências:
 
 - P47: criar experiência dedicada em `/templates` ou unificar `flow_templates` e `campaign_templates`, se isso fizer sentido operacional.
 - P47: política final para idiomas sem alvo seguro no LibreTranslate local.
+
+## P47 — Validação End-to-End do Fluxo Operacional
+
+Última atualização: [2026-06-06 18:14]
+
+Objetivo:
+Validar o fluxo operacional completo usando apenas funcionalidades existentes.
+
+Contexto:
+
+- P42 concluiu `Template -> Mercados -> Geração operacional`.
+- P45 concluiu geração de traduções por mercado.
+- P46 concluiu UI operacional para traduções por mercado.
+- O P47 é uma auditoria funcional, não uma entrega de nova feature.
+
+Regras:
+
+- Não criar novas funcionalidades.
+- Não refatorar arquitetura.
+- Não alterar banco sem necessidade.
+- Não alterar scheduler.
+- Não alterar publicação.
+- Não chamar Meta REAL.
+- Não criar Campaign Meta.
+- Não criar AdSet Meta.
+- Não criar Ad Meta.
+- Não alterar `ACTIVE`.
+
+Tarefas:
+
+- [x] Criar ou selecionar Campaign Template.
+- [x] Confirmar `payload.adVariants`.
+- [x] Gerar traduções para `ARM`, `AREU`, `ENCA`, `ENAU`.
+- [x] Confirmar persistência em `payload.translationsByMarket`.
+- [x] Abrir fluxo operacional via endpoint existente.
+- [x] Gerar campanha operacional para `ARM`, `AREU`, `ENCA`, `ENAU`.
+- [x] Confirmar criação em `operational_market_generations`.
+- [x] Consultar detalhe da campanha.
+- [x] Validar `marketCode`, `marketName`, `marketParam`, `utmCampaign`, `src`, `status`, `resolvedCountries`, `targetingPreview`.
+- [x] Confirmar `status=PAUSED`.
+- [x] Confirmar `publishable=false`.
+- [x] Confirmar `previewOnly=true`.
+- [x] Confirmar `metaPublishing=false`.
+- [x] Confirmar ausência de chamada Meta REAL.
+- [x] Criar `docs/p47-end-to-end-validation.md`.
+- [x] Rodar build frontend.
+
+Resultados:
+
+- Criado Campaign Template temporário com `payload.niche=PlantasBTN` e 2 `adVariants`.
+- Gerado `payload.translationsByMarket` para `ARM`, `AREU`, `ENCA`, `ENAU`.
+- Gerada campanha operacional local com 4 registros em `operational_market_generations`.
+- Validados `marketParam`, `utmCampaign`, `src`, `status`, `resolvedCountries`, `targetingPreview`, `publishable`, `previewOnly`.
+- Registros temporários removidos após validação local.
+- Nenhum endpoint Meta foi chamado.
+
+Validações:
+
+- [2026-06-06 18:10] Validação E2E local via endpoints existentes (OK; `meta_publishing=false`; `generated_campaigns=[]`; todos os mercados `PAUSED`, `publishable=false`, `previewOnly=true`).
+- [2026-06-06 18:12] `npm --prefix frontend run build` (OK; apenas aviso existente de chunk acima de 500 kB).
+
+Documento:
+
+- `docs/p47-end-to-end-validation.md`
+
+Critérios de aceite:
+
+- [x] Fluxo completo executado.
+- [x] Documento criado.
+- [x] Todos os guardrails preservados.
+- [x] Nenhuma publicação Meta.
+- [x] Nenhum `ACTIVE`.
+- [x] Commit final criado com resumo.
