@@ -4306,3 +4306,101 @@ Pendências finais (P38):
 - P39: migrar telas/listagens operacionais para consumir `operational_market_generations`.
 - P39: definir contrato de publicação real por mercado usando `resolved_countries` e exclusões.
 - P39: manter `generated_campaigns` como compatibilidade para fluxo legado/Meta atual até migração planejada.
+
+## P39 — Validação do Catálogo Completo de Mercados Operacionais
+
+Última atualização: [2026-06-06 14:55; 2026-06-06 15:02]
+
+Objetivo:
+Validar a geração operacional usando o catálogo backend completo de mercados oficiais, sem Meta REAL, sem criação de Campaign/AdSet/Ad na Meta e sem alterar o guardrail `PAUSED`.
+
+Contexto:
+
+- P38 corrigiu a ausência do catálogo backend.
+- `backend/src/lib/operationalMarkets.js` agora é consumido pela geração operacional backend.
+- `backend/src/lib/metaLocations.js` resolve localizações somente para geração/preview operacional.
+- `POST /api/generated-campaigns/operational-markets` já funciona com `ENCA`, `AREU` e `ARM`.
+
+Riscos:
+
+- Catálogo backend e frontend podem divergir se a sincronização continuar manual.
+- Algum mercado oficial pode não possuir resolução de países suficiente para persistência operacional.
+- Validação não deve chamar rotas Meta nem helpers de publicação real.
+- `status` deve permanecer sempre `PAUSED`; `ACTIVE` não deve ser introduzido.
+
+Tarefas:
+
+- [x] Criar script `backend/scripts/validate-all-operational-markets.js`.
+- [x] Carregar todos os mercados do catálogo backend.
+- [x] Gerar campanha local `draft` dentro de transação.
+- [x] Gerar operações para todos os mercados oficiais.
+- [x] Persistir registros em `operational_market_generations`.
+- [x] Validar contagem gerada contra total do catálogo.
+- [x] Validar `status = PAUSED` para todos.
+- [x] Validar que nenhum item possui `meta_publishing = true`.
+- [x] Validar `market_code`, `market_name`, `market_param`, `utm_campaign`, `src`, `resolved_countries` e `targeting_preview`.
+- [x] Validar rollback ao final.
+- [x] Rodar script localmente com `DATABASE_URL`.
+- [x] Atualizar `PLANS.md` com evidências.
+
+Critérios de aceite:
+
+- [x] Script executa sem erro.
+- [x] Todos os mercados oficiais são gerados.
+- [x] Quantidade gerada bate com o catálogo backend.
+- [x] Tudo permanece `PAUSED`.
+- [x] `meta_publishing` permanece `false`.
+- [x] Nenhuma chamada Meta REAL.
+- [x] Commit final criado com resumo.
+
+Implementação (P39):
+
+- Criado `backend/scripts/validate-all-operational-markets.js`.
+- O script:
+  - carrega `listOperationalMarkets()` do catálogo backend;
+  - usa todos os códigos oficiais como entrada da geração operacional;
+  - cria campanha local `draft` dentro de transação;
+  - persiste em `operational_market_generations`;
+  - valida contagem, campos principais, tracking e preview;
+  - valida `status = PAUSED`;
+  - valida `publishable = false`;
+  - valida `metaPublishing = false` no `config` da campanha local;
+  - executa `ROLLBACK` ao final.
+
+Validação (P39):
+
+- [2026-06-06 15:02] `node --check backend/scripts/validate-all-operational-markets.js` (OK).
+- [2026-06-06 15:02] Contagem do catálogo backend via `listOperationalMarkets()` (OK; `count = 100`; primeiro `ARM`; último `VISEU`).
+- [2026-06-06 15:02] `DATABASE_URL='postgres://postgres:postgres@localhost:5433/campaign_builder' node backend/scripts/validate-all-operational-markets.js` (OK; `rolledBack: true`).
+- [2026-06-06 15:03] `npm --prefix frontend run build` (OK; aviso Vite de chunk grande mantido).
+- Resultado:
+  - `catalogCount = 100`;
+  - `generatedCount = 100`;
+  - `persistedCount = 100`;
+  - `campaignStatus = draft`;
+  - `metaPublishing = false`;
+  - `status = PAUSED`;
+  - `publishable = false`;
+  - mínimo de países resolvidos por mercado: `1`;
+  - máximo de países resolvidos por mercado: `82`.
+- Estratégias resolvidas:
+  - `direct_country_codes`: 72 mercados;
+  - `country_expansion`: 19 mercados;
+  - `catalog_country_expansion_preview_only`: 9 mercados.
+- Confirmado:
+  - nenhum Campaign Meta criado;
+  - nenhum AdSet Meta criado;
+  - nenhum Ad Meta criado;
+  - nenhum status `ACTIVE`;
+  - nenhuma chamada Meta REAL.
+
+Arquivos alterados (P39):
+
+- `PLANS.md`
+- `backend/scripts/validate-all-operational-markets.js`
+
+Pendências finais (P39):
+
+- P40/P39B: decidir se o catálogo backend seguirá duplicado do frontend ou se haverá uma fonte compartilhada única.
+- P40: evoluir uma tela/listagem operacional para inspecionar todas as gerações por mercado.
+- P40/P41: antes de qualquer publicação real, definir contrato explícito para converter `resolved_countries` e exclusões em payload Meta real mantendo `PAUSED`.
