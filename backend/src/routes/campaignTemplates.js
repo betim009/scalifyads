@@ -5,7 +5,11 @@ import { jsonError, parseLimit } from '../lib/http.js'
 import { slugify } from '../lib/slugify.js'
 import { isUuid } from '../lib/validate.js'
 import { normalizeMarketPersistenceInput } from '../lib/marketTargeting.js'
-import { validateCampaignTemplatePayload } from '../lib/campaignTemplateTranslations.js'
+import {
+  generateTranslationsByMarket,
+  validateCampaignTemplatePayload
+} from '../lib/campaignTemplateTranslations.js'
+import { libreTranslateText } from '../services/libreTranslate.js'
 
 function normalizeNonEmptyString(value, { maxLen } = {}) {
   if (typeof value !== 'string') return null
@@ -243,6 +247,81 @@ export function campaignTemplatesRouter() {
       )
 
       return res.status(201).json({ ok: true, campaign_template: rows[0] })
+    })
+  )
+
+  router.post(
+    '/:id/translations-by-market/generate',
+    asyncHandler(async (req, res) => {
+      if (!req.app.locals.dbEnabled) {
+        return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
+      }
+
+      const templateId = req.params.id
+      if (!isUuid(templateId)) {
+        return jsonError(res, 400, 'Invalid campaign template id')
+      }
+
+      const markets = Array.isArray(req.body?.markets) ? req.body.markets : []
+      const overwrite = req.body?.overwrite === true
+      const pool = getPool()
+      const client = await pool.connect()
+      try {
+        await client.query('BEGIN')
+
+        const { rows, rowCount } = await client.query(
+          `
+            SELECT id, name, payload, created_at
+            FROM campaign_templates
+            WHERE id = $1::uuid
+            FOR UPDATE
+          `,
+          [templateId]
+        )
+        if (rowCount === 0) {
+          await client.query('ROLLBACK')
+          return jsonError(res, 404, 'Campaign template not found')
+        }
+
+        const template = rows[0]
+        const payload = template?.payload && typeof template.payload === 'object' && !Array.isArray(template.payload)
+          ? template.payload
+          : {}
+        const generated = await generateTranslationsByMarket({
+          payload,
+          markets,
+          overwrite,
+          translateText: libreTranslateText
+        })
+        if (!generated.ok) {
+          await client.query('ROLLBACK')
+          return jsonError(res, 400, 'Invalid translationsByMarket generation input', { errors: generated.errors })
+        }
+
+        const updated = await client.query(
+          `
+            UPDATE campaign_templates
+            SET payload = $2::jsonb
+            WHERE id = $1::uuid
+            RETURNING id, name, payload, created_at
+          `,
+          [templateId, JSON.stringify(generated.payload)]
+        )
+
+        await client.query('COMMIT')
+        return res.json({
+          ok: true,
+          campaign_template: updated.rows[0],
+          generated: generated.generated,
+          preserved: generated.preserved,
+          overwrite
+        })
+      } catch (err) {
+        await client.query('ROLLBACK')
+        throw err
+      } finally {
+        client.release()
+      }
     })
   )
 

@@ -4802,3 +4802,88 @@ Pendências finais (P44):
 
 - P45: criar preview/edição operacional de `translationsByMarket` sem tradução automática destrutiva.
 - P45/P46: decidir se `adVariants` por mercado deve carregar índice/chave explícita para mapear A-E com mais clareza.
+
+## P45 — Gerar Traduções por Mercado em Campaign Templates
+
+Última atualização: [2026-06-06 17:18]
+
+Objetivo:
+Gerar traduções por mercado a partir de um Campaign Template base e salvar em `payload.translationsByMarket`.
+
+Contexto:
+
+- P44 adicionou suporte estrutural a `payload.translationsByMarket`.
+- Campos traduzíveis:
+  - `adVariants[].primaryText`;
+  - `adVariants[].headline`;
+  - `adVariants[].description`.
+- A tradução deve usar o idioma principal do mercado operacional no catálogo backend.
+
+Regras:
+
+- Não chamar Meta REAL.
+- Não criar Campaign.
+- Não criar AdSet.
+- Não criar Ad.
+- Não alterar scheduler.
+- Não alterar publicação.
+- Não alterar `ACTIVE`.
+- Não quebrar templates existentes.
+- Não fazer refatoração grande.
+
+Tarefas:
+
+- [x] Criar endpoint `POST /api/campaign-templates/:templateId/translations-by-market/generate`.
+- [x] Buscar template no banco.
+- [x] Ler `payload.adVariants`.
+- [x] Resolver idioma de destino via catálogo backend de mercados.
+- [x] Traduzir somente `primaryText`, `headline` e `description`.
+- [x] Salvar resultado em `payload.translationsByMarket`.
+- [x] Preservar traduções existentes por padrão.
+- [x] Suportar `overwrite=true`.
+- [x] Rejeitar `marketCode` inválido.
+- [x] Criar script com rollback.
+- [x] Validar `overwrite=false`.
+- [x] Validar `overwrite=true`.
+- [x] Rodar build frontend.
+
+Implementação:
+
+- Criado helper `generateTranslationsByMarket` em `backend/src/lib/campaignTemplateTranslations.js`.
+- O helper resolve idioma por `marketCode` usando o catálogo backend de mercados operacionais.
+- O endpoint usa `libreTranslateText` e atualiza somente `payload.translationsByMarket`.
+- Campos técnicos como URL, tracking e CTA permanecem fora da tradução.
+- Traduções existentes são preservadas quando `overwrite` não é `true`.
+- Idiomas sem alvo seguro no LibreTranslate configurado (`Croata`, `Sérvio`, `Todos os idiomas`) são rejeitados com erro de validação em vez de gerar tradução insegura.
+
+Validações:
+
+- [2026-06-06 17:17] `node --check backend/src/lib/campaignTemplateTranslations.js && node --check backend/src/routes/campaignTemplates.js && node --check backend/scripts/validate-template-translations-by-market-generation.js` (OK).
+- [2026-06-06 17:17] `DATABASE_URL='postgres://postgres:postgres@localhost:5433/campaign_builder' node backend/scripts/validate-template-translations-by-market-generation.js` (OK; rollback executado; validou `ARM`, `ENCA`, `overwrite=false`, `overwrite=true`, rejeição de `ZZZZ` e preservação de campos técnicos).
+- [2026-06-06 17:12] Validação HTTP local do endpoint com `ARM` e `ENCA` (OK; `ARM` traduzido para `ar`; `ENCA` resolvido para `en`; `overwrite=false` preservou; `overwrite=true` substituiu; `ZZZZ` retornou 400).
+- [2026-06-06 17:17] `npm --prefix frontend run build` (OK; apenas aviso existente de chunk acima de 500 kB).
+
+Arquivos alterados:
+
+- `PLANS.md`
+- `backend/src/lib/campaignTemplateTranslations.js`
+- `backend/src/routes/campaignTemplates.js`
+- `backend/scripts/validate-template-translations-by-market-generation.js`
+
+Critérios de aceite:
+
+- [x] Endpoint funcionando.
+- [x] `translationsByMarket` preenchido corretamente.
+- [x] Campos técnicos não traduzidos.
+- [x] Traduções existentes preservadas por padrão.
+- [x] `overwrite=true` funcionando.
+- [x] Script com rollback passando.
+- [x] Build frontend passando.
+- [x] Nenhuma chamada Meta REAL.
+- [x] Nenhum `ACTIVE`.
+- [x] Commit final criado com resumo.
+
+Pendências:
+
+- P46: criar UI operacional para solicitar geração de traduções por mercado.
+- P46/P47: decidir política de idiomas não suportados pelo LibreTranslate local (`Croata`, `Sérvio`, `Todos os idiomas`).
