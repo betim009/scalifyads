@@ -1,0 +1,117 @@
+function normalizeNonEmptyString(value) {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  return trimmed ? trimmed : null
+}
+
+function normalizeOptionalObject(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  return value
+}
+
+export function normalizeMarketCode(value) {
+  const raw = normalizeNonEmptyString(value)
+  if (!raw) return null
+  const code = raw.toUpperCase()
+  if (!/^[A-Z0-9]{2,12}$/.test(code)) return null
+  return code
+}
+
+export function normalizeIsoCountryCode(value) {
+  const raw = normalizeNonEmptyString(value)
+  if (!raw) return null
+  const code = raw.toUpperCase()
+  if (!/^[A-Z]{2}$/.test(code)) return null
+  return code
+}
+
+export function normalizeIsoCountryCodes(value, { max = 250 } = {}) {
+  if (!Array.isArray(value)) return []
+  const seen = new Set()
+  for (const item of value) {
+    const code = normalizeIsoCountryCode(item)
+    if (!code) continue
+    seen.add(code)
+    if (seen.size >= max) break
+  }
+  return [...seen].sort()
+}
+
+export function resolveMarketTargetingInput({ marketCode, resolvedCountries, excludedCountries } = {}) {
+  const code = normalizeMarketCode(marketCode)
+  const countries = normalizeIsoCountryCodes(resolvedCountries)
+  const excluded = normalizeIsoCountryCodes(excludedCountries)
+  const errors = []
+
+  if (!code) errors.push('Invalid marketCode')
+  if (countries.length === 0) errors.push('resolvedCountries must include at least one ISO-2 country code')
+
+  return {
+    ok: errors.length === 0,
+    errors,
+    marketCode: code,
+    resolvedCountries: countries,
+    excludedCountries: excluded
+  }
+}
+
+export function buildMarketTargetingTechnicalPreview(input = {}) {
+  const resolved = resolveMarketTargetingInput(input)
+  const futureGeoLocations = resolved.ok
+    ? {
+        countries: resolved.resolvedCountries
+      }
+    : null
+
+  return {
+    ok: resolved.ok,
+    errors: resolved.errors,
+    marketCode: resolved.marketCode,
+    resolvedCountries: resolved.resolvedCountries,
+    excludedCountries: resolved.excludedCountries,
+    futurePayloadPreview: futureGeoLocations
+      ? {
+          targeting: {
+            geo_locations: futureGeoLocations
+          }
+        }
+      : null,
+    publishable: false,
+    previewOnly: true,
+    reason: 'P35 prepares market targeting input only; real Meta AdSet creation still uses countryCode.'
+  }
+}
+
+export function normalizeMarketPersistenceInput(input = {}) {
+  const marketCode = normalizeMarketCode(input?.marketCode ?? input?.market_code)
+  const errors = []
+
+  if (!marketCode) {
+    return {
+      ok: true,
+      hasMarketData: false,
+      errors,
+      marketCode: null,
+      marketName: null,
+      marketParam: null,
+      resolvedCountries: null,
+      targetingPreview: null
+    }
+  }
+
+  const resolvedCountries = normalizeIsoCountryCodes(input?.resolvedCountries ?? input?.resolved_countries)
+  if (resolvedCountries.length === 0) {
+    errors.push('resolvedCountries must include at least one ISO-2 country code when marketCode is provided')
+  }
+
+  return {
+    ok: errors.length === 0,
+    hasMarketData: true,
+    errors,
+    marketCode,
+    marketName: normalizeNonEmptyString(input?.marketName ?? input?.market_name),
+    marketParam: normalizeNonEmptyString(input?.marketParam ?? input?.market_param),
+    resolvedCountries,
+    targetingPreview: normalizeOptionalObject(input?.targetingPreview ?? input?.targeting_preview)
+  }
+}

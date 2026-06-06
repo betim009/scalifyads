@@ -9,6 +9,22 @@ export async function listGeneratedCampaigns({ campaignId, limit = 200 } = {}) {
   return { ok: true, generatedCampaigns: list };
 }
 
+export async function createOperationalMarketGeneration({ campaignId, campaignName, niche, markets } = {}) {
+  const data = await apiPost("/api/generated-campaigns/operational-markets", {
+    ...(campaignId ? { campaignId } : null),
+    campaignName,
+    niche,
+    markets: Array.isArray(markets) ? markets : [],
+  });
+  return {
+    ok: true,
+    campaign: data?.campaign ?? null,
+    operationalMarketGenerations: Array.isArray(data?.operational_market_generations) ? data.operational_market_generations : [],
+    generatedCampaigns: Array.isArray(data?.generated_campaigns) ? data.generated_campaigns : [],
+    metaPublishing: data?.meta_publishing === true,
+  };
+}
+
 export async function markGeneratedPublished(id, { metaCampaignId }) {
   const data = await apiPost(`/api/generated-campaigns/${encodeURIComponent(String(id))}/mark-published`, {
     metaCampaignId,

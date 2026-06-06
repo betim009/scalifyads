@@ -4,6 +4,7 @@ import { asyncHandler } from '../lib/asyncHandler.js'
 import { jsonError, parseLimit } from '../lib/http.js'
 import { slugify } from '../lib/slugify.js'
 import { isUuid } from '../lib/validate.js'
+import { normalizeMarketPersistenceInput } from '../lib/marketTargeting.js'
 
 function normalizeNonEmptyString(value, { maxLen } = {}) {
   if (typeof value !== 'string') return null
@@ -151,6 +152,11 @@ export function campaignTemplatesRouter() {
             id,
             name,
             country_code,
+            market_code,
+            market_name,
+            market_param,
+            resolved_countries,
+            targeting_preview,
             meta_objective,
             meta_ad_account_id,
             meta_run_mode,
@@ -207,6 +213,11 @@ export function campaignTemplatesRouter() {
         campaign: {
           name: gc?.name ?? null,
           countryCode: gc?.country_code ?? null,
+          marketCode: gc?.market_code ?? null,
+          marketName: gc?.market_name ?? null,
+          marketParam: gc?.market_param ?? null,
+          resolvedCountries: gc?.resolved_countries ?? null,
+          targetingPreview: gc?.targeting_preview ?? null,
           metaObjective: gc?.meta_objective ?? null,
           metaAdAccountId: gc?.meta_ad_account_id ?? null,
         },
@@ -289,6 +300,17 @@ export function campaignTemplatesRouter() {
         return jsonError(res, 400, 'Invalid countryCode (template payload missing campaign.countryCode)')
       }
 
+      const marketInput = normalizeMarketPersistenceInput({
+        marketCode: req.body?.marketCode ?? payloadCampaign?.marketCode ?? payloadCampaign?.market_code,
+        marketName: req.body?.marketName ?? payloadCampaign?.marketName ?? payloadCampaign?.market_name,
+        marketParam: req.body?.marketParam ?? payloadCampaign?.marketParam ?? payloadCampaign?.market_param,
+        resolvedCountries: req.body?.resolvedCountries ?? payloadCampaign?.resolvedCountries ?? payloadCampaign?.resolved_countries,
+        targetingPreview: req.body?.targetingPreview ?? payloadCampaign?.targetingPreview ?? payloadCampaign?.targeting_preview,
+      })
+      if (!marketInput.ok) {
+        return jsonError(res, 400, 'Invalid market persistence input', { errors: marketInput.errors })
+      }
+
       const metaObjective =
         overrideMetaObjective ??
         normalizeNonEmptyString(payloadCampaign?.metaObjective, { maxLen: 64 }) ??
@@ -342,15 +364,25 @@ export function campaignTemplatesRouter() {
               country_code,
               name,
               status,
+              market_code,
+              market_name,
+              market_param,
+              resolved_countries,
+              targeting_preview,
               meta_ad_account_id,
               meta_objective,
               meta_run_mode
             )
-            VALUES ($1::uuid, $2, $3, 'PAUSED', $4, $5, $6)
+            VALUES ($1::uuid, $2, $3, 'PAUSED', $4, $5, $6, $7::jsonb, $8::jsonb, $9, $10, $11)
             RETURNING
               id,
               campaign_id,
               country_code,
+              market_code,
+              market_name,
+              market_param,
+              resolved_countries,
+              targeting_preview,
               meta_campaign_id,
               meta_run_mode,
               meta_ad_account_id,
@@ -372,7 +404,19 @@ export function campaignTemplatesRouter() {
               status,
               created_at
           `,
-          [campaign.id, countryCode, name, metaAdAccountId, metaObjective, runMode]
+          [
+            campaign.id,
+            countryCode,
+            name,
+            marketInput.marketCode,
+            marketInput.marketName,
+            marketInput.marketParam,
+            marketInput.resolvedCountries ? JSON.stringify(marketInput.resolvedCountries) : null,
+            marketInput.targetingPreview ? JSON.stringify(marketInput.targetingPreview) : null,
+            metaAdAccountId,
+            metaObjective,
+            runMode
+          ]
         )
         const generatedCampaign = insertedGenerated.rows[0]
 

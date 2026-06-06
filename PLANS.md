@@ -2850,3 +2850,1459 @@ Arquivos alterados (P40):
 - `backend/src/seed.js`
 - `backend/src/routes/auth.js`
 - `frontend/src/data/mockCountries.js`
+
+---
+
+## P30 — Motor de Mercados Operacionais
+
+Última atualização: [2026-06-03 16:28; 2026-06-03 16:34]
+
+Observação:
+Já existia um P30 histórico (“Remodelar Dashboard/Home”) concluído em 2026-06-01. O histórico foi preservado acima; esta seção registra a reabertura/continuação operacional do P30 solicitada em 2026-06-03 para o Motor de Mercados Operacionais.
+
+Objetivo:
+Implementar uma camada incremental de Mercados Operacionais no ScalifyAds, baseada na regra validada com o cliente: o coração operacional não é país/idioma isolado, mas sim uma combinação de código, idioma principal, localização/região geográfica e público-alvo.
+
+Contexto validado:
+
+- Mercados devem vir pré-cadastrados no sistema.
+- O cliente não deve criar mercados manualmente a cada campanha.
+- O cliente informa apenas o nicho/parâmetro operacional, como `PlantasBTN`, `DirigirBTN` ou `InglesBTN`.
+- Entre mercados, permanecem iguais: Pixel, Página, domínio base, beneficiário, conta de anúncio, conversão, orçamento, copy base e criativos base.
+- Entre mercados, mudam: código do mercado, idioma, localização, URL/slug, UTM e SRC.
+- Brasil usa slug em português; todos os demais mercados usam slug internacional em inglês.
+- `utm_source=facebook`, `utm_medium=cpa`, `utm_campaign={CODIGO_MERCADO}`.
+- `src={CODIGO_MERCADO}-{NICHO}-FB`.
+
+Lista inicial de mercados pré-cadastrados:
+
+`ARM`, `AREU`, `ARIS`, `ARKU`, `AROM`, `DE`, `BN`, `BNOM`, `BR`, `BREUA`, `BREU`, `BG`, `KO`, `HR`, `ZHHK`, `ZHML`, `ZHTW`, `SK`, `SL`, `ESM`, `ESARG`, `ESCB`, `ESCH`, `ESEUA`, `ESEU`, `ESMX`, `TLOM`, `TL`, `FRCN`, `FREU`, `FRMD`, `EL`, `NL`, `HU`, `HIOM`, `HI`, `ID`, `ENAU`, `ENCA`, `ENOM`, `ENRU`, `ENNZ`, `ENAF`, `HE`, `IT`, `JP`, `MS`, `PL`, `RO`, `RUEU`, `SRO`, `RU`, `SR`, `TH`, `CS`, `TREU`, `TRM`, `UK`, `UROM`, `VI`, `LT`, `SV`, `ARAF`, `ARAS`, `ARNE`, `ARCA`, `ARUS`, `ARIT`, `BNEUAS`, `BRAF`, `BREUOC`, `ZHEUOC`, `ZHNA`, `ESAMNA`, `ESSL`, `TLAS`, `TLSON`, `FRAF`, `FRAS`, `FRN`, `HIAS`, `HISAF`, `IDAS`, `IDSEUOC`, `ENEU`, `ENNA`, `ENOC`, `MSAS`, `MSAOC`, `RUAS`, `RUNOC`, `THAS`, `THNEUOC`, `TRAFN`, `TRAS`, `URAS`, `UREUAF`, `VIAS`, `VINA`, `VISEU`
+
+Tarefas:
+
+- [x] Documentar a regra de negócio de mercados operacionais.
+- [x] Criar lista/fonte inicial de mercados pré-cadastrados.
+- [x] Definir estrutura interna de mercado:
+  - [x] `code`
+  - [x] `name`
+  - [x] `language`
+  - [x] `location/region`
+  - [x] `audience/description`
+  - [x] `slugMode`
+- [x] Implementar helpers para gerar:
+  - [x] `marketParam`
+  - [x] `utm_campaign`
+  - [x] `src`
+  - [x] `finalUrl`
+- [x] Ajustar fluxo de campanha para aceitar nicho/parâmetro.
+- [x] Ajustar fluxo de campanha para aceitar slug BR.
+- [x] Ajustar fluxo de campanha para aceitar slug internacional.
+- [x] Ajustar fluxo de campanha para selecionar mercados.
+- [x] Gerar automaticamente nomes/parâmetros por mercado.
+- [x] Gerar automaticamente UTM e SRC por mercado.
+- [x] Preservar fluxo antigo se necessário.
+- [x] Rodar build.
+- [x] Atualizar PLANS.md ao final com evidências.
+
+Critérios de aceite:
+
+- [x] Mercados estão pré-cadastrados.
+- [x] Usuário não precisa cadastrar mercado manualmente.
+- [x] Usuário informa nicho/parâmetro.
+- [x] Usuário informa slug BR e slug internacional.
+- [x] Sistema gera `src={CODIGO}-{NICHO}-FB`.
+- [x] Sistema gera `utm_campaign={CODIGO}`.
+- [x] Brasil usa slug BR.
+- [x] Demais mercados usam slug internacional.
+- [x] Guardrail PAUSED continua preservado.
+- [x] Build passa.
+
+Pendências iniciais:
+
+- Mapeamento completo de mercados para países/regiões aceitas pela Meta ainda não foi validado; não inventar targeting real.
+- Mapeamento completo de idiomas por mercado ainda não foi validado; usar metadados seguros/inferidos somente quando confiável.
+- Integração com criação real deve ser incremental e preservar o fluxo atual.
+
+Implementação (P30):
+
+- Catálogo/helper estático criado em `frontend/src/utils/operationalMarkets.js`.
+- `/campaign-flow` recebeu modo opcional “Mercados Operacionais”.
+- Novo modo aceita:
+  - nicho/parâmetro;
+  - domínio base;
+  - slug BR;
+  - slug internacional;
+  - seleção de mercados pré-cadastrados.
+- Preview por mercado exibe:
+  - código;
+  - idioma quando inferido/confirmado;
+  - parâmetro;
+  - `utm_campaign`;
+  - `src`;
+  - slug usado;
+  - URL final.
+- Fluxo antigo por país foi preservado.
+- Guardrail de criação `PAUSED` foi preservado; nenhuma opção `ACTIVE` foi adicionada.
+- Para evitar targeting incorreto, criação Meta em modo Mercados Operacionais fica bloqueada para mercados diferentes de `BR` até validar o mapeamento mercado -> localização Meta.
+- Para `BR`, o modo pode usar a URL final gerada no Creative Draft mantendo `countryCode=BR`.
+
+Arquivos alterados (P30):
+
+- `PLANS.md`
+- `frontend/src/utils/operationalMarkets.js`
+- `frontend/src/pages/CampaignFlow.jsx`
+
+Validação (P30):
+
+- [2026-06-03 16:34] `cd frontend && npm run build` (OK).
+
+Pendências finais (P30):
+
+- Validar com o cliente/Meta o mapeamento completo de cada mercado operacional para `geo_locations` aceitas pela Meta antes de criar campanhas reais para mercados não-BR.
+- Validar nomes/idiomas/localizações/audiências completos dos códigos que ainda só têm código e idioma inferido.
+- Decidir se a lista estática deve virar tabela/seed após estabilização da regra.
+
+---
+
+## P31 — Catálogo Oficial de Mercados Operacionais
+
+Última atualização: [2026-06-04 08:33; 2026-06-04 08:36]
+
+Objetivo:
+Transformar os mercados operacionais documentados nos arquivos oficiais da raiz (`62 CAMPANHAS.txt` e `38 CAMPANHAS.txt`) em um catálogo oficial consumido pelo sistema.
+
+Contexto:
+
+- Os arquivos `62 CAMPANHAS.txt` e `38 CAMPANHAS.txt` substituem hipóteses anteriores sobre mercados.
+- O coração operacional do negócio é Mercado Operacional, não país/idioma/região isoladamente.
+- Cada mercado possui código, nome, idioma, localizações incluídas e localizações excluídas.
+- O catálogo será base para nome da campanha, targeting futuro, idioma, UTM, SRC e geração de campanhas.
+- Nesta etapa ainda não implementar targeting Meta real.
+
+Tarefas:
+
+- [x] Ler completamente `62 CAMPANHAS.txt`.
+- [x] Ler completamente `38 CAMPANHAS.txt`.
+- [x] Identificar todos os códigos, nomes, idiomas, localizações incluídas e localizações excluídas.
+- [x] Auditar implementação P30 (`operationalMarkets.js`, helpers, previews, `/campaign-flow`).
+- [x] Substituir lista simplificada por catálogo oficial.
+- [x] Estruturar cada mercado com `code`, `name`, `language`, `includedLocations`, `excludedLocations`.
+- [x] Adaptar `/campaign-flow` para exibir nome amigável.
+- [x] Preservar código internamente.
+- [x] Adaptar preview para exibir nome, código, idioma, inclusões, exclusões, parâmetro, SRC e UTM.
+- [x] Preparar estrutura para P32 sem implementar targeting Meta real.
+- [x] Preservar fluxo antigo.
+- [x] Rodar build.
+- [x] Atualizar `PLANS.md` com evidências e pendências.
+
+Critérios de aceite:
+
+- [x] Catálogo oficial criado.
+- [x] Dados carregados dos arquivos oficiais.
+- [x] Lista simplificada removida.
+- [x] Campaign Flow usa catálogo oficial.
+- [x] Nome amigável exibido na UI.
+- [x] Código preservado internamente.
+- [x] Preview mostra idioma.
+- [x] Preview mostra inclusões.
+- [x] Preview mostra exclusões.
+- [x] Build executado.
+- [x] PLANS.md atualizado.
+
+Pendências iniciais:
+
+- Não criar migrations nesta etapa.
+- Não implementar targeting Meta real antes de validar conversão de `includedLocations`/`excludedLocations` para Meta.
+- Não alterar guardrail `PAUSED`, Meta REAL, credenciais ou `.env`.
+
+Relatório interno (P31):
+
+- Fontes oficiais lidas na raiz:
+  - `62 CAMPANHAS.txt`: 62 mercados oficiais.
+  - `38 CAMPANHAS.txt`: 38 mercados oficiais.
+- Total carregado no catálogo: 100 mercados.
+- Validação estrutural: 100 códigos únicos.
+- Campos oficiais preservados no catálogo:
+  - `code`;
+  - `name`;
+  - `language`;
+  - `includedLocations`;
+  - `excludedLocations`.
+- A lista simplificada do P30 (`CONFIRMED_MARKET_DETAILS` + inferência por prefixo de idioma) foi removida.
+
+Implementação (P31):
+
+- `frontend/src/utils/operationalMarkets.js` agora exporta `OFFICIAL_OPERATIONAL_MARKETS`, `OPERATIONAL_MARKETS` e `OPERATIONAL_MARKET_CODES` derivados do catálogo oficial.
+- Helpers preservados:
+  - `generateMarketParam`;
+  - `generateTrackingParams`;
+  - `resolveSlug`;
+  - `buildFinalUrl`;
+  - `buildMarketPreview`.
+- `/campaign-flow` agora exibe nome amigável na seleção de mercados e mantém o código como dado interno.
+- Preview de Mercados Operacionais agora mostra:
+  - nome do mercado;
+  - código;
+  - idioma;
+  - localizações incluídas;
+  - localizações excluídas;
+  - parâmetro gerado;
+  - `utm_campaign`;
+  - `src`;
+  - URL final.
+- Targeting Meta real continua não implementado para mercados não-BR; guardrail de bloqueio permanece.
+
+Arquivos alterados (P31):
+
+- `PLANS.md`
+- `frontend/src/utils/operationalMarkets.js`
+- `frontend/src/pages/CampaignFlow.jsx`
+
+Validação (P31):
+
+- [2026-06-04 08:36] Validação estrutural via Node: `{ total: 100, unique: 100 }` (OK).
+- [2026-06-04 08:36] `cd frontend && npm run build` (OK).
+
+Pendências finais (P31):
+
+- P32: definir conversor seguro de `includedLocations`/`excludedLocations` para targeting Meta, sem inventar IDs/regiões.
+- P32/P33: decidir se o catálogo oficial deve continuar estático ou virar seed/tabela após estabilização.
+- P32: revisar como mercados não-BR devem interagir com cópia/tradução e mídia por mercado no fluxo operacional.
+
+---
+
+## P32 — Conversor de Mercados para Targeting Meta
+
+Última atualização: [2026-06-04 08:43; 2026-06-04 08:44]
+
+Objetivo:
+Criar uma camada segura de conversão de Mercado Operacional para uma estrutura interna de Targeting Meta previsto, sem publicar campanhas reais e sem alterar o fluxo Meta existente.
+
+Contexto:
+
+- P31 criou o catálogo oficial de 100 mercados com `code`, `name`, `language`, `includedLocations` e `excludedLocations`.
+- P32 deve consumir exclusivamente esse catálogo oficial.
+- O sistema já gera parâmetro, UTM, SRC, slug e preview operacional.
+- O próximo passo é representar targeting previsto para P33/P34/P35, sem inventar IDs/regiões Meta.
+
+Auditoria inicial:
+
+- `backend/src/meta/adsets.js`: `metaCreateAdSet` monta `targeting = { geo_locations: { countries: [cc] } }` usando `countryCode` ISO-2 e força `status = 'PAUSED'`.
+- `backend/src/routes/meta.js`: endpoint de criação de AdSet resolve `countryCode` a partir de `generated_campaigns.country_code` ou body e passa para `metaCreateAdSet`.
+- `backend/src/routes/meta.js`: criação simples de campanha exige `countryCode` ISO-2, valida em `countries`, grava `campaign_country_targets` e `generated_campaigns.country_code`.
+- `backend/migrations/0001_init.sql`: `countries.code` tem `char_length(code) = 2`; `campaign_country_targets` e `generated_campaigns` dependem de `country_code`.
+- `backend/src/seed.js`: mapeamento atual de países é pequeno (`BR`, `US`, `MX`, `AE`, `FR`, `ES`, `DE`) e não cobre mercados operacionais.
+- `frontend/src/pages/CampaignFlow.jsx`: modo Mercados Operacionais já bloqueia criação para mercados não-BR; para BR mantém `countryCode=BR`.
+
+Arquivos impactados:
+
+- `frontend/src/utils/operationalMarkets.js`
+- `frontend/src/pages/CampaignFlow.jsx`
+- `PLANS.md`
+
+Fluxo atual:
+
+- Fluxo legado: usuário escolhe país (`countryCode`) -> backend cria Campaign/AdSet/Ad -> AdSet Meta usa `geo_locations.countries`.
+- Fluxo Mercados Operacionais: usuário escolhe `marketCode` -> frontend gera preview/URL -> criação Meta para não-BR permanece bloqueada.
+
+Riscos encontrados:
+
+- Trocar `countryCode` por `marketCode` agora quebraria constraints e FK do banco.
+- Converter nomes como `Europa`/`Worldwide` diretamente para Meta sem IDs/regiões validadas pode criar targeting incorreto.
+- Muitos mercados possuem exclusões; publicar sem conversor validado poderia atingir localizações proibidas pelo cliente.
+- Idioma do catálogo é nome humano; ainda não há mapeamento validado para `locales` Meta.
+
+Tarefas:
+
+- [x] Auditoria do targeting atual concluída.
+- [x] Fluxo de `geo_locations` identificado.
+- [x] Criar estrutura interna de targeting previsto.
+- [x] Criar helper isolado `resolveMarketTargeting`.
+- [x] Consumir exclusivamente o catálogo oficial P31.
+- [x] Classificar mercados por tipo.
+- [x] Expandir preview com Targeting Meta previsto.
+- [x] Preparar compatibilidade futura `countryCode` -> `marketCode` sem remover `countryCode`.
+- [x] Preservar fluxo antigo.
+- [x] Preservar guardrail `PAUSED`.
+- [x] Rodar build.
+- [x] Atualizar `PLANS.md` com evidências e pendências.
+
+Critérios de aceite:
+
+- [x] Auditoria do targeting atual concluída.
+- [x] Fluxo de `geo_locations` identificado.
+- [x] Conversor de mercados criado.
+- [x] Estrutura de targeting criada.
+- [x] Mercados classificados.
+- [x] Preview expandido.
+- [x] Fluxo antigo preservado.
+- [x] Guardrail `PAUSED` preservado.
+- [x] Build executado.
+- [x] PLANS atualizado.
+
+Implementação (P32):
+
+- `frontend/src/utils/operationalMarkets.js` agora expõe:
+  - `MARKET_TARGETING_TYPES`;
+  - `classifyMarketTargeting`;
+  - `resolveMarketTargeting`;
+  - `getMarketTargetingClassificationSummary`.
+- `resolveMarketTargeting(marketCode)` retorna estrutura interna:
+  - `marketCode`;
+  - `marketName`;
+  - `language`;
+  - `targetingType`;
+  - `publishable: false`;
+  - `targeting.included`;
+  - `targeting.excluded`;
+  - `metaTargetingPreview.geo_locations.included`;
+  - `metaTargetingPreview.geo_locations.excluded`.
+- Todos os itens de targeting ficam com `metaLocation: null` e `status: "mapping_pending"` para evitar invenção de IDs Meta.
+- `buildMarketPreview` passou a anexar `targetingPreview` por mercado.
+- `/campaign-flow` passou a exibir:
+  - classificação do mercado;
+  - Targeting Meta previsto;
+  - status “Preview somente (mapeamento Meta pendente)”.
+
+Classificação (P32):
+
+- `simple_location`: 33 mercados. Exemplos: `ENCA`, `JP`, `KO`, `IT`, `BR`.
+- `location_group`: 38 mercados. Exemplos: `ARKU`, `AROM`, `DE`, `ENOM`.
+- `region_with_exclusions`: 18 mercados. Exemplos: `AREU`, `BREU`, `ESEU`, `FREU`.
+- `worldwide_with_exclusions`: 9 mercados. Exemplos: `ARM`, `FRMD`, `RU`, `TRM`.
+- `location_group_with_exclusions`: 2 mercados. Exemplos: `FRAS`, `TRAS`.
+
+Compatibilidade (P32):
+
+- `countryCode` não foi removido.
+- Nenhuma tabela/migration foi criada.
+- A criação Meta real continua usando o fluxo antigo de `countryCode`.
+- Mercados não-BR continuam bloqueados para criação real até existir mapeamento Meta validado.
+- Guardrail `PAUSED` permanece preservado; nenhuma opção `ACTIVE` foi adicionada.
+
+Arquivos alterados (P32):
+
+- `PLANS.md`
+- `frontend/src/utils/operationalMarkets.js`
+- `frontend/src/pages/CampaignFlow.jsx`
+
+Validação (P32):
+
+- [2026-06-04 08:44] Validação via Node: `{ total: 100, unique: 100 }` (OK).
+- [2026-06-04 08:44] Classificação via Node:
+  - `worldwide_with_exclusions`: 9;
+  - `region_with_exclusions`: 18;
+  - `simple_location`: 33;
+  - `location_group`: 38;
+  - `location_group_with_exclusions`: 2.
+- [2026-06-04 08:44] `cd frontend && npm run build` (OK).
+- Backend não possui script seguro de build/test em `backend/package.json`; não rodado. Scripts existentes: `dev`, `migrate`, `seed`, `start`.
+
+Pendências finais (P32):
+
+- P33: criar mapeamento validado de nomes oficiais (`Brasil`, `Europa`, `Worldwide`, etc.) para objetos Meta reais, sem inventar IDs.
+- P33: decidir formato de compatibilidade para persistir `marketCode` futuramente sem quebrar `generated_campaigns.country_code`.
+- P33: definir se idiomas humanos do catálogo serão mapeados para `locales` Meta e onde esse mapeamento será validado.
+
+---
+
+## P33 — Mapeamento Meta de Localizações
+
+Última atualização: [2026-06-04 09:00; 2026-06-04 09:03]
+
+Objetivo:
+Criar uma camada segura de mapeamento entre nomes operacionais de localização do catálogo oficial e uma estrutura interna validável para uso futuro em targeting Meta.
+
+Contexto:
+
+- P30 criou o Motor de Mercados Operacionais.
+- P31 criou o catálogo oficial de 100 mercados.
+- P32 criou o conversor/classificador de targeting previsto.
+- O backend ainda cria AdSet real via `countryCode` ISO-2 em `geo_locations.countries`.
+- P33 não deve publicar campanhas reais com mercados e não deve alterar criação REAL existente.
+
+Tarefas:
+
+- [x] Auditar localizações únicas usadas em `includedLocations` e `excludedLocations`.
+- [x] Registrar total de localizações únicas.
+- [x] Criar catálogo estático de localizações Meta.
+- [x] Mapear países simples conhecidos para ISO-2 com `mapping_ready`.
+- [x] Marcar `Europa` como região pendente sem inventar formato Meta final.
+- [x] Marcar `Worldwide` como worldwide pendente sem inventar formato Meta final.
+- [x] Criar `resolveMetaLocation(name)`.
+- [x] Criar `resolveMarketMetaLocations(marketCode)`.
+- [x] Integrar resolver ao preview de Mercados Operacionais.
+- [x] Mostrar mapeamento Meta resolvido no preview.
+- [x] Mostrar status ready/pending no preview.
+- [x] Preservar fluxo antigo por `countryCode`.
+- [x] Preservar guardrail `PAUSED`.
+- [x] Rodar validação estrutural via Node.
+- [x] Rodar build do frontend.
+- [x] Atualizar `PLANS.md` com evidências e pendências.
+
+Critérios de aceite:
+
+- [x] P33 criado no `PLANS.md`.
+- [x] Localizações únicas auditadas.
+- [x] Catálogo de localizações Meta criado.
+- [x] `resolveMetaLocation` criado.
+- [x] `resolveMarketMetaLocations` criado.
+- [x] Preview mostra mapeamento Meta.
+- [x] Preview mostra status ready/pending.
+- [x] Países simples mapeados com ISO-2.
+- [x] Europa e Worldwide não foram inventados.
+- [x] Fluxo antigo preservado.
+- [x] Guardrail `PAUSED` preservado.
+- [x] Build passou.
+
+Riscos:
+
+- Nomes operacionais como `Europa` e `Worldwide` não podem ser convertidos sem validação específica da Meta.
+- Alguns nomes podem exigir revisão de nomenclatura Meta (`Holanda` vs `Países Baixos`, `Ilhas Fiji`, `Timor-Leste`, etc.).
+- Integrar esse mapeamento ao backend antes de persistir `marketCode` poderia quebrar o fluxo atual por `countryCode`.
+- O backend ainda não suporta targeting por regiões, exclusões ou worldwide em produção.
+
+Auditoria de localizações (P33):
+
+- Total de mercados analisados: 100.
+- Total de localizações únicas em `includedLocations`/`excludedLocations`: 86.
+- Localizações `mapping_ready`: 84.
+- Localizações `mapping_pending`: 2 (`Europa`, `Worldwide`).
+- Mercados totalmente prontos: 72.
+- Mercados pendentes: 28.
+
+Implementação (P33):
+
+- Criado `frontend/src/utils/metaLocations.js`.
+- Catálogo estático `META_LOCATION_CATALOG` criado com países conhecidos mapeados para ISO-2.
+- `Europa` foi modelada como `{ type: "region", key: "EUROPE", status: "mapping_pending" }`.
+- `Worldwide` foi modelada como `{ type: "worldwide", key: "WORLDWIDE", status: "mapping_pending" }`.
+- Criados helpers:
+  - `listUniqueOperationalLocations`;
+  - `resolveMetaLocation`;
+  - `resolveMarketMetaLocations`;
+  - `getMetaLocationMappingSummary`.
+- `/campaign-flow` agora mostra no preview de Mercados Operacionais:
+  - mapeamento Meta de localizações incluídas;
+  - mapeamento Meta de localizações excluídas;
+  - status “Pronto para targeting” ou “Mapeamento pendente”;
+  - pendências por mercado.
+
+Arquivos alterados (P33):
+
+- `PLANS.md`
+- `frontend/src/utils/metaLocations.js`
+- `frontend/src/utils/operationalMarkets.js`
+- `frontend/src/pages/CampaignFlow.jsx`
+
+Validação (P33):
+
+- [2026-06-04 09:03] Validação estrutural via Node:
+  - `totalMarkets`: 100;
+  - `totalUniqueLocations`: 86;
+  - `mappingReadyLocations`: 84;
+  - `mappingPendingLocations`: 2;
+  - `readyMarkets`: 72;
+  - `pendingMarkets`: 28.
+- [2026-06-04 09:03] Exemplos validados:
+  - `ENCA`: Canadá -> `CA`, pronto.
+  - `AROM`: Emirados Árabes Unidos -> `AE`, Catar -> `QA`, Arábia Saudita -> `SA`, pronto.
+  - `AREU`: Europa pendente; exclusões mapeadas para ISO-2.
+  - `ARM`: Worldwide pendente; Taiwan -> `TW`.
+- [2026-06-04 09:03] `cd frontend && npm run build` (OK).
+
+Pendências finais (P33):
+
+- P34: validar oficialmente como representar `Europa` em targeting Meta sem inventar região/ID.
+- P34: validar oficialmente como representar `Worldwide` em targeting Meta sem inventar formato final.
+- P34: decidir se mercados `ready` podem gerar AdSet real em modo controlado, ainda sempre `PAUSED`.
+- P34: revisar se `Kosovo` (`XK`) e nomenclaturas como `Holanda`/`Países Baixos` são aceitas pela Meta no formato escolhido.
+
+---
+
+## P34 — Resolver Europa e Worldwide para Targeting Meta
+
+Última atualização: [2026-06-04 09:18; 2026-06-04 09:20; 2026-06-04 09:22]
+
+Objetivo:
+Resolver, de forma segura e auditável, as localizações operacionais `Europa` e `Worldwide` para estruturas internas utilizáveis em preview de targeting Meta, sem criar campanhas reais por mercado.
+
+Contexto:
+
+- P33 deixou 2 localizações pendentes: `Europa` e `Worldwide`.
+- O backend real ainda só usa `geo_locations.countries` com um `countryCode` ISO-2.
+- A criação real de AdSet permanece dependente do fluxo antigo por `countryCode`.
+
+Auditoria técnica Meta:
+
+- `backend/src/meta/adsets.js`: `metaCreateAdSet` recebe `countryCode`, valida ISO-2, monta `targeting = { geo_locations: { countries: [cc] } }`, serializa em `params.set('targeting', JSON.stringify(targeting))` e força `status = 'PAUSED'`.
+- `backend/src/routes/meta.js`: criação de AdSet resolve `countryCode` de `generated_campaigns.country_code` ou body e passa para `metaCreateAdSet`.
+- Não há helper de targeting real além do uso direto de `geo_locations.countries`.
+- Não há suporte backend atual para região, worldwide, múltiplos países por mercado ou exclusões em criação real.
+
+Arquivos impactados:
+
+- `frontend/src/utils/metaLocations.js`
+- `frontend/src/pages/CampaignFlow.jsx`
+- `PLANS.md`
+
+Estratégia segura:
+
+- Resolver `Europa` internamente por expansão conservadora de países ISO-2.
+- Aplicar exclusões por ISO-2 no helper, sem enviar para Meta real.
+- Manter `Worldwide` fora de publicação real. Se houver expansão, ela deve ser preview-only e não `publishable`.
+- Não alterar backend, banco, migrations, credenciais, `.env` ou fluxo real de criação.
+
+Riscos:
+
+- Lista de Europa pode não corresponder 100% a regiões Meta oficiais.
+- `Worldwide` não tem representação segura no backend atual.
+- Publicar múltiplos países e exclusões sem backend preparado poderia quebrar ou alterar alcance real.
+
+Tarefas:
+
+- [x] Registrar P34 no `PLANS.md`.
+- [x] Auditar formato atual de `geo_locations`.
+- [x] Criar representação interna para `Europa`.
+- [x] Criar representação segura para `Worldwide`.
+- [x] Criar expansão por países para `Europa`.
+- [x] Criar helper `expandIncludedLocations`.
+- [x] Criar helper `applyExcludedLocations`.
+- [x] Atualizar `resolveMetaLocation`.
+- [x] Atualizar `resolveMarketMetaLocations`.
+- [x] Expandir preview do Campaign Flow.
+- [x] Rodar validação estrutural via Node.
+- [x] Rodar build do frontend.
+- [x] Atualizar `PLANS.md` ao final.
+
+Critérios de aceite:
+
+- [x] P34 criado no `PLANS.md`.
+- [x] Auditoria do `geo_locations` atual registrada.
+- [x] Europa tratada com estratégia segura.
+- [x] Exclusões aplicadas corretamente.
+- [x] Worldwide tratado de forma segura ou mantido pendente.
+- [x] Resolvers atualizados.
+- [x] Preview expandido.
+- [x] Nenhuma alteração Meta REAL feita.
+- [x] Fluxo antigo preservado.
+- [x] PAUSED preservado.
+- [x] Build passou.
+
+Implementação (P34):
+
+- `Europa` agora é representada internamente como:
+  - `type: "region_group"`;
+  - `key: "EUROPE"`;
+  - `status: "mapping_ready_internal"`;
+  - `strategy: "country_expansion"`;
+  - `publishable: false`.
+- Lista interna conservadora de Europa criada com 33 códigos ISO-2:
+  - `AD`, `AT`, `BE`, `BG`, `CH`, `CY`, `CZ`, `DE`, `DK`, `EE`, `ES`, `FI`, `FR`, `GB`, `GR`, `HR`, `HU`, `IE`, `IS`, `IT`, `LI`, `LT`, `LU`, `LV`, `MT`, `NL`, `NO`, `PL`, `PT`, `RO`, `SE`, `SI`, `SK`.
+- `Worldwide` agora é representado internamente como:
+  - `type: "worldwide_group"`;
+  - `key: "WORLDWIDE"`;
+  - `status: "mapping_ready_internal"`;
+  - `strategy: "catalog_country_expansion_preview_only"`;
+  - `publishable: false`.
+- `Worldwide` usa expansão preview-only com 83 códigos ISO-2 derivados do catálogo estático de localizações, sem ser considerado publicável.
+- Criados/atualizados helpers em `frontend/src/utils/metaLocations.js`:
+  - `EUROPE_COUNTRY_CODES`;
+  - `getWorldwidePreviewCountryCodes`;
+  - `expandIncludedLocations`;
+  - `applyExcludedLocations`;
+  - `resolveMetaLocation`;
+  - `resolveMarketMetaLocations`;
+  - `getMetaLocationMappingSummary`.
+- `resolveMarketMetaLocations` agora retorna:
+  - `ready`;
+  - `publishable: false`;
+  - `publishableReason`;
+  - `resolvedCountries`;
+  - `excludedCountryCodes`;
+  - `strategy`.
+- `/campaign-flow` passou a exibir:
+  - estratégia de resolução;
+  - países resolvidos;
+  - países excluídos;
+  - status interno;
+  - publicável na Meta: `Sim/Não`.
+
+Decisão sobre `Worldwide`:
+
+- `Worldwide` foi resolvido apenas como estrutura interna preview-only.
+- Não foi marcado como publicável.
+- Não foi convertido para payload Meta real.
+
+Validação (P34):
+
+- [2026-06-04 09:20] Validação estrutural via Node:
+  - `totalMarkets`: 100;
+  - `totalUniqueLocations`: 86;
+  - `mappingReadyLocations`: 84;
+  - `mappingReadyInternalLocations`: 2;
+  - `mappingPendingLocations`: 0;
+  - `readyMarkets`: 100;
+  - `pendingMarkets`: 0;
+  - `publishableMarkets`: 0;
+  - `internalReadyMarkets`: 100;
+  - `europeResolvedMarkets`: 19;
+  - `worldwidePreviewOnlyMarkets`: 9.
+- [2026-06-04 09:20] Exemplos validados:
+  - `AREU`: Europa expandida e exclusões `AL`, `BA`, `ME`, `MK`, `XK` aplicadas.
+  - `ARM`: Worldwide expandido em preview-only e `TW` excluído.
+  - `AROM`: países diretos `AE`, `QA`, `SA`, pronto internamente.
+  - `ENCA`: país direto `CA`, pronto internamente.
+- [2026-06-04 09:20] `cd frontend && npm run build` (OK).
+- [2026-06-04 09:22] Validação estrutural e build reexecutados após limpeza interna do helper (OK).
+
+Arquivos alterados (P34):
+
+- `PLANS.md`
+- `frontend/src/utils/metaLocations.js`
+- `frontend/src/pages/CampaignFlow.jsx`
+
+Pendências finais (P34):
+
+- P35: criar integração controlada para usar `resolvedCountries` no backend apenas em modo explicitamente aprovado e sempre `PAUSED`.
+- P35: decidir modelo de persistência de `marketCode` sem quebrar `countryCode`.
+- P35: validar lista de Europa com documentação/Graph Meta antes de qualquer publicação.
+- P35: validar se expansão preview-only de `Worldwide` deve virar produto ou permanecer bloqueada.
+
+---
+
+## P35 — Integração Controlada MarketCode → Backend
+
+Última atualização: [2026-06-04 09:42; 2026-06-04 09:45]
+
+Objetivo:
+Preparar a menor camada backend compatível para receber `marketCode` e `resolvedCountries` no futuro, mantendo o fluxo antigo por `countryCode` intacto e sem alterar payload real enviado à Meta.
+
+Contexto:
+
+- P30 criou o Motor de Mercados Operacionais.
+- P31 criou o catálogo oficial com 100 mercados.
+- P32 criou classificação/conversor operacional.
+- P33 criou catálogo de localizações Meta.
+- P34 resolveu `Europa` e `Worldwide` internamente, deixando 100 mercados resolvidos, 0 pendentes e 0 publicáveis.
+- O backend atual ainda foi desenhado para `countryCode`/`country_code`.
+
+Riscos:
+
+- Substituir `countryCode` por `marketCode` agora quebraria compatibilidade com banco, endpoints e criação real existente.
+- Enviar múltiplos países/exclusões para Meta sem suporte explícito no backend pode alterar alcance real.
+- Persistir `marketCode` sem migração planejada pode criar inconsistência com `generated_campaigns.country_code`.
+
+Tarefas:
+
+- [x] Auditar usos backend de `countryCode`, `country_code`, `countryId`, `countries`, `geo_locations`, `targeting`, `adsets` e Meta targeting.
+- [x] Registrar arquivos, endpoints, services, tabelas e payloads impactados.
+- [x] Definir estratégia de compatibilidade entre fluxo antigo e futuro fluxo por mercado.
+- [x] Criar estrutura/validator backend para aceitar `marketCode` opcional.
+- [x] Criar estrutura/validator backend para aceitar `resolvedCountries` opcional.
+- [x] Criar helper de preview técnico `marketCode → resolvedCountries → geo_locations futuro`.
+- [x] Garantir que criação real Meta continue usando somente `countryCode`.
+- [x] Preservar guardrail `PAUSED`.
+- [x] Rodar build frontend.
+- [x] Rodar validação/build backend seguro, se existir.
+- [x] Atualizar `PLANS.md` ao final com evidências.
+
+Critérios de aceite:
+
+- [x] Auditoria completa do backend realizada.
+- [x] Todos os usos de `countryCode` mapeados.
+- [x] Estratégia de compatibilidade definida.
+- [x] Backend preparado para receber `marketCode`.
+- [x] Backend preparado para receber `resolvedCountries`.
+- [x] Fluxo antigo preservado.
+- [x] Nenhuma campanha Meta alterada.
+- [x] Nenhum payload Meta alterado.
+- [x] Guardrail `PAUSED` preservado.
+- [x] Build executado.
+- [x] `PLANS.md` atualizado.
+
+Auditoria backend (P35):
+
+- Arquivos com uso direto de `countryCode`/`country_code`:
+  - `backend/src/routes/meta.js`: recebe `countryCode` em criação simples e cria AdSet usando `gc.country_code` ou `req.body.countryCode`.
+  - `backend/src/meta/adsets.js`: monta o payload real `targeting = { geo_locations: { countries: [cc] } }`.
+  - `backend/src/routes/campaigns.js`: cria, atualiza, duplica e gera campanhas por `campaign_country_targets.country_code`.
+  - `backend/src/routes/generatedCampaigns.js`: lista/retorna `generated_campaigns.country_code`.
+  - `backend/src/routes/campaignTemplates.js`: salva/aplica templates usando `campaign.countryCode`.
+  - `backend/src/routes/auth.js`: gerencia `user_operational_countries.country_code`.
+  - `backend/src/routes/flowTemplates.js`: usa `user_operational_countries.country_code` para traduções por país.
+  - `backend/src/routes/finance.js`: agrega relatórios por `generated_campaigns.country_code`.
+  - `backend/src/seed.js`: popula tabela `countries`.
+- Endpoints que recebem ou dependem de `countryCode`:
+  - `POST /api/meta/campaigns/simple`;
+  - `POST /api/meta/adsets`;
+  - `POST /api/campaigns`;
+  - `PATCH /api/campaigns/:id`;
+  - `POST /api/campaigns/:id/generate`;
+  - `POST /api/campaign-templates/:id/apply`;
+  - `POST /api/auth/operational-countries/add`;
+  - `POST /api/auth/operational-countries/remove`;
+  - `POST /api/auth/operational-countries/language`.
+- Tabelas dependentes:
+  - `countries(code)` como fonte ISO-2;
+  - `campaign_country_targets.country_code` com FK para `countries`;
+  - `generated_campaigns.country_code` com FK para `countries`;
+  - `user_operational_countries.country_code` com FK para `countries`.
+- Payload real enviado à Meta:
+  - somente `backend/src/meta/adsets.js`;
+  - formato atual: `targeting.geo_locations.countries = [countryCode]`;
+  - `status` real continua forçado para `PAUSED`.
+
+Estratégia de compatibilidade (P35):
+
+- Manter `countryCode` como contrato de criação real.
+- Adicionar `marketCode` e `resolvedCountries` apenas em camada de validação/preview técnico.
+- Não persistir `marketCode` ainda.
+- Não criar migration ainda.
+- Não alterar `metaCreateAdSet`.
+- Não permitir publicação real por mercado enquanto `publishable` permanecer `false`.
+
+Implementação (P35):
+
+- Criado `backend/src/lib/marketTargeting.js` com:
+  - `normalizeMarketCode`;
+  - `normalizeIsoCountryCode`;
+  - `normalizeIsoCountryCodes`;
+  - `resolveMarketTargetingInput`;
+  - `buildMarketTargetingTechnicalPreview`.
+- Criado endpoint técnico:
+  - `POST /api/meta/market-targeting-preview`.
+- O endpoint aceita:
+  - `marketCode`;
+  - `resolvedCountries`;
+  - `excludedCountries`.
+- O endpoint retorna apenas preview:
+  - `futurePayloadPreview.targeting.geo_locations.countries`;
+  - `publishable: false`;
+  - `previewOnly: true`.
+- `/campaign-flow` passou a exibir `Payload futuro (não enviado)` com `targeting.geo_locations.countries=[...]`.
+- `backend/src/meta/adsets.js` não foi alterado.
+- `backend/src/routes/meta.js` continua chamando `metaCreateAdSet` com `countryCode` no fluxo real.
+
+Validação (P35):
+
+- [2026-06-04 09:45] `node --check backend/src/lib/marketTargeting.js` (OK).
+- [2026-06-04 09:45] `node --check backend/src/routes/meta.js` (OK).
+- [2026-06-04 09:45] Validação Node do helper com `AREU` e entrada inválida (OK).
+- [2026-06-04 09:45] `cd frontend && npm run build` (OK; aviso Vite de chunk grande mantido).
+
+Arquivos alterados (P35):
+
+- `PLANS.md`
+- `backend/src/lib/marketTargeting.js`
+- `backend/src/routes/meta.js`
+- `frontend/src/pages/CampaignFlow.jsx`
+
+Pendências finais (P35):
+
+- P36: decidir migration compatível para persistir `marketCode`/payload operacional sem remover `country_code`.
+- P36: integrar o endpoint técnico ao frontend apenas se houver necessidade de validação backend em tempo real.
+- P36: preparar criação real por mercado em modo explicitamente controlado, ainda `PAUSED`, após validar lista de países Europa/Worldwide.
+- P36: desenhar suporte backend real para múltiplos países e exclusões antes de alterar `metaCreateAdSet`.
+
+---
+
+## P36A — Persistência de MarketCode e Compatibilidade
+
+Última atualização: [2026-06-05 11:46; 2026-06-05 11:58]
+
+Objetivo:
+Adicionar suporte persistente e compatível para dados de Mercado Operacional, mantendo `country_code` como fluxo legado obrigatório e sem alterar publicação real Meta.
+
+Contexto:
+
+- P30 criou o Motor de Mercados Operacionais.
+- P31 criou o catálogo oficial com 100 mercados.
+- P32 criou classificação dos mercados.
+- P33 criou catálogo de localizações Meta.
+- P34 resolveu `Europa` e `Worldwide` internamente para preview.
+- P35 criou preview técnico backend para `marketCode` e `resolvedCountries`, sem persistência e sem alterar Meta real.
+- O banco atual ainda depende de `country_code` em campanhas geradas e relações operacionais.
+
+Riscos:
+
+- Tornar `market_code` obrigatório quebraria registros antigos.
+- Alterar ou remover FK de `country_code` quebraria o fluxo legado.
+- Usar `market_code` em criação real antes do backend suportar múltiplos países/exclusões pode alterar alcance na Meta.
+- Persistir payload operacional em local errado pode duplicar fonte de verdade sem contrato claro.
+
+Tarefas:
+
+- [x] Auditar migrations/tabelas relacionadas a campanhas geradas e `country_code`.
+- [x] Registrar onde `country_code` é obrigatório.
+- [x] Definir estratégia aditiva e compatível para `market_code`.
+- [x] Criar migration idempotente com campos opcionais.
+- [x] Adaptar backend para normalizar dados opcionais de mercado.
+- [x] Adaptar criação/retorno de `generated_campaigns` quando dados de mercado forem enviados.
+- [x] Garantir que `countryCode` continue funcionando sem alteração.
+- [x] Garantir que `metaCreateAdSet` não seja alterado.
+- [x] Rodar validações seguras.
+- [x] Atualizar `PLANS.md` ao final com evidências.
+
+Critérios de aceite:
+
+- [x] P36A criado no `PLANS.md`.
+- [x] Banco auditado.
+- [x] Estratégia de compatibilidade registrada.
+- [x] Migration idempotente criada, se necessário.
+- [x] Campos de `marketCode` são opcionais.
+- [x] `countryCode` continua preservado.
+- [x] Backend aceita `marketCode` sem usar em Meta REAL.
+- [x] `metaCreateAdSet` não foi alterado para publicação real.
+- [x] Guardrail `PAUSED` preservado.
+- [x] Validações executadas.
+
+Auditoria de banco (P36A):
+
+- `countries(code)`:
+  - tabela base ISO-2;
+  - `code` é PK e exige 2 caracteres.
+- `campaign_country_targets.country_code`:
+  - `NOT NULL`;
+  - FK para `countries(code)`;
+  - PK composta `(campaign_id, country_code)`.
+- `generated_campaigns.country_code`:
+  - `NOT NULL`;
+  - FK para `countries(code)`;
+  - `UNIQUE (campaign_id, country_code)`.
+- `user_operational_countries.country_code`:
+  - `NOT NULL`;
+  - FK para `countries(code)`;
+  - PK composta `(user_id, country_code)`.
+- `campaign_templates.payload`:
+  - `jsonb`;
+  - não possui coluna `country_code`, mas templates guardam `campaign.countryCode` dentro do payload.
+- Tabelas dependentes de `generated_campaigns`:
+  - `campaign_metrics`;
+  - `generated_adsets`;
+  - `generated_ads`;
+  - `creative_drafts`;
+  - `generated_campaign_events`.
+
+Estratégia de compatibilidade (P36A):
+
+- Manter `country_code` obrigatório e com FK.
+- Adicionar campos opcionais em `generated_campaigns`, sem FK e sem `NOT NULL`.
+- Persistir metadados de mercado apenas quando `marketCode` vier validado.
+- Se `marketCode` não vier, o backend preserva o comportamento antigo.
+- Não alterar `campaign_country_targets` nem `user_operational_countries` nesta etapa.
+- Não alterar `metaCreateAdSet` nem payload real enviado à Meta.
+
+Migration criada (P36A):
+
+- `backend/migrations/0023_generated_campaigns_operational_market.sql`
+- Campos adicionados em `generated_campaigns`:
+  - `market_code text`;
+  - `market_name text`;
+  - `market_param text`;
+  - `resolved_countries jsonb`;
+  - `targeting_preview jsonb`.
+- Índice adicionado:
+  - `generated_campaigns_market_code_idx` em `market_code`.
+- Migration é idempotente:
+  - usa `ADD COLUMN IF NOT EXISTS`;
+  - usa `CREATE INDEX IF NOT EXISTS`;
+  - não remove dados;
+  - não altera constraints existentes.
+
+Implementação backend/frontend (P36A):
+
+- `backend/src/lib/marketTargeting.js` ganhou `normalizeMarketPersistenceInput`.
+- `POST /api/meta/campaigns/simple` aceita opcionalmente:
+  - `marketCode`;
+  - `marketName`;
+  - `marketParam`;
+  - `resolvedCountries`;
+  - `targetingPreview`.
+- `POST /api/meta/campaigns/simple` continua exigindo `countryCode`.
+- `backend/src/routes/generatedCampaigns.js` passou a retornar os campos de mercado.
+- `backend/src/routes/campaignTemplates.js` passou a preservar campos de mercado ao criar/aplicar templates.
+- `frontend/src/services/metaCampaigns.js` passou a enviar campos opcionais de mercado.
+- `/campaign-flow` envia metadados do mercado quando o modo operacional está ativo e há preview resolvido.
+
+Validação (P36A):
+
+- [2026-06-05 11:58] `node --check backend/src/lib/marketTargeting.js` (OK).
+- [2026-06-05 11:58] `node --check backend/src/routes/meta.js` (OK).
+- [2026-06-05 11:58] `node --check backend/src/routes/generatedCampaigns.js` (OK).
+- [2026-06-05 11:58] `node --check backend/src/routes/campaignTemplates.js` (OK).
+- [2026-06-05 11:58] Validação Node de `normalizeMarketPersistenceInput` com mercado válido, sem mercado e mercado inválido (OK).
+- [2026-06-05 11:58] `cd frontend && npm run build` (OK; aviso Vite de chunk grande mantido).
+- Migration criada, mas não executada.
+
+Arquivos alterados (P36A):
+
+- `PLANS.md`
+- `backend/migrations/0023_generated_campaigns_operational_market.sql`
+- `backend/src/lib/marketTargeting.js`
+- `backend/src/routes/meta.js`
+- `backend/src/routes/generatedCampaigns.js`
+- `backend/src/routes/campaignTemplates.js`
+- `frontend/src/pages/CampaignFlow.jsx`
+- `frontend/src/services/metaCampaigns.js`
+
+Pendências finais (P36A):
+
+- P36B: aplicar migration em ambiente local/staging e validar leitura/escrita real com banco.
+- P36B: decidir se `campaign_country_targets` terá equivalente por mercado ou se `generated_campaigns` será a primeira fronteira operacional.
+- P36B: adicionar endpoint dedicado para criar campanhas geradas por mercado sem acionar Meta real.
+- P36B: manter `metaCreateAdSet` bloqueado para mercado até haver suporte formal a múltiplos países/exclusões e validação de publishability.
+
+---
+
+## P36B — Validação de Persistência de Mercados
+
+Última atualização: [2026-06-06 08:54; 2026-06-06 08:57]
+
+Objetivo:
+Validar escrita e leitura real dos novos campos de Mercado Operacional em `generated_campaigns`, sem publicar campanhas reais por mercado e sem alterar Meta REAL.
+
+Contexto:
+
+- P36A criou a migration `backend/migrations/0023_generated_campaigns_operational_market.sql`.
+- As colunas `market_code`, `market_name`, `market_param`, `resolved_countries` e `targeting_preview` já foram validadas localmente como existentes.
+- `country_code` continua `NOT NULL` e preservado como contrato legado.
+- O backend já normaliza dados opcionais de mercado via `normalizeMarketPersistenceInput`.
+
+Riscos:
+
+- Validar escrita usando rota real de Meta poderia criar campanha real se `mode` for `REAL`.
+- Inserir dados de teste fora de transação poderia poluir o banco local.
+- Tornar `market_code` obrigatório quebraria o fluxo antigo.
+- Alterar `metaCreateAdSet` nesta etapa mudaria o escopo e o risco.
+
+Tarefas:
+
+- [x] Auditar criação, leitura e listagem de `generated_campaigns`.
+- [x] Confirmar que inserts aceitam campos opcionais de mercado.
+- [x] Confirmar que selects/listagens retornam campos de mercado.
+- [x] Confirmar que fluxo sem mercado preserva campos nulos.
+- [x] Criar validação técnica segura de persistência.
+- [x] Executar validação sem criar campanha/adset/ad Meta.
+- [x] Confirmar que `countryCode` continua obrigatório.
+- [x] Confirmar que `metaCreateAdSet` não foi alterado.
+- [x] Rodar validações seguras.
+- [x] Atualizar `PLANS.md` ao final com evidências.
+
+Critérios de aceite:
+
+- [x] P36B criado no `PLANS.md`.
+- [x] Inserts de `generated_campaigns` aceitam campos de mercado opcionais.
+- [x] Selects/listagens retornam campos de mercado.
+- [x] Campos nulos não quebram fluxo antigo.
+- [x] Validação segura de persistência criada/executada.
+- [x] Nenhuma publicação Meta por mercado.
+- [x] Nenhum payload Meta real alterado.
+- [x] `countryCode` preservado.
+- [x] `PAUSED` preservado.
+- [x] Validações executadas.
+
+Auditoria repositories/services (P36B):
+
+- `backend/src/routes/meta.js`:
+  - `POST /api/meta/campaigns/simple` insere `generated_campaigns` com `country_code` obrigatório e campos opcionais de mercado quando enviados;
+  - retornos de campanha/adset/ad incluem os campos de mercado;
+  - `POST /api/meta/adsets` continua lendo `country_code` e chamando `metaCreateAdSet` com `countryCode`.
+- `backend/src/routes/generatedCampaigns.js`:
+  - listagem `GET /api/generated-campaigns` retorna `market_code`, `market_name`, `market_param`, `resolved_countries`, `targeting_preview`;
+  - retornos de status/ops/published também retornam os campos.
+- `backend/src/routes/campaignTemplates.js`:
+  - `from-generated` preserva campos de mercado dentro do payload do template;
+  - `apply` aceita/persiste os campos opcionais quando presentes.
+- `backend/src/routes/campaigns.js`:
+  - fluxo antigo `POST /api/campaigns/:id/generate` continua criando `generated_campaigns` apenas com `country_code`, `name` e `PAUSED`;
+  - os campos de mercado ficam nulos nesse caminho legado.
+- `frontend/src/services/metaCampaigns.js`:
+  - envia campos opcionais de mercado apenas quando fornecidos.
+
+Validação técnica criada (P36B):
+
+- Criado `backend/scripts/validate-market-persistence.js`.
+- O script:
+  - usa `DATABASE_URL`;
+  - abre transação;
+  - insere campanha gerada com `market_code = ENCA`, `market_name`, `market_param`, `resolved_countries` e `targeting_preview`;
+  - lê os campos via `RETURNING`;
+  - valida `country_code = CA`;
+  - valida `status = PAUSED`;
+  - cria também um caso legado sem mercado e confirma campos nulos;
+  - executa `ROLLBACK` ao final.
+
+Evidências de execução (P36B):
+
+- [2026-06-06 08:57] `node --check backend/scripts/validate-market-persistence.js` (OK).
+- [2026-06-06 08:57] `node --check backend/src/lib/marketTargeting.js` (OK).
+- [2026-06-06 08:57] `node --check backend/src/routes/meta.js` (OK).
+- [2026-06-06 08:57] `node --check backend/src/routes/generatedCampaigns.js` (OK).
+- [2026-06-06 08:57] `node --check backend/src/routes/campaignTemplates.js` (OK).
+- [2026-06-06 08:57] `node backend/scripts/validate-market-persistence.js` sem `DATABASE_URL` falhou com erro esperado e explícito.
+- [2026-06-06 08:57] `DATABASE_URL='postgres://postgres:postgres@localhost:5433/campaign_builder' node backend/scripts/validate-market-persistence.js` (OK; `rolledBack: true`).
+- [2026-06-06 08:57] `cd frontend && npm run build` (OK; aviso Vite de chunk grande mantido).
+- Saída validada:
+  - `marketRow.country_code`: `CA`;
+  - `marketRow.status`: `PAUSED`;
+  - `marketRow.market_code`: `ENCA`;
+  - `marketRow.market_param`: `ENCA-PlantasBTN-FB`;
+  - `marketRow.resolved_countries`: `["CA"]`;
+  - `marketRow.targeting_preview.publishable`: `false`;
+  - `legacyRow.market_code`: `null`;
+  - `legacyRow.resolved_countries`: `null`;
+  - `legacyRow.targeting_preview`: `null`.
+
+Arquivos alterados (P36B):
+
+- `PLANS.md`
+- `backend/scripts/validate-market-persistence.js`
+
+Pendências finais (P36B):
+
+- P36C/P37: criar endpoint operacional para gerar campanhas por mercado sem criar Meta real.
+- P36C/P37: decidir se a seleção por mercado precisa de tabela própria ou se `generated_campaigns` será suficiente inicialmente.
+- P36C/P37: validar publishability antes de qualquer uso real de `resolved_countries` em AdSet.
+- P36C/P37: manter `metaCreateAdSet` inalterado até o contrato de múltiplos países/exclusões estar fechado.
+
+---
+
+## P36C — Geração Operacional por Mercado (Sem Meta REAL)
+
+Última atualização: [2026-06-06 09:55; 2026-06-06 10:03]
+
+Objetivo:
+Criar a primeira geração operacional completa baseada em mercados, persistindo estruturas em `generated_campaigns` sem criar campanhas, AdSets ou Ads reais na Meta.
+
+Contexto:
+
+- P30 criou o motor de Mercados Operacionais.
+- P31 criou o catálogo oficial com 100 mercados.
+- P32 criou classificação dos mercados.
+- P33 criou catálogo de localizações Meta.
+- P34 resolveu `Europa` e `Worldwide` internamente.
+- P35 criou integração controlada `marketCode → backend`.
+- P36A adicionou persistência compatível.
+- P36B validou escrita/leitura real com rollback.
+
+Riscos:
+
+- `generated_campaigns.country_code` continua `NOT NULL` e único por `(campaign_id, country_code)`, então mercados operacionais ainda precisam de um `country_code` de compatibilidade.
+- Usar `resolved_countries` para Meta real antes de P37 poderia alterar targeting.
+- Criar rota operacional dentro de `/api/meta` poderia sugerir publicação real; preferir rota de `generated-campaigns`.
+- Mercados diferentes podem resolver para o mesmo primeiro país de compatibilidade e colidir no índice legado.
+
+Tarefas:
+
+- [x] Auditar pontos de geração de campanhas e Campaign Flow.
+- [x] Criar helper isolado de geração operacional.
+- [x] Gerar `marketParam` corretamente.
+- [x] Gerar UTM corretamente.
+- [x] Gerar SRC corretamente.
+- [x] Criar persistência operacional sem Meta.
+- [x] Expandir preview operacional no Campaign Flow.
+- [x] Criar validação segura com `ENCA`, `AREU`, `ARM`.
+- [x] Confirmar que nenhuma chamada Meta real foi adicionada.
+- [x] Confirmar que `metaCreateAdSet` não foi alterado.
+- [x] Rodar validações/build.
+- [x] Atualizar `PLANS.md` ao final com evidências.
+
+Critérios de aceite:
+
+- [x] P36C criado no `PLANS.md`.
+- [x] Gerador operacional criado.
+- [x] `marketParam` gerado corretamente.
+- [x] UTM gerada corretamente.
+- [x] SRC gerado corretamente.
+- [x] Persistência funcionando.
+- [x] Preview operacional expandido.
+- [x] Nenhuma publicação Meta.
+- [x] Nenhum AdSet criado.
+- [x] Nenhum Ad criado.
+- [x] Fluxo antigo preservado.
+- [x] Build executado.
+
+Auditoria (P36C):
+
+- Geração legada:
+  - `backend/src/routes/campaigns.js` continua gerando por `campaign_country_targets.country_code`.
+- Persistência/consulta:
+  - `backend/src/routes/generatedCampaigns.js` é o ponto mais seguro para geração operacional sem Meta.
+- Fluxo Meta:
+  - `backend/src/routes/meta.js` continua sendo o único caminho de criação real Meta.
+  - `backend/src/meta/adsets.js` não foi alterado.
+- Campaign Flow:
+  - já possuía preview operacional por mercado;
+  - foi expandido para salvar geração operacional sem acionar Campaign/AdSet/Ad Meta.
+
+Implementação (P36C):
+
+- Criado `backend/src/lib/operationalMarketGeneration.js` com:
+  - `generateMarketParam`;
+  - `generateOperationalTracking`;
+  - `generateOperationalMarkets`.
+- Criado endpoint:
+  - `POST /api/generated-campaigns/operational-markets`.
+- O endpoint:
+  - cria uma `campaign` draft quando `campaignId` não é enviado;
+  - gera uma `generated_campaign` por mercado;
+  - salva `market_code`, `market_name`, `market_param`, `resolved_countries` e `targeting_preview`;
+  - salva tracking dentro de `targeting_preview.tracking`;
+  - mantém `status = 'PAUSED'`;
+  - mantém `meta_campaign_id`, `meta_adset_id` e `meta_ad_id` nulos;
+  - não chama Graph API.
+- `country_code` segue obrigatório por compatibilidade:
+  - é escolhido entre países já existentes na tabela `countries`;
+  - usa o primeiro país resolvido disponível no legado;
+  - se nenhum existir, usa `BR` quando disponível;
+  - essa decisão fica registrada em `targeting_preview.compatibilityCountryCodeReason`.
+- `frontend/src/services/generatedCampaigns.js` ganhou `createOperationalMarketGeneration`.
+- `/campaign-flow` ganhou ação `Salvar geração operacional`.
+- Preview operacional passou a mostrar UTM completa:
+  - `utm_source=facebook`;
+  - `utm_medium=cpa`;
+  - `utm_campaign={marketCode}`;
+  - `src={marketCode}-{niche}-FB`.
+
+Validação (P36C):
+
+- Criado `backend/scripts/validate-operational-market-generation.js`.
+- [2026-06-06 10:03] `node --check backend/src/lib/operationalMarketGeneration.js` (OK).
+- [2026-06-06 10:03] `node --check backend/src/routes/generatedCampaigns.js` (OK).
+- [2026-06-06 10:03] `node --check backend/scripts/validate-operational-market-generation.js` (OK).
+- [2026-06-06 10:03] `node --check frontend/src/services/generatedCampaigns.js` (OK).
+- [2026-06-06 10:03] `DATABASE_URL='postgres://postgres:postgres@localhost:5433/campaign_builder' node backend/scripts/validate-operational-market-generation.js` (OK; `rolledBack: true`).
+- [2026-06-06 10:03] `cd frontend && npm run build` (OK; aviso Vite de chunk grande mantido).
+- Mercados validados:
+  - `ENCA`: `market_param = ENCA-PlantasBTN-FB`, `utm_campaign = ENCA`, `src = ENCA-PlantasBTN-FB`;
+  - `AREU`: `market_param = AREU-PlantasBTN-FB`, `utm_campaign = AREU`, `src = AREU-PlantasBTN-FB`;
+  - `ARM`: `market_param = ARM-PlantasBTN-FB`, `utm_campaign = ARM`, `src = ARM-PlantasBTN-FB`.
+- Confirmações:
+  - `status = PAUSED`;
+  - `meta_campaign_id = null`;
+  - `meta_adset_id = null`;
+  - `meta_ad_id = null`;
+  - rollback executado.
+
+Arquivos alterados (P36C):
+
+- `PLANS.md`
+- `backend/src/lib/operationalMarketGeneration.js`
+- `backend/src/routes/generatedCampaigns.js`
+- `backend/scripts/validate-operational-market-generation.js`
+- `frontend/src/services/generatedCampaigns.js`
+- `frontend/src/pages/CampaignFlow.jsx`
+
+Pendências finais (P36C):
+
+- P37: resolver o modelo definitivo de `country_code` de compatibilidade para mercados que não são país simples.
+- P37: avaliar tabela própria para geração por mercado, evitando colisões do índice legado `(campaign_id, country_code)`.
+- P37: validar publishability e contrato de múltiplos países/exclusões antes de qualquer criação real de AdSet.
+- P37: manter Meta REAL bloqueada até a camada de targeting real estar explicitamente aprovada.
+
+---
+
+## P37 — Desacoplamento de Mercados Operacionais do country_code
+
+Última atualização: [2026-06-06 11:25; 2026-06-06 11:38]
+
+Objetivo:
+Preparar o modelo operacional para usar `market_code`, `resolved_countries` e `targeting_preview` como fonte principal, mantendo `country_code` apenas como compatibilidade legada enquanto o schema antigo ainda exige esse campo.
+
+Contexto:
+
+- P36C já gera e persiste mercados operacionais sem Meta REAL.
+- `generated_campaigns.country_code` continua `NOT NULL` e único por `(campaign_id, country_code)`.
+- Mercados compostos como `AREU`, `ARM`, `AROM` e `ARKU` não representam um único país.
+
+Riscos:
+
+- Remover ou tornar nullable `country_code` agora quebraria schema, queries e fluxo Meta atual.
+- Tratar `country_code` como fonte operacional principal pode distorcer mercados compostos.
+- Alterar `metaCreateAdSet` nesta etapa mudaria o escopo e poderia tocar Meta REAL.
+- A constraint legada `(campaign_id, country_code)` ainda pode limitar múltiplos mercados com o mesmo país de compatibilidade.
+
+Tarefas:
+
+- [x] Auditar todos os usos relevantes de `generated_campaigns.country_code`.
+- [x] Classificar usos entre compatibilidade histórica, Meta atual e dependência artificial.
+- [x] Criar modelo/helper explícito com `market_code`, `resolved_countries`, `targeting_preview` como fonte principal.
+- [x] Centralizar resolução de `legacyCountryCode`.
+- [x] Atualizar geração operacional para expor `legacyCountryCode`.
+- [x] Atualizar preview/serialização operacional para mostrar fonte principal e legado.
+- [x] Validar `ENCA`, `AREU`, `ARM`, `AROM`.
+- [x] Confirmar compatibilidade com fluxo antigo.
+- [x] Confirmar que Meta REAL não foi alterada.
+- [x] Rodar build.
+- [x] Atualizar `PLANS.md` ao final com evidências.
+
+Critérios de aceite:
+
+- [x] P37 criado no `PLANS.md`.
+- [x] Auditoria de `country_code` realizada.
+- [x] Dependências mapeadas.
+- [x] Fonte principal passa a ser `market_code`.
+- [x] `resolved_countries` utilizado como referência principal.
+- [x] `country_code` tratado como legado.
+- [x] Compatibilidade preservada.
+- [x] Nenhuma publicação Meta.
+- [x] Nenhuma alteração Meta REAL.
+- [x] Build executado.
+
+Auditoria `country_code` (P37):
+
+- Compatibilidade histórica:
+  - `campaigns.js`: geração antiga por `campaign_country_targets.country_code`.
+  - `generatedCampaigns.js`: listagem/status ainda retorna `country_code`.
+  - `campaignTemplates.js`: templates ainda preservam `campaign.countryCode`.
+  - `finance.js`: relatórios financeiros ainda agregam por `generated_campaigns.country_code`.
+  - `auth.js` e `flowTemplates.js`: configuração operacional antiga por países.
+- Necessário para Meta atual:
+  - `meta.js`: criação real de AdSet lê `gc.country_code` e passa `countryCode` para `metaCreateAdSet`.
+  - `meta/adsets.js`: payload real Meta continua `targeting.geo_locations.countries = [countryCode]`.
+- Dependência artificial no fluxo de mercados:
+  - `generated_campaigns.country_code` continua `NOT NULL` e `UNIQUE (campaign_id, country_code)`;
+  - mercados compostos exigem um código legado apenas para persistir no schema atual;
+  - `country_code` não representa a fonte operacional do mercado.
+
+Modelo operacional (P37):
+
+- Fonte principal:
+  - `market_code`;
+  - `resolved_countries`;
+  - `targeting_preview`.
+- Criado/atualizado em `backend/src/lib/operationalMarketGeneration.js`:
+  - `buildOperationalTargeting`;
+  - `resolveLegacyCountryCode`.
+- `targeting_preview.operationalTargeting` agora registra:
+  - `source: "market_code"`;
+  - `marketCode`;
+  - `resolvedCountries`;
+  - `tracking`;
+  - `publishable: false`;
+  - `previewOnly: true`.
+- `country_code` passa a ser tratado como:
+  - `legacyCountryCode`;
+  - compatibilidade de schema;
+  - não fonte de targeting operacional.
+
+Camada de compatibilidade (P37):
+
+- `resolveLegacyCountryCode`:
+  - tenta usar um país resolvido que exista em `countries`;
+  - evita reutilizar o mesmo legado dentro do mesmo lote para não colidir com `UNIQUE (campaign_id, country_code)`;
+  - usa `BR` como fallback legado quando disponível;
+  - se ainda houver conflito, usa qualquer país legado disponível não utilizado;
+  - registra o motivo em `legacyCountryCodeReason`.
+- A rota operacional ainda grava `generated_campaigns.country_code`, mas usa `market.legacyCountryCode` explicitamente.
+- A resposta de `GET /api/generated-campaigns` e `POST /api/generated-campaigns/operational-markets` inclui `operational_targeting` derivado.
+
+Preview (P37):
+
+- `/campaign-flow` agora mostra:
+  - `Fonte principal: market_code={CODIGO}`;
+  - `Legacy country_code`;
+  - países resolvidos;
+  - payload futuro não enviado.
+
+Validação (P37):
+
+- [2026-06-06 11:38] `node --check backend/src/lib/operationalMarketGeneration.js` (OK).
+- [2026-06-06 11:38] `node --check backend/src/routes/generatedCampaigns.js` (OK).
+- [2026-06-06 11:38] `node --check backend/scripts/validate-operational-market-generation.js` (OK).
+- [2026-06-06 11:38] `DATABASE_URL='postgres://postgres:postgres@localhost:5433/campaign_builder' node backend/scripts/validate-operational-market-generation.js` (OK; `rolledBack: true`).
+- [2026-06-06 11:38] `cd frontend && npm run build` (OK; aviso Vite de chunk grande mantido).
+- Mercados validados:
+  - `ENCA`;
+  - `AREU`;
+  - `ARM`;
+  - `AROM`.
+- Confirmações:
+  - `targeting_preview.operationalTargeting.source = "market_code"`;
+  - `resolved_countries` preservado;
+  - `legacyCountryCode` presente e separado;
+  - `status = PAUSED`;
+  - `meta_campaign_id = null`;
+  - `meta_adset_id = null`;
+  - `meta_ad_id = null`;
+  - rollback executado.
+
+Arquivos alterados (P37):
+
+- `PLANS.md`
+- `backend/src/lib/operationalMarketGeneration.js`
+- `backend/src/routes/generatedCampaigns.js`
+- `backend/scripts/validate-operational-market-generation.js`
+- `frontend/src/pages/CampaignFlow.jsx`
+
+Pendências finais (P37):
+
+- P38: criar tabela própria para geração operacional por mercado, removendo a necessidade de `country_code` por mercado composto.
+- P38: migrar relatórios/serializadores operacionais para consumir `operational_targeting`.
+- P38: definir contrato de targeting real com múltiplos países e exclusões.
+- P38: só depois avaliar publicação real por mercado, sempre `PAUSED`.
+
+---
+
+## P38 — Estrutura Própria para Mercados Operacionais
+
+Última atualização: [2026-06-06 13:31; 2026-06-06 13:42; 2026-06-06 14:42]
+
+Objetivo:
+Criar estrutura própria para armazenar gerações operacionais por mercado, removendo a dependência lógica de `generated_campaigns.country_code` sem quebrar compatibilidade.
+
+Contexto:
+
+- P37 definiu `market_code`, `resolved_countries` e `targeting_preview` como fonte operacional principal.
+- `generated_campaigns.country_code` continua obrigatório por compatibilidade e para o fluxo Meta atual.
+- Mercados compostos não devem depender logicamente de um único país.
+
+Riscos:
+
+- Remover ou alterar `generated_campaigns` quebraria fluxo antigo e Meta atual.
+- Criar publicação Meta nesta etapa aumentaria risco operacional.
+- Duplicar persistência sem DTO claro poderia confundir consumidores.
+- Relatórios antigos ainda dependem de `generated_campaigns`.
+
+Tarefas:
+
+- [x] Modelar tabela própria de gerações operacionais.
+- [x] Criar migration idempotente.
+- [x] Criar repository de acesso.
+- [x] Adaptar geração operacional para persistir na nova estrutura.
+- [x] Preservar `generated_campaigns` sem alterações destrutivas.
+- [x] Garantir que `legacyCountryCode` não seja dependência principal.
+- [x] Criar validação com `ENCA`, `AREU`, `ARM`, `AROM`.
+- [x] Confirmar que nenhuma chamada Meta real foi adicionada.
+- [x] Confirmar que `metaCreateAdSet` não foi alterado.
+- [x] Rodar build.
+- [x] Atualizar `PLANS.md` ao final com evidências.
+
+Critérios de aceite:
+
+- [x] P38 criado no `PLANS.md`.
+- [x] Modelagem concluída.
+- [x] Migration criada.
+- [x] Repository criado.
+- [x] Persistência operacional migrada.
+- [x] `legacyCountryCode` deixa de ser dependência principal.
+- [x] Fluxo antigo preservado.
+- [x] Nenhuma publicação Meta.
+- [x] Nenhuma alteração Meta REAL.
+- [x] Build executado.
+
+Modelagem (P38):
+
+- Nova tabela:
+  - `operational_market_generations`.
+- Campos:
+  - `id`;
+  - `campaign_id`;
+  - `market_code`;
+  - `market_name`;
+  - `market_param`;
+  - `resolved_countries`;
+  - `targeting_preview`;
+  - `utm_campaign`;
+  - `src`;
+  - `status`;
+  - `created_at`;
+  - `updated_at`.
+- Índices:
+  - único por `(campaign_id, market_code)`;
+  - índice por `market_code`;
+  - índice por `created_at DESC`.
+
+Migration (P38):
+
+- Criada `backend/migrations/0024_operational_market_generations.sql`.
+- Migration idempotente:
+  - `CREATE TABLE IF NOT EXISTS`;
+  - `CREATE UNIQUE INDEX IF NOT EXISTS`;
+  - `CREATE INDEX IF NOT EXISTS`.
+- Não remove nem altera `generated_campaigns`.
+- Não altera `country_code`.
+- Não altera constraints antigas.
+
+Repository (P38):
+
+- Criado `backend/src/services/operationalMarketGenerations.js`.
+- Funções:
+  - `insertOperationalMarketGeneration`;
+  - `listOperationalMarketGenerations`.
+- Persistência sempre mantém:
+  - `status = 'PAUSED'`;
+  - `publishable = false` dentro do preview;
+  - tracking operacional (`utm_campaign`, `src`).
+
+Integração (P38):
+
+- `POST /api/generated-campaigns/operational-markets` agora persiste em `operational_market_generations`.
+- A resposta passou a retornar:
+  - `operational_market_generations`;
+  - `generated_campaigns: []` por compatibilidade de payload.
+- `GET /api/generated-campaigns/operational-markets` lista gerações operacionais.
+- `frontend/src/services/generatedCampaigns.js` passou a ler `operational_market_generations`.
+- `/campaign-flow` usa a contagem de `operationalMarketGenerations` ao salvar geração operacional.
+- `legacyCountryCode` pode permanecer em `targeting_preview` como metadado, mas não é usado como chave principal de persistência operacional.
+- Correção [2026-06-06 14:42]:
+  - criado catálogo backend oficial em `backend/src/lib/operationalMarkets.js`, sincronizado com o catálogo operacional do frontend;
+  - criado resolver backend de localizações em `backend/src/lib/metaLocations.js`, usado apenas para geração/preview operacional;
+  - `generateOperationalMarkets` passou a aceitar `markets` como lista simples de códigos (`["ENCA", "AREU", "ARM"]`);
+  - validação de `marketCode` agora usa o catálogo backend, removendo a falha `Invalid marketCode` para códigos oficiais;
+  - endpoint continua sem publicar Meta, com `meta_publishing: false` e registros `PAUSED`.
+
+Validação (P38):
+
+- `backend/scripts/validate-operational-market-generation.js` passou a validar a nova tabela.
+- A validação executa o SQL da migration dentro de uma transação e faz `ROLLBACK`.
+- [2026-06-06 13:42] `node --check backend/src/lib/operationalMarketGeneration.js` (OK).
+- [2026-06-06 13:42] `node --check backend/src/services/operationalMarketGenerations.js` (OK).
+- [2026-06-06 13:42] `node --check backend/src/routes/generatedCampaigns.js` (OK).
+- [2026-06-06 13:42] `node --check backend/scripts/validate-operational-market-generation.js` (OK).
+- [2026-06-06 13:42] `node --check frontend/src/services/generatedCampaigns.js` (OK).
+- [2026-06-06 13:42] `DATABASE_URL='postgres://postgres:postgres@localhost:5433/campaign_builder' node backend/scripts/validate-operational-market-generation.js` (OK; `rolledBack: true`).
+- [2026-06-06 13:42] `cd frontend && npm run build` (OK; aviso Vite de chunk grande mantido).
+- [2026-06-06 14:42] `node --check backend/src/lib/operationalMarkets.js && node --check backend/src/lib/metaLocations.js && node --check backend/src/lib/operationalMarketGeneration.js && node --check backend/src/routes/generatedCampaigns.js` (OK).
+- [2026-06-06 14:42] Validação Node direta de `generateOperationalMarkets({ niche: "PlantasBTN", markets: ["ENCA", "AREU", "ARM"] })` (OK; 3 mercados gerados; `publishable: false`).
+- [2026-06-06 14:42] `DATABASE_URL='postgres://postgres:postgres@localhost:5433/campaign_builder' node backend/scripts/validate-operational-market-generation.js` (OK; `rolledBack: true`; script agora usa lista simples de códigos).
+- [2026-06-06 14:42] `DATABASE_URL='postgres://postgres:postgres@localhost:5433/campaign_builder' npm --prefix backend run migrate` (OK; aplicou `0023` e `0024` no banco local).
+- [2026-06-06 14:42] `POST http://localhost:3001/api/generated-campaigns/operational-markets` com `{"campaignName":"Teste operacional local","niche":"PlantasBTN","markets":["ENCA","AREU","ARM"]}` (OK; criou campanha local `draft`; persistiu 3 linhas em `operational_market_generations`; `meta_publishing: false`).
+- [2026-06-06 14:42] `npm --prefix frontend run build` (OK; aviso Vite de chunk grande mantido).
+- Mercados validados:
+  - `ENCA`;
+  - `AREU`;
+  - `ARM`;
+  - `AROM`.
+- Confirmado:
+  - gravação em `operational_market_generations`;
+  - leitura/serialização;
+  - `market_param`;
+  - `utm_campaign`;
+  - `src`;
+  - `resolved_countries`;
+  - `targeting_preview.operationalTargeting.source = "market_code"`;
+  - `status = PAUSED`;
+  - rollback executado;
+  - nenhuma chamada Meta.
+
+Arquivos alterados (P38):
+
+- `PLANS.md`
+- `backend/migrations/0024_operational_market_generations.sql`
+- `backend/src/services/operationalMarketGenerations.js`
+- `backend/src/routes/generatedCampaigns.js`
+- `backend/src/lib/operationalMarketGeneration.js`
+- `backend/src/lib/operationalMarkets.js`
+- `backend/src/lib/metaLocations.js`
+- `backend/scripts/validate-operational-market-generation.js`
+- `frontend/src/services/generatedCampaigns.js`
+- `frontend/src/pages/CampaignFlow.jsx`
+
+Pendências finais (P38):
+
+- P39: aplicar migration em ambiente controlado e validar endpoint real com a tabela persistida fora de rollback.
+- P39: migrar telas/listagens operacionais para consumir `operational_market_generations`.
+- P39: definir contrato de publicação real por mercado usando `resolved_countries` e exclusões.
+- P39: manter `generated_campaigns` como compatibilidade para fluxo legado/Meta atual até migração planejada.

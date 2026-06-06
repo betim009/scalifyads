@@ -18,10 +18,16 @@ import {
   createCampaignTemplateFromGenerated,
   listCampaignTemplates,
 } from "../services/campaignTemplates.js";
+import { createOperationalMarketGeneration } from "../services/generatedCampaigns.js";
 import { listCreativeTemplates } from "../services/creativeTemplates.js";
 import { listCreativeAssets, uploadCreativeAsset } from "../services/creativeAssets.js";
 import { listMetaAccounts } from "../services/metaAccounts.js";
 import { formatBrlFromCents, formatBrlInputFromCents, parseBrlToCents } from "../utils/brlMoney.js";
+import {
+  OPERATIONAL_MARKETS,
+  buildMarketPreview,
+} from "../utils/operationalMarkets.js";
+import { resolveMarketMetaLocations } from "../utils/metaLocations.js";
 
 const DEFAULTS = {
   campaign: {
@@ -49,6 +55,13 @@ const DEFAULTS = {
   },
   ad: {
     name: "Ad • BR — 1",
+  },
+  operationalMarket: {
+    enabled: false,
+    nicheParam: "",
+    brSlug: "",
+    internationalSlug: "",
+    baseDomain: "",
   },
 };
 
@@ -229,6 +242,54 @@ function SummaryRow({ label, value }) {
   );
 }
 
+function formatLocations(locations) {
+  return Array.isArray(locations) && locations.length ? locations.join(", ") : "Nenhuma";
+}
+
+function formatTargetingType(type) {
+  const map = {
+    simple_location: "Tipo 1 — localização simples",
+    location_group: "Tipo 2 — grupo de localizações",
+    region_with_exclusions: "Tipo 3 — região com exclusões",
+    worldwide_with_exclusions: "Tipo 4 — worldwide com exclusões",
+    location_group_with_exclusions: "Grupo com exclusões",
+    unknown: "Pendente",
+  };
+  return map[type] || type || "Pendente";
+}
+
+function formatMetaLocationMapping(locations) {
+  if (!Array.isArray(locations) || !locations.length) return "Nenhuma";
+  return locations
+    .map((location) => {
+      const target = location.countryCode || location.key || "pendente";
+      const status =
+        location.status === "mapping_ready"
+          ? "ready"
+          : location.status === "mapping_ready_internal"
+            ? "ready interno"
+            : "pendente";
+      return `${location.name} -> ${target} (${status})`;
+    })
+    .join(", ");
+}
+
+function formatBooleanStatus(value) {
+  return value ? "Sim" : "Não";
+}
+
+function formatFutureGeoLocationsPreview(metaMapping) {
+  const countries = Array.isArray(metaMapping?.resolvedCountries) ? metaMapping.resolvedCountries : [];
+  if (!countries.length) return "Pendente";
+  return `targeting.geo_locations.countries=[${countries.join(", ")}]`;
+}
+
+function resolvePreviewLegacyCountryCode(metaMapping) {
+  const countries = Array.isArray(metaMapping?.resolvedCountries) ? metaMapping.resolvedCountries : [];
+  if (countries.includes("BR")) return "BR";
+  return countries[0] || "BR";
+}
+
 function mediaRejectionReasons(media) {
   const m = media && typeof media === "object" ? media : null;
   if (!m) return ["asset não encontrado"];
@@ -254,17 +315,20 @@ export default function CampaignFlow() {
   const [profileMetaAdAccountId, setProfileMetaAdAccountId] = useState("");
   const [profileMetaPageId, setProfileMetaPageId] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [savingOperationalGeneration, setSavingOperationalGeneration] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [realConfirm, setRealConfirm] = useState(false);
   const [batchEnabled, setBatchEnabled] = useState(false);
   const [selectedCountryCodes, setSelectedCountryCodes] = useState(["BR"]);
+  const [selectedMarketCodes, setSelectedMarketCodes] = useState(["BR"]);
   const [progress, setProgress] = useState(null);
 
   const [campaign, setCampaign] = useState(DEFAULTS.campaign);
   const [adSet, setAdSet] = useState(DEFAULTS.adSet);
   const [creative, setCreative] = useState(DEFAULTS.creative);
   const [ad, setAd] = useState(DEFAULTS.ad);
+  const [operationalMarket, setOperationalMarket] = useState(DEFAULTS.operationalMarket);
 
   const [result, setResult] = useState(null);
 
@@ -376,8 +440,8 @@ export default function CampaignFlow() {
     };
   }, []);
 
-  const operationalCountriesMissing = batchEnabled && operationalCountryCodes.length === 0;
-  const countryLanguagesMissing = batchEnabled && operationalCountryCodes.length > 0 && Object.keys(countryLanguageByCode || {}).length === 0;
+  const operationalCountriesMissing = batchEnabled && !operationalMarket.enabled && operationalCountryCodes.length === 0;
+  const countryLanguagesMissing = batchEnabled && !operationalMarket.enabled && operationalCountryCodes.length > 0 && Object.keys(countryLanguageByCode || {}).length === 0;
 
   useEffect(() => {
     const last = safeJsonParse(localStorage.getItem(STORAGE_LAST_EXECUTION_KEY));
@@ -491,13 +555,105 @@ export default function CampaignFlow() {
     return Object.fromEntries(pairs);
   }, [countries]);
 
+  const marketPreview = useMemo(
+    () =>
+      buildMarketPreview({
+        markets: selectedMarketCodes,
+        nicheParam: operationalMarket.nicheParam,
+        brSlug: operationalMarket.brSlug,
+        internationalSlug: operationalMarket.internationalSlug,
+        baseDomain: operationalMarket.baseDomain,
+      }),
+    [
+      operationalMarket.baseDomain,
+      operationalMarket.brSlug,
+      operationalMarket.internationalSlug,
+      operationalMarket.nicheParam,
+      selectedMarketCodes,
+    ]
+  );
+
+  const marketPreviewByCode = useMemo(
+    () => Object.fromEntries((marketPreview || []).map((item) => [item.code, item])),
+    [marketPreview]
+  );
+
+  function buildMarketPersistencePayload(code) {
+    if (!operationalMarket.enabled) return {};
+    const market = marketPreviewByCode?.[String(code || "").trim().toUpperCase()];
+    if (!market) return {};
+    const metaMapping = resolveMarketMetaLocations(market.code);
+    if (!metaMapping?.ready || !Array.isArray(metaMapping.resolvedCountries) || metaMapping.resolvedCountries.length === 0) return {};
+    return {
+      marketCode: market.code,
+      marketName: market.name,
+      marketParam: market.marketParam,
+      resolvedCountries: metaMapping.resolvedCountries,
+      targetingPreview: {
+        strategy: metaMapping.strategy,
+        publishable: Boolean(metaMapping.publishable),
+        previewOnly: true,
+        excludedCountryCodes: metaMapping.excludedCountryCodes || [],
+        futurePayloadPreview: {
+          targeting: {
+            geo_locations: {
+              countries: metaMapping.resolvedCountries,
+            },
+          },
+        },
+      },
+    };
+  }
+
+  function buildOperationalGenerationMarkets() {
+    if (!operationalMarket.enabled) return [];
+    return (marketPreview || [])
+      .map((market) => {
+        const metaMapping = resolveMarketMetaLocations(market.code);
+        if (!metaMapping?.ready || !Array.isArray(metaMapping.resolvedCountries) || metaMapping.resolvedCountries.length === 0) return null;
+        return {
+          marketCode: market.code,
+          marketName: market.name,
+          language: market.language,
+          resolvedCountries: metaMapping.resolvedCountries,
+          targetingPreview: {
+            strategy: metaMapping.strategy,
+            included: market.includedLocations || [],
+            excluded: market.excludedLocations || [],
+            excludedCountryCodes: metaMapping.excludedCountryCodes || [],
+            publishable: false,
+            previewOnly: true,
+          },
+        };
+      })
+      .filter(Boolean);
+  }
+
+  const selectedExecutionCodes = operationalMarket.enabled
+    ? selectedMarketCodes
+    : batchEnabled
+      ? selectedCountryCodes
+      : [campaign.countryCode || "BR"];
+
+  function resolveDestinationUrlForCode(code) {
+    if (!operationalMarket.enabled) return creative.destinationUrl;
+    const cc = String(code || "").trim().toUpperCase();
+    return marketPreviewByCode?.[cc]?.finalUrl || "";
+  }
+
   const canGoNext = useMemo(() => {
     if (submitting) return false;
     if (step === 0) {
       return (
         normalizeNonEmptyString(campaign.name) &&
         normalizeNonEmptyString(campaign.objective) &&
-        (batchEnabled ? selectedCountryCodes.length > 0 : normalizeNonEmptyString(campaign.countryCode)) &&
+        (
+          operationalMarket.enabled
+            ? selectedMarketCodes.length > 0
+            : batchEnabled
+              ? selectedCountryCodes.length > 0
+              : normalizeNonEmptyString(campaign.countryCode)
+        ) &&
         normalizeNonEmptyString(campaign.mode)
       );
     }
@@ -515,13 +671,20 @@ export default function CampaignFlow() {
       const allHaveText = variants.every((v) => normalizeNonEmptyString(v?.primaryText));
       return (
         allHaveText &&
-        normalizeNonEmptyString(creative.destinationUrl) &&
+        (
+          operationalMarket.enabled
+            ? normalizeNonEmptyString(operationalMarket.nicheParam) &&
+              normalizeNonEmptyString(operationalMarket.brSlug) &&
+              normalizeNonEmptyString(operationalMarket.internationalSlug) &&
+              normalizeNonEmptyString(operationalMarket.baseDomain)
+            : normalizeNonEmptyString(creative.destinationUrl)
+        ) &&
         normalizeNonEmptyString(creative.ctaType)
       );
     }
     if (step === 3) return true;
     return false;
-  }, [submitting, step, campaign, adSet, creative]);
+  }, [submitting, step, campaign, adSet, creative, operationalMarket, selectedMarketCodes, selectedCountryCodes, batchEnabled]);
 
   const steps = [
     "1. Selecionar template",
@@ -619,6 +782,12 @@ export default function CampaignFlow() {
     const nextAdSet = base.adSet && typeof base.adSet === "object" ? base.adSet : {};
     const nextCreative = base.creative && typeof base.creative === "object" ? base.creative : {};
     const nextAd = base.ad && typeof base.ad === "object" ? base.ad : {};
+    const nextOperationalMarket =
+      base.operationalMarket && typeof base.operationalMarket === "object"
+        ? base.operationalMarket
+        : snap.operationalMarket && typeof snap.operationalMarket === "object"
+          ? snap.operationalMarket
+          : {};
 
     setCampaign((p) => ({
       ...p,
@@ -647,10 +816,12 @@ export default function CampaignFlow() {
         "",
     }));
     setAd((p) => ({ ...p, ...nextAd }));
+    setOperationalMarket((p) => ({ ...p, ...nextOperationalMarket }));
 
     const snapBatchEnabled = Boolean(snap.batchEnabled);
     setBatchEnabled(snapBatchEnabled);
     setSelectedCountryCodes(Array.isArray(snap.selectedCountryCodes) ? snap.selectedCountryCodes : ["BR"]);
+    setSelectedMarketCodes(Array.isArray(snap.selectedMarketCodes) ? snap.selectedMarketCodes : ["BR"]);
     if (!snapBatchEnabled) {
       const first = Array.isArray(snap.selectedCountryCodes) && snap.selectedCountryCodes.length ? snap.selectedCountryCodes[0] : "BR";
       setCampaign((p) => ({ ...p, countryCode: first || "BR" }));
@@ -690,9 +861,10 @@ export default function CampaignFlow() {
       name: trimmed,
       createdAt: new Date().toISOString(),
       snapshot: {
-        base: { campaign, adSet, creative, ad },
+        base: { campaign, adSet, creative, ad, operationalMarket },
         batchEnabled,
         selectedCountryCodes,
+        selectedMarketCodes,
       },
     };
 
@@ -822,6 +994,45 @@ export default function CampaignFlow() {
     }
   }
 
+  async function saveOperationalGenerationOnly() {
+    setSavingOperationalGeneration(true);
+    setError("");
+    setNotice("");
+    try {
+      if (!operationalMarket.enabled) {
+        throw new Error("Ative Mercados Operacionais para salvar a geração operacional.");
+      }
+      if (!normalizeNonEmptyString(operationalMarket.nicheParam)) {
+        throw new Error("Informe o nicho/parâmetro para gerar os mercados.");
+      }
+      const markets = buildOperationalGenerationMarkets();
+      if (!markets.length) {
+        throw new Error("Nenhum mercado com mapeamento interno pronto para salvar.");
+      }
+      const res = await createOperationalMarketGeneration({
+        campaignName: campaign.name || `Operacional ${operationalMarket.nicheParam}`,
+        niche: operationalMarket.nicheParam,
+        markets,
+      });
+      setResult({
+        ok: true,
+        operationalOnly: true,
+        mode: "OPERATIONAL_ONLY",
+        campaignId: res.campaign?.id ?? null,
+        campaignName: res.campaign?.name ?? null,
+        operationalMarketGenerations: res.operationalMarketGenerations,
+        generatedCampaigns: res.generatedCampaigns,
+        count: res.operationalMarketGenerations.length || res.generatedCampaigns.length,
+        metaPublishing: false,
+      });
+      setNotice(`Geração operacional salva: ${res.operationalMarketGenerations.length || res.generatedCampaigns.length} mercado(s). Nenhuma campanha Meta foi criada.`);
+    } catch (err) {
+      setError(err?.message || "Falha ao salvar geração operacional.");
+    } finally {
+      setSavingOperationalGeneration(false);
+    }
+  }
+
   async function runFlow() {
     setSubmitting(true);
     setError("");
@@ -853,6 +1064,29 @@ export default function CampaignFlow() {
         setError("Configure ou selecione uma Conta Meta antes de executar em REAL.");
         setStep(0);
         return;
+      }
+
+      if (operationalMarket.enabled) {
+        const blocked = (selectedMarketCodes || [])
+          .map((code) => String(code || "").trim().toUpperCase())
+          .filter((code) => code && code !== "BR");
+        if (blocked.length) {
+          setSubmitting(false);
+          setNotice("");
+          setError(
+            `Mercados Operacionais ainda estão em modo preview para Meta targeting: ${blocked.join(", ")}. ` +
+              "O mapeamento mercado -> localização Meta precisa ser validado antes de criar campanhas reais para esses mercados."
+          );
+          setStep(3);
+          return;
+        }
+        if (!marketPreviewByCode.BR?.finalUrl) {
+          setSubmitting(false);
+          setNotice("");
+          setError("Preencha nicho/parâmetro, domínio base, slug BR e slug internacional para gerar a URL final do mercado BR.");
+          setStep(2);
+          return;
+        }
       }
 
       if (batchEnabled) {
@@ -1022,6 +1256,7 @@ export default function CampaignFlow() {
               metaAdAccountId: campaign.metaAdAccountId,
               metaAccountId: normalizeNonEmptyString(campaign.metaAccountId) || null,
               countryCode,
+              ...buildMarketPersistencePayload(countryCode),
               mode: campaign.mode,
             });
 
@@ -1077,7 +1312,7 @@ export default function CampaignFlow() {
                   primaryText: copy.primaryText,
                   headline: copy.headline || null,
                   description: copy.description || null,
-                  destinationUrl: creative.destinationUrl,
+                  destinationUrl: resolveDestinationUrlForCode(countryCode),
                   ctaType: creative.ctaType,
                 });
 
@@ -1154,15 +1389,22 @@ export default function CampaignFlow() {
           type: "batch",
           mode: campaign.mode,
           base: { campaign, adSet, creative, ad },
+          operationalMarket,
+          marketPreview,
           perCountry,
           createdAt: new Date().toISOString(),
         };
         setResult(nextResult);
-        persistLastExecution({ base: { campaign, adSet, creative, ad }, batchEnabled: true, selectedCountryCodes: codes });
+        persistLastExecution({
+          base: { campaign, adSet, creative, ad, operationalMarket },
+          batchEnabled: true,
+          selectedCountryCodes: codes,
+          selectedMarketCodes,
+        });
         setStep(4);
       } else {
         if (campaign.mode === "REAL") {
-          const cc = String(campaign.countryCode || "").trim().toUpperCase();
+          const cc = operationalMarket.enabled ? "BR" : String(campaign.countryCode || "").trim().toUpperCase();
           // Best-effort: auto-generate missing thumbnails for videos.
           for (const k of AD_KEYS) {
             const media = resolveFinalMedia(cc, k);
@@ -1235,7 +1477,8 @@ export default function CampaignFlow() {
           objective: campaign.objective,
           metaAdAccountId: campaign.metaAdAccountId,
           metaAccountId: normalizeNonEmptyString(campaign.metaAccountId) || null,
-          countryCode: campaign.countryCode,
+          countryCode: operationalMarket.enabled ? "BR" : campaign.countryCode,
+          ...buildMarketPersistencePayload(operationalMarket.enabled ? "BR" : campaign.countryCode),
           mode: campaign.mode,
         });
 
@@ -1257,7 +1500,7 @@ export default function CampaignFlow() {
         const translationsRequired = creative?.translationsRequired === true;
         const translationsByCountry =
           creative?.translationsByCountry && typeof creative.translationsByCountry === "object" ? creative.translationsByCountry : null;
-        const cc = String(campaign.countryCode || "").trim().toUpperCase();
+        const cc = operationalMarket.enabled ? "BR" : String(campaign.countryCode || "").trim().toUpperCase();
         const perAds = [];
         for (const k of AD_KEYS) {
           const copy = resolveFinalCopy(cc, k);
@@ -1282,7 +1525,7 @@ export default function CampaignFlow() {
               primaryText: copy.primaryText,
               headline: copy.headline || null,
               description: copy.description || null,
-              destinationUrl: creative.destinationUrl,
+              destinationUrl: resolveDestinationUrlForCode(cc),
               ctaType: creative.ctaType,
             });
             const creativeDraftId = draftRes?.creativeDraft?.id;
@@ -1326,18 +1569,20 @@ export default function CampaignFlow() {
         const nextResult = {
           type: "single",
           mode: campaign.mode,
-          countryCode: campaign.countryCode,
+          countryCode: operationalMarket.enabled ? "BR" : campaign.countryCode,
           generatedCampaignId,
           metaCampaignId: campaignRes?.metaCampaign?.id ?? null,
           metaAdSetId: adSetRes?.metaAdSet?.id ?? null,
+          operationalMarket: operationalMarket.enabled ? marketPreviewByCode?.[cc] ?? null : null,
           ads: perAds,
           createdAt: new Date().toISOString(),
         };
         setResult(nextResult);
         persistLastExecution({
-          base: { campaign, adSet, creative, ad },
+          base: { campaign, adSet, creative, ad, operationalMarket },
           batchEnabled: false,
           selectedCountryCodes: [campaign.countryCode || "BR"],
+          selectedMarketCodes,
         });
 
         setStep(4);
@@ -1806,7 +2051,7 @@ export default function CampaignFlow() {
                   <input
                     type="checkbox"
                     checked={batchEnabled}
-                    disabled={submitting}
+                    disabled={submitting || operationalMarket.enabled}
                     onChange={(e) => {
                       const next = e.target.checked;
                       setBatchEnabled(next);
@@ -1825,7 +2070,91 @@ export default function CampaignFlow() {
                 </label>
               </Field>
 
-              {batchEnabled ? (
+              <Field
+                label="Mercados Operacionais"
+                hint="Modo incremental P30: gera parâmetro, UTM, SRC e URL por mercado. Criação Meta para mercados não-BR fica bloqueada até validar localização Meta."
+              >
+                <label style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 850, color: "#111827" }}>
+                  <input
+                    type="checkbox"
+                    checked={operationalMarket.enabled}
+                    disabled={submitting}
+                    onChange={(e) => {
+                      const next = e.target.checked;
+                      setOperationalMarket((p) => ({ ...p, enabled: next }));
+                      setRealConfirm(false);
+                      if (next) {
+                        setBatchEnabled(false);
+                        setCampaign((p) => ({ ...p, countryCode: "BR" }));
+                        setSelectedMarketCodes((prev) => (Array.isArray(prev) && prev.length ? prev : ["BR"]));
+                      }
+                    }}
+                  />
+                  Usar Mercados Operacionais
+                </label>
+              </Field>
+
+              {operationalMarket.enabled ? (
+                <Field label="Mercados" required hint="Selecione os códigos pré-cadastrados para gerar preview operacional.">
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      className="pillOutline"
+                      disabled={submitting}
+                      onClick={() => setSelectedMarketCodes(OPERATIONAL_MARKETS.map((m) => m.code))}
+                    >
+                      Selecionar todos
+                    </button>
+                    <button
+                      type="button"
+                      className="pillOutline"
+                      disabled={submitting}
+                      onClick={() => setSelectedMarketCodes([])}
+                    >
+                      Limpar
+                    </button>
+                  </div>
+                  <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
+                    {OPERATIONAL_MARKETS.map((market) => {
+                      const checked = selectedMarketCodes.includes(market.code);
+                      return (
+                        <label
+                          key={market.code}
+                          className="card"
+                          style={{
+                            padding: 12,
+                            cursor: submitting ? "not-allowed" : "pointer",
+                            borderColor: checked ? "#111827" : "#e5e7eb",
+                          }}
+                          title={market.name}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                            <div>
+                              <div style={{ fontWeight: 950, color: "#111827" }}>{market.name}</div>
+                              <div style={{ color: "#6b7280", fontWeight: 750, fontSize: 11 }}>
+                                {market.code} • {market.language}
+                              </div>
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              disabled={submitting}
+                              onChange={() => {
+                                setSelectedMarketCodes((prev) => {
+                                  const set = new Set(prev || []);
+                                  if (set.has(market.code)) set.delete(market.code);
+                                  else set.add(market.code);
+                                  return Array.from(set);
+                                });
+                              }}
+                            />
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </Field>
+              ) : batchEnabled ? (
                 <Field label="Países" required hint="Selecione 1 ou mais países para o lote.">
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                     <button
@@ -2054,14 +2383,54 @@ export default function CampaignFlow() {
                   })}
                 </div>
               </Field>
-              <Field label="Destination URL" required>
-                <InputLike
-                  placeholder="https://example.com/?utm_source=demo"
-                  value={creative.destinationUrl}
-                  onChange={(e) => setCreative((p) => ({ ...p, destinationUrl: e.target.value }))}
-                  disabled={submitting}
-                />
-              </Field>
+              {operationalMarket.enabled ? (
+                <>
+                  <div style={{ height: 1, background: "#f3f4f6" }} />
+                  <Field label="Nicho/parâmetro" required hint="Ex.: PlantasBTN, DirigirBTN, InglesBTN.">
+                    <InputLike
+                      placeholder="PlantasBTN"
+                      value={operationalMarket.nicheParam}
+                      onChange={(e) => setOperationalMarket((p) => ({ ...p, nicheParam: e.target.value }))}
+                      disabled={submitting}
+                    />
+                  </Field>
+                  <Field label="Domínio base" required hint="Ex.: https://example.com">
+                    <InputLike
+                      placeholder="https://example.com"
+                      value={operationalMarket.baseDomain}
+                      onChange={(e) => setOperationalMarket((p) => ({ ...p, baseDomain: e.target.value }))}
+                      disabled={submitting}
+                    />
+                  </Field>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+                    <Field label="Slug BR" required hint="Brasil usa este slug. Ex.: plantas.">
+                      <InputLike
+                        placeholder="plantas"
+                        value={operationalMarket.brSlug}
+                        onChange={(e) => setOperationalMarket((p) => ({ ...p, brSlug: e.target.value }))}
+                        disabled={submitting}
+                      />
+                    </Field>
+                    <Field label="Slug internacional" required hint="Demais mercados usam este slug. Ex.: plants.">
+                      <InputLike
+                        placeholder="plants"
+                        value={operationalMarket.internationalSlug}
+                        onChange={(e) => setOperationalMarket((p) => ({ ...p, internationalSlug: e.target.value }))}
+                        disabled={submitting}
+                      />
+                    </Field>
+                  </div>
+                </>
+              ) : (
+                <Field label="Destination URL" required>
+                  <InputLike
+                    placeholder="https://example.com/?utm_source=demo"
+                    value={creative.destinationUrl}
+                    onChange={(e) => setCreative((p) => ({ ...p, destinationUrl: e.target.value }))}
+                    disabled={submitting}
+                  />
+                </Field>
+              )}
               <Field label="CTA Type" required>
                 <SelectLike
                   value={creative.ctaType}
@@ -2128,9 +2497,11 @@ export default function CampaignFlow() {
                   <SummaryRow label="Conta de anúncios" value={campaign.metaAdAccountId || "—"} />
                   <SummaryRow label="Objetivo" value={campaign.objective || "—"} />
                   <SummaryRow
-                    label="Países"
+                    label={operationalMarket.enabled ? "Mercados" : "Países"}
                     value={
-                      batchEnabled
+                      operationalMarket.enabled
+                        ? `${selectedMarketCodes.length} selecionados`
+                        : batchEnabled
                         ? `${selectedCountryCodes.length} selecionados`
                         : campaign.countryCode || "—"
                     }
@@ -2163,11 +2534,98 @@ export default function CampaignFlow() {
                       return missing ? `5 (faltando texto em ${missing})` : "5 (ok)";
                     })()}
                   />
-                  <SummaryRow label="URL de destino" value={creative.destinationUrl || "—"} />
+                  <SummaryRow
+                    label="URL de destino"
+                    value={operationalMarket.enabled ? "gerada por mercado" : creative.destinationUrl || "—"}
+                  />
                   <SummaryRow label="Chamada (CTA)" value={creative.ctaType || "—"} />
                   <SummaryRow label="Traduções" value={creative?.translationsRequired ? "ativas (revisar antes)" : "—"} />
                 </div>
               </div>
+
+              {operationalMarket.enabled ? (
+                <div className="card" style={{ padding: 18 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
+                    <div style={{ fontWeight: 950 }}>Preview de Mercados Operacionais</div>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={saveOperationalGenerationOnly}
+                      disabled={savingOperationalGeneration || submitting || !marketPreview.length}
+                    >
+                      {savingOperationalGeneration ? "Salvando..." : "Salvar geração operacional"}
+                    </button>
+                  </div>
+                  <div style={{ color: "#6b7280", fontWeight: 750, fontSize: 12 }}>
+                    Brasil usa slug BR. Demais mercados usam slug internacional. Mercados sem mapeamento Meta validado não serão enviados para criação real.
+                  </div>
+                  <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+                    {(marketPreview || []).map((item) => (
+                      (() => {
+                        const metaMapping = resolveMarketMetaLocations(item.code);
+                        return (
+                          <div key={item.code} className="card" style={{ padding: 12 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                              <div>
+                                <div style={{ fontWeight: 950 }}>{item.name}</div>
+                                <div style={{ color: "#6b7280", fontWeight: 850, fontSize: 12 }}>Código: {item.code}</div>
+                              </div>
+                              <div style={{ color: "#6b7280", fontWeight: 850, fontSize: 12 }}>
+                                idioma: {item.language || "—"} • slug: {item.slug || "—"}
+                              </div>
+                            </div>
+                            <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
+                              <SummaryRow label="Localizações incluídas" value={formatLocations(item.includedLocations)} />
+                              <SummaryRow label="Localizações excluídas" value={formatLocations(item.excludedLocations)} />
+                              <SummaryRow label="Mapeamento Meta incluído" value={formatMetaLocationMapping(metaMapping?.included)} />
+                              <SummaryRow label="Mapeamento Meta excluído" value={formatMetaLocationMapping(metaMapping?.excluded)} />
+                              <SummaryRow label="Fonte principal" value={`market_code=${item.code}`} />
+                              <SummaryRow label="Legacy country_code" value={resolvePreviewLegacyCountryCode(metaMapping)} />
+                              <SummaryRow label="Estratégia de resolução" value={metaMapping?.strategy || "Pendente"} />
+                              <SummaryRow label="Países resolvidos" value={formatLocations(metaMapping?.resolvedCountries)} />
+                              <SummaryRow label="Países excluídos" value={formatLocations(metaMapping?.excludedCountryCodes)} />
+                              <SummaryRow
+                                label="Status mapeamento Meta"
+                                value={metaMapping?.ready ? "Pronto internamente" : "Mapeamento pendente"}
+                              />
+                              <SummaryRow
+                                label="Publicável na Meta"
+                                value={formatBooleanStatus(metaMapping?.publishable)}
+                              />
+                              <SummaryRow
+                                label="Payload futuro (não enviado)"
+                                value={formatFutureGeoLocationsPreview(metaMapping)}
+                              />
+                              <SummaryRow
+                                label="Pendências"
+                                value={metaMapping?.pendingLocations?.length ? metaMapping.pendingLocations.map((location) => location.name).join(", ") : "Nenhuma"}
+                              />
+                              <SummaryRow label="Classificação" value={formatTargetingType(item.targetingPreview?.targetingType)} />
+                              <SummaryRow
+                                label="Targeting Meta previsto"
+                                value={
+                                  item.targetingPreview
+                                    ? `Inclui: ${formatLocations(item.targetingPreview.metaTargetingPreview?.geo_locations?.included)} | Exclui: ${formatLocations(item.targetingPreview.metaTargetingPreview?.geo_locations?.excluded)}`
+                                    : "Pendente"
+                                }
+                              />
+                              <SummaryRow
+                                label="Status Targeting Meta"
+                                value={item.targetingPreview?.publishable ? "Pronto para publicação" : "Preview somente (mapeamento Meta pendente)"}
+                              />
+                              <SummaryRow label="Parâmetro" value={item.marketParam || "—"} />
+                              <SummaryRow label="UTM" value={`utm_source=facebook | utm_medium=cpa | utm_campaign=${item.utm_campaign || "—"}`} />
+                              <SummaryRow label="utm_campaign" value={item.utm_campaign || "—"} />
+                              <SummaryRow label="src" value={item.src || "—"} />
+                              <SummaryRow label="URL final" value={item.finalUrl || "—"} />
+                            </div>
+                          </div>
+                        );
+                      })()
+                    ))}
+                  </div>
+                </div>
+              ) : null}
 
               <div className="card" style={{ padding: 18 }}>
                 <div style={{ fontWeight: 950, marginBottom: 10 }}>Ad</div>
@@ -2183,7 +2641,7 @@ export default function CampaignFlow() {
                   Mostra o que será enviado no Creative Draft por país e por Ad (A–E). BR usa sempre o texto base (PT-BR).
                 </div>
                 <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
-                  {(batchEnabled ? selectedCountryCodes : [campaign.countryCode || "BR"]).map((code) => {
+                  {selectedExecutionCodes.map((code) => {
                     const cc = String(code || "").trim().toUpperCase();
                     return (
                       <div key={cc} className="card" style={{ padding: 12 }}>
@@ -2296,7 +2754,7 @@ export default function CampaignFlow() {
                   País sem vídeo (A–E) será bloqueado no REAL (ou pulado no lote, com confirmação).
                 </div>
                 <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
-                  {(batchEnabled ? selectedCountryCodes : [campaign.countryCode || "BR"]).map((code) => {
+                  {selectedExecutionCodes.map((code) => {
                     const cc = String(code || "").trim().toUpperCase();
                     return (
                       <div key={cc} className="opsMediaCountry">
@@ -2468,7 +2926,9 @@ export default function CampaignFlow() {
               >
                 {submitting
                   ? "Criando..."
-                  : batchEnabled
+                  : operationalMarket.enabled
+                    ? `Criar mercados (PAUSED) • ${selectedMarketCodes.length} selecionados`
+                    : batchEnabled
                     ? `Criar lote (PAUSED) • ${selectedCountryCodes.length} países`
                     : "Criar tudo (PAUSED)"}
               </button>

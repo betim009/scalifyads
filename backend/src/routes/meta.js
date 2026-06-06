@@ -29,6 +29,7 @@ import {
   metaListMyPages
 } from '../meta/pages.js'
 import { resolveAuthUser } from '../lib/internalAuth.js'
+import { buildMarketTargetingTechnicalPreview, normalizeMarketPersistenceInput } from '../lib/marketTargeting.js'
 
 function parseDateOrNull(value) {
   if (typeof value !== 'string' || !value.trim()) return null
@@ -172,6 +173,26 @@ export function metaRouter() {
     if (!req.auth?.userId) return jsonError(res, 401, 'Login required')
     return null
   }
+
+  router.post(
+    '/market-targeting-preview',
+    asyncHandler(async (req, res) => {
+      const denied = requireAuth(req, res)
+      if (denied) return denied
+
+      const preview = buildMarketTargetingTechnicalPreview({
+        marketCode: req.body?.marketCode,
+        resolvedCountries: req.body?.resolvedCountries,
+        excludedCountries: req.body?.excludedCountries
+      })
+
+      if (!preview.ok) {
+        return jsonError(res, 400, 'Invalid market targeting preview input', { errors: preview.errors })
+      }
+
+      return res.json({ ok: true, technical_preview: preview })
+    })
+  )
 
   async function insertOpsLogBestEffort(pool, entry) {
     try {
@@ -1020,6 +1041,11 @@ export function metaRouter() {
               id,
               campaign_id,
               country_code,
+              market_code,
+              market_name,
+              market_param,
+              resolved_countries,
+              targeting_preview,
               meta_campaign_id,
               meta_run_mode,
               meta_ad_account_id,
@@ -1127,6 +1153,11 @@ export function metaRouter() {
         return jsonError(res, 400, 'Unknown countryCode (not in countries table)')
       }
 
+      const marketInput = normalizeMarketPersistenceInput(req.body)
+      if (!marketInput.ok) {
+        return jsonError(res, 400, 'Invalid market persistence input', { errors: marketInput.errors })
+      }
+
       let metaUserId = normalizeNonEmptyString(req.body?.metaUserId)
       if (!metaUserId && mode === 'REAL') {
         try {
@@ -1163,15 +1194,30 @@ export function metaRouter() {
           [campaign.id, countryCode]
         )
 
-        const generatedName = `${name} — ${countryCode}`
+        const generatedName = marketInput.marketParam ? `${name} — ${marketInput.marketParam}` : `${name} — ${countryCode}`
         const insertedGenerated = await client.query(
           `
-            INSERT INTO generated_campaigns (campaign_id, country_code, name, status)
-            VALUES ($1, $2, $3, 'PAUSED')
+            INSERT INTO generated_campaigns (
+              campaign_id,
+              country_code,
+              name,
+              status,
+              market_code,
+              market_name,
+              market_param,
+              resolved_countries,
+              targeting_preview
+            )
+            VALUES ($1, $2, $3, 'PAUSED', $4, $5, $6, $7::jsonb, $8::jsonb)
             RETURNING
               id,
               campaign_id,
               country_code,
+              market_code,
+              market_name,
+              market_param,
+              resolved_countries,
+              targeting_preview,
               meta_campaign_id,
               meta_run_mode,
               meta_ad_account_id,
@@ -1183,7 +1229,16 @@ export function metaRouter() {
               status,
               created_at
           `,
-          [campaign.id, countryCode, generatedName]
+          [
+            campaign.id,
+            countryCode,
+            generatedName,
+            marketInput.marketCode,
+            marketInput.marketName,
+            marketInput.marketParam,
+            marketInput.resolvedCountries ? JSON.stringify(marketInput.resolvedCountries) : null,
+            marketInput.targetingPreview ? JSON.stringify(marketInput.targetingPreview) : null
+          ]
         )
 
         const generated = insertedGenerated.rows[0]
@@ -1226,6 +1281,11 @@ export function metaRouter() {
               id,
               campaign_id,
               country_code,
+              market_code,
+              market_name,
+              market_param,
+              resolved_countries,
+              targeting_preview,
               meta_campaign_id,
               meta_run_mode,
               meta_ad_account_id,
@@ -1340,6 +1400,11 @@ export function metaRouter() {
           SELECT
             id,
             country_code,
+            market_code,
+            market_name,
+            market_param,
+            resolved_countries,
+            targeting_preview,
             meta_campaign_id,
             meta_ad_account_id,
             meta_account_id,
@@ -1423,6 +1488,11 @@ export function metaRouter() {
                 id,
                 campaign_id,
                 country_code,
+                market_code,
+                market_name,
+                market_param,
+                resolved_countries,
+                targeting_preview,
                 meta_campaign_id,
                 meta_run_mode,
                 meta_ad_account_id,
@@ -1642,6 +1712,11 @@ export function metaRouter() {
                 id,
                 campaign_id,
                 country_code,
+                market_code,
+                market_name,
+                market_param,
+                resolved_countries,
+                targeting_preview,
                 meta_campaign_id,
                 meta_run_mode,
                 meta_ad_account_id,

@@ -1,0 +1,40 @@
+| Sigla   | Mercado                         | Localizações Incluídas                                                  | Excluídas         | Idioma                      |
+| ------- | ------------------------------- | ----------------------------------------------------------------------- | ----------------- | --------------------------- |
+| ARAF    | Árabe África                    | Argélia, Marrocos, Tunísia                                              | Nenhuma           | Árabe                       |
+| ARAS    | Árabe Ásia                      | Arábia Saudita, Emirados Árabes Unidos, Kuwait, Catar                   | Nenhuma           | Árabe                       |
+| ARNE    | Árabe Norte e Europa            | Canadá, Alemanha, França, Itália, Estados Unidos                        | Nenhuma           | Árabe                       |
+| ARCA    | Árabe Canadá                    | Canadá                                                                  | Nenhuma           | Árabe                       |
+| ARUS    | Árabe EUA                       | Estados Unidos                                                          | Nenhuma           | Árabe                       |
+| ARIT    | Árabe Itália                    | Itália                                                                  | Nenhuma           | Árabe                       |
+| BNEUAS  | Bengali Europa Ásia Sul         | Reino Unido, Itália, Portugal                                           | Nenhuma           | Bengali                     |
+| BRAF    | Brasil África                   | Angola, Cabo Verde, Moçambique                                          | Nenhuma           | Português (Brasil)          |
+| BREUOC  | Brasil Europa e Oceania         | Portugal, Irlanda, Luxemburgo, Austrália, Nova Zelândia                 | Nenhuma           | Português (Brasil)          |
+| ZHEUOC  | Chinês Europa e Oceania         | Austrália, Espanha, França, Reino Unido, Nova Zelândia                  | Nenhuma           | Chinês Tradicional (Taiwan) |
+| ZHNA    | Chinês Norte                    | Canadá, Estados Unidos                                                  | Nenhuma           | Chinês Tradicional (Taiwan) |
+| ESAMNA  | Espanhol América Norte e África | Canadá, Estados Unidos, Marrocos                                        | Nenhuma           | Espanhol                    |
+| ESSL    | Espanhol Sul                    | Argentina, Chile, Colômbia                                              | Nenhuma           | Espanhol                    |
+| TLAS    | Filipinas Ásia                  | Filipinas                                                               | Nenhuma           | Filipino                    |
+| TLSON   | Filipinas Sul Oceania e Norte   | Austrália, Brasil, Canadá, Chile, Nova Zelândia, Estados Unidos         | Nenhuma           | Filipino                    |
+| FRAF    | França África                   | Costa do Marfim, Marrocos, Senegal                                      | Nenhuma           | Francês                     |
+| FRAS    | França Ásia                     | Camboja, Líbano                                                         | Singapura, Taiwan | Francês                     |
+| FRN     | França Norte                    | Canadá, Haiti                                                           | Nenhuma           | Francês                     |
+| HIAS    | Hindi Ásia                      | Índia, Nepal                                                            | Nenhuma           | Hindi                       |
+| HISAF   | Hindi Sul Norte África          | Canadá, Guiana, Quênia, Suriname, Estados Unidos, África do Sul         | Nenhuma           | Hindi                       |
+| IDAS    | Indonésia Ásia                  | Indonésia, Timor-Leste                                                  | Nenhuma           | Indonésio                   |
+| IDSEUOC | Indonésia Sul Europa Oceania    | Austrália, Brasil, Alemanha, Países Baixos, Papua-Nova Guiné, Suriname  | Nenhuma           | Indonésio                   |
+| ENEU    | Inglês Europa                   | Reino Unido, Irlanda, Malta                                             | Nenhuma           | Inglês                      |
+| ENNA    | Inglês Norte                    | Belize, Canadá, Estados Unidos                                          | Nenhuma           | Inglês                      |
+| ENOC    | Inglês Oceania                  | Austrália, Ilhas Fiji, Nova Zelândia                                    | Nenhuma           | Inglês                      |
+| MSAS    | Malásia Ásia                    | Brunei, Malásia                                                         | Nenhuma           | Malaio                      |
+| MSAOC   | Malásia Sul África Oceania      | Austrália, Nova Zelândia, Suriname, África do Sul                       | Nenhuma           | Malaio                      |
+| RUAS    | Rússia Ásia                     | Quirguistão, Cazaquistão                                                | Nenhuma           | Russo                       |
+| RUNOC   | Rússia Norte e Oceania          | Austrália, Canadá, Nova Zelândia, Estados Unidos                        | Nenhuma           | Russo                       |
+| THAS    | Tailândia Ásia                  | Chipre, Turquia                                                         | Nenhuma           | Tailandês                   |
+| THNEUOC | Tailândia Norte Europa Oceania  | Austrália, Canadá, Alemanha, Reino Unido, Nova Zelândia, Estados Unidos | Nenhuma           | Tailandês                   |
+| TRAFN   | Turco África e Norte            | Canadá, Egito, Líbia, Estados Unidos, Europa                            | Nenhuma           | Turco                       |
+| TRAS    | Turco Ásia                      | Índia, Nepal                                                            | Singapura, Taiwan | Turco                       |
+| URAS    | Urdu Ásia                       | Paquistão                                                               | Nenhuma           | Urdu                        |
+| UREUAF  | Urdu Europa Sul e África        | Reino Unido, Guiana, Quênia, Noruega, África do Sul                     | Nenhuma           | Urdu                        |
+| VIAS    | Vietnam Ásia                    | Vietnã                                                                  | Nenhuma           | Vietnamita                  |
+| VINA    | Vietnam Norte                   | Canadá, Estados Unidos                                                  | Nenhuma           | Vietnamita                  |
+| VISEU   | Vietnam Sul e Europa            | Brasil, Alemanha, França                                                | Nenhuma           | Vietnamita                  |

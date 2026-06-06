@@ -3,11 +3,38 @@ import { getPool } from '../db.js'
 import { jsonError, parseLimit } from '../lib/http.js'
 import { asyncHandler } from '../lib/asyncHandler.js'
 import { isUuid } from '../lib/validate.js'
+import { slugify } from '../lib/slugify.js'
+import { generateOperationalMarkets } from '../lib/operationalMarketGeneration.js'
+import {
+  insertOperationalMarketGeneration,
+  listOperationalMarketGenerations
+} from '../services/operationalMarketGenerations.js'
 
 const ALLOWED_STATUSES = new Set(['PAUSED', 'ACTIVE', 'ARCHIVED'])
 const ALLOWED_OPS_STATES = new Set(['draft', 'validated', 'published'])
 const CHECKPOINT_LABEL_MAX = 80
 const CHECKPOINT_NOTE_MAX = 400
+
+function normalizeNonEmptyString(value, { maxLen } = {}) {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  if (maxLen && trimmed.length > maxLen) return trimmed.slice(0, maxLen)
+  return trimmed
+}
+
+async function createUniqueSlug(pool, base) {
+  const cleaned = slugify(base) || `campaign-${Date.now()}`
+  let candidate = cleaned
+  let attempt = 0
+
+  while (true) {
+    const { rowCount } = await pool.query('SELECT 1 FROM campaigns WHERE slug = $1', [candidate])
+    if (rowCount === 0) return candidate
+    attempt += 1
+    candidate = `${cleaned}-${attempt}`
+  }
+}
 
 async function tryInsertGeneratedCampaignEvent(pool, generatedCampaignId, eventType, payload) {
   try {
@@ -49,6 +76,11 @@ export function generatedCampaignsRouter() {
             gc.id,
             gc.campaign_id,
             gc.country_code,
+            gc.market_code,
+            gc.market_name,
+            gc.market_param,
+            gc.resolved_countries,
+            gc.targeting_preview,
             gc.meta_campaign_id,
             gc.meta_run_mode,
             gc.meta_ad_account_id,
@@ -77,7 +109,136 @@ export function generatedCampaignsRouter() {
         [campaignId, limit]
       )
 
-      return res.json({ ok: true, generated_campaigns: rows })
+      return res.json({
+        ok: true,
+        generated_campaigns: rows.map((row) => ({
+          ...row,
+          operational_targeting: {
+            source: row.market_code ? 'market_code' : 'legacy_country_code',
+            market_code: row.market_code ?? null,
+            resolved_countries: row.resolved_countries ?? null,
+            targeting_preview: row.targeting_preview ?? null,
+            legacy_country_code: row.country_code ?? null
+          }
+        }))
+      })
+    })
+  )
+
+  router.get(
+    '/operational-markets',
+    asyncHandler(async (req, res) => {
+      if (!req.app.locals.dbEnabled) {
+        return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
+      }
+
+      const limit = parseLimit(req.query.limit, 50, 200)
+      const campaignId =
+        typeof req.query.campaignId === 'string' && req.query.campaignId.trim()
+          ? req.query.campaignId.trim()
+          : null
+      if (campaignId && !isUuid(campaignId)) {
+        return jsonError(res, 400, 'Invalid campaignId')
+      }
+
+      const rows = await listOperationalMarketGenerations(getPool(), { campaignId, limit })
+      return res.json({ ok: true, operational_market_generations: rows })
+    })
+  )
+
+  router.post(
+    '/operational-markets',
+    asyncHandler(async (req, res) => {
+      if (!req.app.locals.dbEnabled) {
+        return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
+      }
+
+      const campaignIdRaw = normalizeNonEmptyString(req.body?.campaignId)
+      if (campaignIdRaw && !isUuid(campaignIdRaw)) {
+        return jsonError(res, 400, 'Invalid campaignId')
+      }
+
+      const campaignName = normalizeNonEmptyString(req.body?.campaignName, { maxLen: 140 }) ?? 'Campanha Operacional'
+      const niche = normalizeNonEmptyString(req.body?.niche ?? req.body?.nicheParam, { maxLen: 80 })
+      const marketsInput = Array.isArray(req.body?.markets) ? req.body.markets : []
+      const pool = getPool()
+
+      const { rows: countryRows } = await pool.query(`SELECT code FROM countries ORDER BY code ASC`)
+      const availableCountryCodes = countryRows.map((row) => row.code).filter(Boolean)
+      const generatedInput = generateOperationalMarkets({
+        niche,
+        markets: marketsInput,
+        availableCountryCodes
+      })
+      if (!generatedInput.ok) {
+        return jsonError(res, 400, 'Invalid operational markets input', { errors: generatedInput.errors })
+      }
+
+      const client = await pool.connect()
+      try {
+        await client.query('BEGIN')
+
+        let campaign = null
+        if (campaignIdRaw) {
+          const { rows, rowCount } = await client.query(
+            `
+              SELECT id, slug, name, status, scope, objective_key, created_by_user_id, config, created_at
+              FROM campaigns
+              WHERE id = $1::uuid
+            `,
+            [campaignIdRaw]
+          )
+          if (rowCount === 0) {
+            await client.query('ROLLBACK')
+            return jsonError(res, 404, 'Campaign not found')
+          }
+          campaign = rows[0]
+        } else {
+          const slug = await createUniqueSlug(client, campaignName)
+          const { rows } = await client.query(
+            `
+              INSERT INTO campaigns (slug, name, status, scope, objective_key, created_by_user_id, config)
+              VALUES ($1, $2, 'draft', 'global', NULL, NULL, $3::jsonb)
+              RETURNING id, slug, name, status, scope, objective_key, created_by_user_id, config, created_at
+            `,
+            [
+              slug,
+              campaignName,
+              JSON.stringify({
+                source: 'operational_market_generations',
+                niche: generatedInput.niche,
+                metaPublishing: false
+              })
+            ]
+          )
+          campaign = rows[0]
+        }
+
+        const created = []
+        for (const market of generatedInput.markets) {
+          const row = await insertOperationalMarketGeneration(client, { campaignId: campaign.id, market })
+          created.push(row)
+        }
+
+        await client.query('COMMIT')
+        return res.status(201).json({
+          ok: true,
+          campaign,
+          operational_market_generations: created,
+          generated_campaigns: [],
+          meta_publishing: false
+        })
+      } catch (err) {
+        await client.query('ROLLBACK')
+        if (err?.code === '23505') {
+          return jsonError(res, 409, 'Operational market generation conflicts with existing campaign market_code', {
+            detail: err?.detail ?? null
+          })
+        }
+        throw err
+      } finally {
+        client.release()
+      }
     })
   )
 
@@ -261,6 +422,11 @@ export function generatedCampaignsRouter() {
             id,
             campaign_id,
             country_code,
+            market_code,
+            market_name,
+            market_param,
+            resolved_countries,
+            targeting_preview,
             meta_campaign_id,
             meta_run_mode,
             meta_ad_account_id,
@@ -319,6 +485,11 @@ export function generatedCampaignsRouter() {
             id,
             campaign_id,
             country_code,
+            market_code,
+            market_name,
+            market_param,
+            resolved_countries,
+            targeting_preview,
             meta_campaign_id,
             meta_run_mode,
             meta_ad_account_id,
@@ -378,6 +549,11 @@ export function generatedCampaignsRouter() {
             id,
             campaign_id,
             country_code,
+            market_code,
+            market_name,
+            market_param,
+            resolved_countries,
+            targeting_preview,
             meta_campaign_id,
             meta_run_mode,
             meta_ad_account_id,
