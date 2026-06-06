@@ -1880,7 +1880,7 @@ export default function CampaignFlow() {
 	            <div style={{ fontWeight: 750, color: "#92400e", fontSize: 13 }}>
 	              {modeIsReal
 	                ? "Modo REAL: use uma Conta Meta configurada no Perfil. Tudo será criado como PAUSED."
-	                : "Modo de teste (STUB): simula criação para diagnóstico (sem operação real)."}
+	                : "Modo de teste: simula criação para conferência, sem operação real."}
 	            </div>
             {templatesInfo ? (
               <div style={{ fontWeight: 750, color: "#92400e", fontSize: 13 }}>{templatesInfo}</div>
@@ -2276,7 +2276,7 @@ export default function CampaignFlow() {
                 <Field
                   label="Modo de execução"
                   required
-                  hint="Operacional (REAL) cria tudo como PAUSED. STUB é apenas para testes (simula IDs, sem chamadas ao Graph)."
+                  hint="Operacional cria tudo como PAUSED. O modo de teste simula IDs, sem chamadas externas."
                 >
                   <SelectLike
                     value={campaign.mode}
@@ -2284,7 +2284,7 @@ export default function CampaignFlow() {
                     disabled={submitting}
                     options={[
                       { value: "REAL", label: "Operacional (REAL — sempre PAUSED)", disabled: false },
-                      { value: "STUB", label: "Modo de teste (STUB)", disabled: false },
+                      { value: "STUB", label: "Modo de teste", disabled: false },
                     ]}
                   />
                 </Field>
@@ -2557,7 +2557,7 @@ export default function CampaignFlow() {
           <section className="card" style={{ marginTop: 16, padding: 24 }}>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 950 }}>Etapa 4 — Gerar campanhas (PAUSED)</h2>
             <p style={{ marginTop: 8, marginBottom: 0, color: "#6b7280", fontWeight: 750 }}>
-              Revise os dados antes de criar. Nada aqui permite `ACTIVE`.
+              Revise os dados antes de criar. Publicação ativa não está disponível neste fluxo.
             </p>
 
             {progress ? (

@@ -281,9 +281,9 @@ export default function CampaignTemplatesSection({
     <div id="meta-test-campaign-templates" className="card" style={{ padding: 0, marginTop: 16 }}>
       <div style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
         <div>
-          <div style={{ fontWeight: 900, fontSize: 16 }}>Campaign Templates (DB)</div>
+          <div style={{ fontWeight: 900, fontSize: 16 }}>Templates de Campanha</div>
           <div className="muted" style={{ marginTop: 6, fontWeight: 800 }}>
-            Salva a estrutura base (Campaign → AdSet → Ad) a partir de uma `generated_campaign`.
+            Salva a estrutura base usada na geração operacional.
           </div>
         </div>
         <button type="button" className="pillOutline" onClick={onRefresh} disabled={refreshDisabled}>
@@ -295,7 +295,7 @@ export default function CampaignTemplatesSection({
         <div className="card" style={{ padding: 12 }}>
           <div style={{ fontWeight: 900 }}>Criar a partir do selecionado</div>
           <div className="muted" style={{ marginTop: 6, fontWeight: 800 }}>
-            Requer DB e um registro selecionado em `generated_campaigns`.
+            Use quando já houver uma campanha operacional selecionada.
           </div>
           <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
             <input
@@ -367,7 +367,7 @@ export default function CampaignTemplatesSection({
                     disabled={applyDisabled || !t?.id || applyLoadingId === t.id}
                     onClick={() => onApply?.(t)}
                   >
-                    {applyLoadingId === t.id ? "Aplicando..." : "Aplicar (criar no DB)"}
+                    {applyLoadingId === t.id ? "Aplicando..." : "Aplicar template"}
                   </button>
                   <button
                     type="button"
@@ -385,7 +385,7 @@ export default function CampaignTemplatesSection({
                     await onRefresh?.();
                   }}
                 />
-                <JsonAccordion title="Payload" value={t.payload} safeJson={safeJson} />
+                <JsonAccordion title="Detalhes do template" value={t.payload} safeJson={safeJson} />
               </div>
             ))}
           </div>

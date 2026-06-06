@@ -338,24 +338,24 @@ export default function CampanhaDetalhes() {
 	                            <td colSpan={5}>
 	                              <div style={{ display: "grid", gap: 12, padding: "8px 0" }}>
 	                                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-	                                  <span className="monoTag">market_code: {market.marketCode || "—"}</span>
-	                                  <span className="monoTag">market_name: {market.marketName || "—"}</span>
-	                                  <span className="monoTag">market_param: {market.marketParam || "—"}</span>
-	                                  <span className="monoTag">utm_campaign: {market.utmCampaign || "—"}</span>
-	                                  <span className="monoTag">src: {market.src || "—"}</span>
-	                                  <span className="monoTag">
-	                                    resolved_countries: {(market.resolvedCountries || []).length}
-	                                  </span>
-	                                  <span className="monoTag">publishable: {market.publishable ? "true" : "false"}</span>
-	                                  <span className="monoTag">previewOnly: {market.previewOnly ? "true" : "false"}</span>
-	                                </div>
-	                                <div style={{ display: "grid", gap: 10 }}>
-	                                  <AdvancedDisclosure summary="resolved_countries" defaultOpen={false}>
-	                                    <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
-	                                      {safeJson(market.resolvedCountries || [])}
-	                                    </pre>
-	                                  </AdvancedDisclosure>
-	                                  <AdvancedDisclosure summary="targeting_preview" defaultOpen={false}>
+		                                  <span className="monoTag">Código: {market.marketCode || "—"}</span>
+		                                  <span className="monoTag">Mercado: {market.marketName || "—"}</span>
+		                                  <span className="monoTag">Nome gerado: {market.marketParam || "—"}</span>
+		                                  <span className="monoTag">UTM: {market.utmCampaign || "—"}</span>
+		                                  <span className="monoTag">src: {market.src || "—"}</span>
+		                                  <span className="monoTag">
+		                                    Países resolvidos: {(market.resolvedCountries || []).length}
+		                                  </span>
+		                                  <span className="monoTag">Publicação Meta: {market.publishable ? "liberada" : "não liberada"}</span>
+		                                  <span className="monoTag">Modo: {market.previewOnly ? "pré-visualização" : "operacional"}</span>
+		                                </div>
+		                                <div style={{ display: "grid", gap: 10 }}>
+		                                  <AdvancedDisclosure summary="Países resolvidos" defaultOpen={false}>
+		                                    <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
+		                                      {safeJson(market.resolvedCountries || [])}
+		                                    </pre>
+		                                  </AdvancedDisclosure>
+		                                  <AdvancedDisclosure summary="Detalhes técnicos do targeting" defaultOpen={false}>
 	                                    <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
 	                                      {safeJson(market.targetingPreview || {})}
 	                                    </pre>

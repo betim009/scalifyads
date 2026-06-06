@@ -5034,3 +5034,65 @@ Critérios de aceite:
 - [x] Nenhuma publicação Meta.
 - [x] Nenhum `ACTIVE`.
 - [x] Commit final criado com resumo.
+
+## P48 — Preparação para Demonstração Operacional
+
+Última atualização: [2026-06-06 18:37]
+
+Objetivo:
+Preparar o sistema para demonstração operacional ao cliente Victor, priorizando clareza sem criar funcionalidades grandes.
+
+Contexto:
+
+- P47 validou o fluxo completo `Template -> Traduções por Mercado -> Geração Operacional -> Conferência`.
+- P48 foca em linguagem, roteiro e limitações atuais para demo.
+
+Regras:
+
+- Não chamar Meta REAL.
+- Não criar Campaign Meta.
+- Não criar AdSet Meta.
+- Não criar Ad Meta.
+- Não alterar `ACTIVE`.
+- Não alterar scheduler.
+- Não alterar publicação.
+- Não criar funcionalidades grandes.
+
+Tarefas:
+
+- [x] Auditar Dashboard.
+- [x] Auditar Campaign Flow.
+- [x] Auditar Campaign Templates.
+- [x] Auditar Campanha Detalhes.
+- [x] Corrigir textos pequenos que confundiriam a demo.
+- [x] Criar roteiro com `Plantas BTN`, `ARM`, `AREU`, `ENCA`, `ENAU`.
+- [x] Criar documento de demonstração.
+- [x] Criar documento de limitações atuais.
+- [x] Rodar build frontend.
+
+Implementação:
+
+- Ajustados textos pequenos em `Campaign Templates (DB)` para `Templates de Campanha`.
+- Removidas menções visíveis a `DB`, `generated_campaigns`, `Payload` e `STUB` em pontos principais da demo.
+- Ajustados labels expandidos de mercados operacionais em `Campanha Detalhes` para termos como `Código`, `Mercado`, `Nome gerado`, `UTM`, `Países resolvidos`.
+- Mantidos detalhes técnicos recolhidos em disclosures avançados.
+- Nenhum comportamento operacional foi alterado.
+
+Documentos:
+
+- `docs/p48-demo-script.md`
+- `docs/p48-current-limitations.md`
+
+Validações:
+
+- [2026-06-06 18:34] `npm --prefix frontend run build` (OK; apenas aviso existente de chunk acima de 500 kB).
+- [2026-06-06 18:35] Auditoria textual pós-ajuste via `rg` (OK; termos restantes aparecem em código interno ou preview técnico avançado).
+
+Critérios de aceite:
+
+- [x] Fluxo continua funcionando.
+- [x] Build frontend passa.
+- [x] Documentos criados.
+- [x] Nenhuma chamada Meta REAL.
+- [x] Nenhuma funcionalidade operacional quebrada.
+- [x] Commit final criado com resumo.
