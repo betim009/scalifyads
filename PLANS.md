@@ -4606,3 +4606,109 @@ Pendências finais (P42):
 
 - P43: melhorar a fonte única do nicho/slug operacional no cadastro de templates para evitar fallback por nome.
 - P43/P44: antes de publicação real, criar etapa explícita de preview de payload Meta por template+mercado, ainda sem publicar.
+
+## P43 — Mapa de Campos Traduzíveis dos Campaign Templates
+
+Última atualização: [2026-06-06 16:12; 2026-06-06 16:18]
+
+Objetivo:
+Mapear os campos traduzíveis dos `campaign_templates` para preparar a futura camada de tradução operacional por mercado, sem mudança funcional.
+
+Contexto:
+
+- O fluxo atual já possui Template → Mercados → Geração operacional → Conferência.
+- `campaign_templates` usa `name` + `payload jsonb`.
+- Templates podem vir da tela de templates, de `generated_campaigns` ou de criação manual via API.
+- Antes de traduzir por mercado, é necessário separar copy/conteúdo humano de campos técnicos, URL, tracking e targeting.
+
+Regras:
+
+- Não chamar Meta REAL.
+- Não criar Campaign.
+- Não criar AdSet.
+- Não criar Ad.
+- Não alterar publicação.
+- Não alterar scheduler.
+- Não alterar `ACTIVE`.
+- Não alterar fluxo operacional existente.
+
+Tarefas:
+
+- [x] Auditar estrutura atual dos Campaign Templates.
+- [x] Identificar campos textuais.
+- [x] Identificar campos técnicos.
+- [x] Identificar campos de URL.
+- [x] Identificar campos de tracking.
+- [x] Classificar campos em traduzível/não traduzível.
+- [x] Documentar campos já preparados para tradução.
+- [x] Criar `docs/template-translation-map.md`.
+- [x] Não alterar banco.
+- [x] Não alterar frontend.
+- [x] Não alterar backend operacional.
+
+Critérios de aceite:
+
+- [x] Documento criado.
+- [x] Campos catalogados.
+- [x] Nenhuma mudança funcional.
+- [x] Commit final criado com resumo.
+
+Auditoria (P43):
+
+- Estrutura física confirmada em `backend/migrations/0016_campaign_templates.sql`:
+  - `id`;
+  - `name`;
+  - `payload jsonb`;
+  - `created_at`.
+- Rotas auditadas:
+  - `GET /api/campaign-templates`;
+  - `POST /api/campaign-templates`;
+  - `POST /api/campaign-templates/from-generated/:id`;
+  - `POST /api/campaign-templates/:id/apply`.
+- UI auditada:
+  - `/templates`;
+  - `CampaignFlow`.
+
+Implementação (P43):
+
+- Criado `docs/template-translation-map.md`.
+- Classificados como traduzíveis:
+  - `adVariants[].primaryText`;
+  - `adVariants[].headline`;
+  - `adVariants[].description`;
+  - equivalentes em `translationsByCountry`;
+  - equivalentes em `translationsByCountry.{COUNTRY}.ads.{AD_KEY}`.
+- Classificados como não traduzíveis:
+  - mercado operacional;
+  - tracking;
+  - URLs/slugs;
+  - IDs;
+  - Meta/account/pixel/conversão;
+  - targeting;
+  - orçamento/billing/optimization;
+  - mídia/assets;
+  - status/guardrails.
+- Campos já preparados para tradução documentados:
+  - `translationsByCountry`;
+  - revisão/edição por país;
+  - variações A-E.
+
+Validação (P43):
+
+- [2026-06-06 16:18] Conferido que não houve alteração em migrations, backend operacional ou frontend.
+- [2026-06-06 16:18] Alterações limitadas a documentação:
+  - `PLANS.md`;
+  - `docs/template-translation-map.md`.
+- Confirmado:
+  - nenhuma chamada Meta REAL;
+  - nenhuma Campaign criada;
+  - nenhum AdSet criado;
+  - nenhum Ad criado;
+  - nenhuma alteração de publicação;
+  - nenhuma alteração de scheduler;
+  - nenhum `ACTIVE`.
+
+Pendências finais (P43):
+
+- P44: definir schema `translationsByMarket.{MARKET_CODE}` mantendo compatibilidade com `translationsByCountry`.
+- P44/P45: implementar apenas preview/tradução operacional revisável antes de qualquer publicação real.
