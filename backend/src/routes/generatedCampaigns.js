@@ -23,6 +23,59 @@ function normalizeNonEmptyString(value, { maxLen } = {}) {
   return trimmed
 }
 
+function compactOperationalParam(value, { maxLen = 80 } = {}) {
+  const raw = normalizeNonEmptyString(value, { maxLen: 160 })
+  if (!raw) return null
+  const compact = raw.replace(/[^A-Za-z0-9_-]+/g, '')
+  return compact ? compact.slice(0, maxLen) : null
+}
+
+function extractNicheFromMarketParam(value) {
+  const raw = normalizeNonEmptyString(value, { maxLen: 160 })
+  if (!raw) return null
+  const match = raw.match(/^[A-Z0-9]+-(.+)-FB$/)
+  return compactOperationalParam(match?.[1] ?? null)
+}
+
+function resolveTemplateOperationalBase(template) {
+  if (!template) return null
+  const payload = template?.payload && typeof template.payload === 'object' && !Array.isArray(template.payload)
+    ? template.payload
+    : {}
+  const campaign = payload?.campaign && typeof payload.campaign === 'object' && !Array.isArray(payload.campaign)
+    ? payload.campaign
+    : {}
+  const operationalMarket =
+    payload?.operationalMarket && typeof payload.operationalMarket === 'object' && !Array.isArray(payload.operationalMarket)
+      ? payload.operationalMarket
+      : {}
+
+  const niche =
+    compactOperationalParam(operationalMarket?.nicheParam) ??
+    compactOperationalParam(operationalMarket?.niche) ??
+    compactOperationalParam(payload?.nicheParam) ??
+    compactOperationalParam(payload?.niche) ??
+    compactOperationalParam(payload?.slug) ??
+    compactOperationalParam(campaign?.nicheParam) ??
+    compactOperationalParam(campaign?.niche) ??
+    compactOperationalParam(campaign?.slug) ??
+    extractNicheFromMarketParam(campaign?.marketParam ?? campaign?.market_param) ??
+    compactOperationalParam(template?.name)
+
+  const campaignName =
+    normalizeNonEmptyString(campaign?.name, { maxLen: 140 }) ??
+    normalizeNonEmptyString(template?.name, { maxLen: 140 }) ??
+    'Campanha Operacional'
+
+  return {
+    templateId: template.id,
+    templateName: template.name,
+    campaignName,
+    niche,
+    payload
+  }
+}
+
 async function createUniqueSlug(pool, base) {
   const cleaned = slugify(base) || `campaign-${Date.now()}`
   let candidate = cleaned
@@ -185,10 +238,40 @@ export function generatedCampaignsRouter() {
         return jsonError(res, 400, 'Invalid campaignId')
       }
 
-      const campaignName = normalizeNonEmptyString(req.body?.campaignName, { maxLen: 140 }) ?? 'Campanha Operacional'
-      const niche = normalizeNonEmptyString(req.body?.niche ?? req.body?.nicheParam, { maxLen: 80 })
+      const templateIdRaw = normalizeNonEmptyString(req.body?.templateId)
+      if (templateIdRaw && !isUuid(templateIdRaw)) {
+        return jsonError(res, 400, 'Invalid templateId')
+      }
+
       const marketsInput = Array.isArray(req.body?.markets) ? req.body.markets : []
       const pool = getPool()
+
+      let templateBase = null
+      if (templateIdRaw) {
+        const { rows, rowCount } = await pool.query(
+          `
+            SELECT id, name, payload, created_at
+            FROM campaign_templates
+            WHERE id = $1::uuid
+          `,
+          [templateIdRaw]
+        )
+        if (rowCount === 0) {
+          return jsonError(res, 404, 'Campaign template not found')
+        }
+        templateBase = resolveTemplateOperationalBase(rows[0])
+        if (!templateBase?.niche) {
+          return jsonError(res, 400, 'Invalid template operational niche')
+        }
+      }
+
+      const campaignName =
+        templateBase?.campaignName ??
+        normalizeNonEmptyString(req.body?.campaignName, { maxLen: 140 }) ??
+        'Campanha Operacional'
+      const niche =
+        templateBase?.niche ??
+        normalizeNonEmptyString(req.body?.niche ?? req.body?.nicheParam, { maxLen: 80 })
 
       const { rows: countryRows } = await pool.query(`SELECT code FROM countries ORDER BY code ASC`)
       const availableCountryCodes = countryRows.map((row) => row.code).filter(Boolean)
@@ -234,6 +317,9 @@ export function generatedCampaignsRouter() {
               JSON.stringify({
                 source: 'operational_market_generations',
                 niche: generatedInput.niche,
+                templateId: templateBase?.templateId ?? null,
+                templateName: templateBase?.templateName ?? null,
+                templateSource: templateBase ? 'campaign_templates' : null,
                 metaPublishing: false
               })
             ]
@@ -251,6 +337,13 @@ export function generatedCampaignsRouter() {
         return res.status(201).json({
           ok: true,
           campaign,
+          template: templateBase
+            ? {
+                id: templateBase.templateId,
+                name: templateBase.templateName,
+                niche: templateBase.niche
+              }
+            : null,
           operational_market_generations: created,
           generated_campaigns: [],
           meta_publishing: false

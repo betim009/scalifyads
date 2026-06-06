@@ -74,6 +74,41 @@ function normalizeNonEmptyString(value) {
   return value.trim();
 }
 
+function compactOperationalParam(value) {
+  const raw = normalizeNonEmptyString(value);
+  if (!raw) return "";
+  return raw.replace(/[^A-Za-z0-9_-]+/g, "").slice(0, 80);
+}
+
+function extractNicheFromMarketParam(value) {
+  const raw = normalizeNonEmptyString(value);
+  if (!raw) return "";
+  const match = raw.match(/^[A-Z0-9]+-(.+)-FB$/);
+  return compactOperationalParam(match?.[1] || "");
+}
+
+function resolveTemplateOperationalNiche(template) {
+  if (!template) return "";
+  const payload = template?.payload && typeof template.payload === "object" && !Array.isArray(template.payload) ? template.payload : {};
+  const campaign = payload?.campaign && typeof payload.campaign === "object" && !Array.isArray(payload.campaign) ? payload.campaign : {};
+  const operationalMarket =
+    payload?.operationalMarket && typeof payload.operationalMarket === "object" && !Array.isArray(payload.operationalMarket)
+      ? payload.operationalMarket
+      : {};
+  return (
+    compactOperationalParam(operationalMarket?.nicheParam) ||
+    compactOperationalParam(operationalMarket?.niche) ||
+    compactOperationalParam(payload?.nicheParam) ||
+    compactOperationalParam(payload?.niche) ||
+    compactOperationalParam(payload?.slug) ||
+    compactOperationalParam(campaign?.nicheParam) ||
+    compactOperationalParam(campaign?.niche) ||
+    compactOperationalParam(campaign?.slug) ||
+    extractNicheFromMarketParam(campaign?.marketParam || campaign?.market_param) ||
+    compactOperationalParam(template?.name)
+  );
+}
+
 function normalizeCountrySuffixName(base, countryCode, { fallbackPrefix } = {}) {
   const cc = String(countryCode || "").trim().toUpperCase();
   const raw = typeof base === "string" ? base.trim() : "";
@@ -555,11 +590,23 @@ export default function CampaignFlow() {
     return Object.fromEntries(pairs);
   }, [countries]);
 
+  const selectedOperationalTemplate = useMemo(
+    () => (campaignTemplates || []).find((item) => String(item?.id) === String(selectedCampaignTemplateId || "")) ?? null,
+    [campaignTemplates, selectedCampaignTemplateId]
+  );
+
+  const selectedOperationalTemplateNiche = useMemo(
+    () => resolveTemplateOperationalNiche(selectedOperationalTemplate),
+    [selectedOperationalTemplate]
+  );
+
+  const effectiveOperationalNiche = selectedOperationalTemplateNiche || normalizeNonEmptyString(operationalMarket.nicheParam);
+
   const marketPreview = useMemo(
     () =>
       buildMarketPreview({
         markets: selectedMarketCodes,
-        nicheParam: operationalMarket.nicheParam,
+        nicheParam: effectiveOperationalNiche,
         brSlug: operationalMarket.brSlug,
         internationalSlug: operationalMarket.internationalSlug,
         baseDomain: operationalMarket.baseDomain,
@@ -568,7 +615,7 @@ export default function CampaignFlow() {
       operationalMarket.baseDomain,
       operationalMarket.brSlug,
       operationalMarket.internationalSlug,
-      operationalMarket.nicheParam,
+      effectiveOperationalNiche,
       selectedMarketCodes,
     ]
   );
@@ -673,7 +720,7 @@ export default function CampaignFlow() {
         allHaveText &&
         (
           operationalMarket.enabled
-            ? normalizeNonEmptyString(operationalMarket.nicheParam) &&
+            ? normalizeNonEmptyString(effectiveOperationalNiche) &&
               normalizeNonEmptyString(operationalMarket.brSlug) &&
               normalizeNonEmptyString(operationalMarket.internationalSlug) &&
               normalizeNonEmptyString(operationalMarket.baseDomain)
@@ -684,7 +731,7 @@ export default function CampaignFlow() {
     }
     if (step === 3) return true;
     return false;
-  }, [submitting, step, campaign, adSet, creative, operationalMarket, selectedMarketCodes, selectedCountryCodes, batchEnabled]);
+  }, [submitting, step, campaign, adSet, creative, operationalMarket, effectiveOperationalNiche, selectedMarketCodes, selectedCountryCodes, batchEnabled]);
 
   const steps = [
     "1. Selecionar template",
@@ -1002,16 +1049,16 @@ export default function CampaignFlow() {
       if (!operationalMarket.enabled) {
         throw new Error("Ative Mercados Operacionais para salvar a geração operacional.");
       }
-      if (!normalizeNonEmptyString(operationalMarket.nicheParam)) {
-        throw new Error("Informe o nicho/parâmetro para gerar os mercados.");
+      if (!normalizeNonEmptyString(effectiveOperationalNiche)) {
+        throw new Error("Selecione um template com nicho resolvido ou informe o nicho/parâmetro manual.");
       }
       const markets = buildOperationalGenerationMarkets();
       if (!markets.length) {
         throw new Error("Nenhum mercado com mapeamento interno pronto para salvar.");
       }
+      const templateId = normalizeNonEmptyString(selectedCampaignTemplateId);
       const res = await createOperationalMarketGeneration({
-        campaignName: campaign.name || `Operacional ${operationalMarket.nicheParam}`,
-        niche: operationalMarket.nicheParam,
+        ...(templateId ? { templateId } : { campaignName: campaign.name || `Operacional ${effectiveOperationalNiche}`, niche: effectiveOperationalNiche }),
         markets,
       });
       setResult({
@@ -1020,6 +1067,7 @@ export default function CampaignFlow() {
         mode: "OPERATIONAL_ONLY",
         campaignId: res.campaign?.id ?? null,
         campaignName: res.campaign?.name ?? null,
+        template: res.template ?? null,
         operationalMarketGenerations: res.operationalMarketGenerations,
         generatedCampaigns: res.generatedCampaigns,
         count: res.operationalMarketGenerations.length || res.generatedCampaigns.length,
@@ -2386,13 +2434,47 @@ export default function CampaignFlow() {
               {operationalMarket.enabled ? (
                 <>
                   <div style={{ height: 1, background: "#f3f4f6" }} />
-                  <Field label="Nicho/parâmetro" required hint="Ex.: PlantasBTN, DirigirBTN, InglesBTN.">
+                  <Field
+                    label="Template operacional"
+                    hint="Origem preferencial da geração operacional. O nicho é resolvido do payload do template ou do nome."
+                  >
+                    <div style={{ display: "grid", gap: 10 }}>
+                      <SelectLike
+                        value={selectedCampaignTemplateId}
+                        onChange={(e) => setSelectedCampaignTemplateId(e.target.value)}
+                        disabled={submitting}
+                        options={campaignTemplateOptions}
+                      />
+                      {selectedOperationalTemplate ? (
+                        <div style={{ padding: 12, border: "1px solid #bfdbfe", borderRadius: 8, background: "#eff6ff", color: "#1d4ed8" }}>
+                          <div style={{ fontWeight: 950 }}>Template: {selectedOperationalTemplate.name || "—"}</div>
+                          <div style={{ marginTop: 4, fontWeight: 850, fontSize: 12 }}>
+                            Slug/Nicho: {selectedOperationalTemplateNiche || "—"}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="muted" style={{ fontWeight: 800, fontSize: 12 }}>
+                          Sem template selecionado. O campo manual abaixo será usado como fallback legado.
+                        </div>
+                      )}
+                    </div>
+                  </Field>
+                  <Field
+                    label="Nicho/parâmetro manual"
+                    required={!selectedOperationalTemplate}
+                    hint="Fallback legado. Ex.: PlantasBTN, DirigirBTN, InglesBTN."
+                  >
                     <InputLike
                       placeholder="PlantasBTN"
                       value={operationalMarket.nicheParam}
                       onChange={(e) => setOperationalMarket((p) => ({ ...p, nicheParam: e.target.value }))}
-                      disabled={submitting}
+                      disabled={submitting || Boolean(selectedOperationalTemplate)}
                     />
+                    {selectedOperationalTemplate ? (
+                      <div className="muted" style={{ marginTop: 6, fontWeight: 800, fontSize: 12 }}>
+                        Usando nicho resolvido do template: <b>{effectiveOperationalNiche || "—"}</b>
+                      </div>
+                    ) : null}
                   </Field>
                   <Field label="Domínio base" required hint="Ex.: https://example.com">
                     <InputLike

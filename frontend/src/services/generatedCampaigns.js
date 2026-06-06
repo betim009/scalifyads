@@ -9,16 +9,18 @@ export async function listGeneratedCampaigns({ campaignId, limit = 200 } = {}) {
   return { ok: true, generatedCampaigns: list };
 }
 
-export async function createOperationalMarketGeneration({ campaignId, campaignName, niche, markets } = {}) {
+export async function createOperationalMarketGeneration({ campaignId, campaignName, niche, templateId, markets } = {}) {
   const data = await apiPost("/api/generated-campaigns/operational-markets", {
     ...(campaignId ? { campaignId } : null),
-    campaignName,
-    niche,
+    ...(templateId ? { templateId } : null),
+    ...(campaignName ? { campaignName } : null),
+    ...(niche ? { niche } : null),
     markets: Array.isArray(markets) ? markets : [],
   });
   return {
     ok: true,
     campaign: data?.campaign ?? null,
+    template: data?.template ?? null,
     operationalMarketGenerations: Array.isArray(data?.operational_market_generations) ? data.operational_market_generations : [],
     generatedCampaigns: Array.isArray(data?.generated_campaigns) ? data.generated_campaigns : [],
     metaPublishing: data?.meta_publishing === true,

@@ -4497,3 +4497,112 @@ Pendências finais (P41):
 
 - P42: decidir se a próxima tela operacional deve listar campanhas locais com mercados sem depender da tela legada de campanhas por país.
 - P42/P43: antes de publicação real, definir endpoint separado e explícito para preview de payload Meta, mantendo `PAUSED`.
+
+## P42 — Templates Reais como Origem da Geração Operacional
+
+Última atualização: [2026-06-06 15:43; 2026-06-06 15:57]
+
+Objetivo:
+Permitir que a geração operacional de mercados use `campaign_templates` reais como origem, aceitando `templateId + markets`, sem quebrar o payload legado `campaignName + niche + markets`.
+
+Contexto:
+
+- P41 criou a visualização operacional das gerações persistidas.
+- O endpoint `POST /api/generated-campaigns/operational-markets` hoje funciona com payload manual.
+- O fluxo precisa evoluir para usar templates reais como base operacional.
+
+Regras:
+
+- Não chamar Meta REAL.
+- Não criar Campaign Meta.
+- Não criar AdSet Meta.
+- Não criar Ad Meta.
+- Não alterar `ACTIVE`.
+- Tudo continua `PAUSED`.
+- `metaPublishing` continua `false`.
+- `publishable` continua `false`.
+- `previewOnly` continua `true`.
+- Não alterar scheduler.
+- Não fazer refatoração grande.
+
+Tarefas:
+
+- [x] Atualizar `POST /api/generated-campaigns/operational-markets` para aceitar `templateId`.
+- [x] Buscar template no banco quando `templateId` for enviado.
+- [x] Resolver nome/nicho operacional a partir do template.
+- [x] Gerar `market_param = CODIGO-NICHO-FB`.
+- [x] Preservar payload legado com `campaignName + niche + markets`.
+- [x] Carregar templates reais na UI operacional.
+- [x] Permitir seleção de template no Campaign Flow.
+- [x] Enviar `templateId + markets` ao salvar geração operacional.
+- [x] Exibir resumo do template selecionado.
+- [x] Validar geração com `templateId`.
+- [x] Validar geração com payload legado.
+- [x] Validar detalhe da campanha gerada.
+- [x] Rodar build frontend.
+
+Critérios de aceite:
+
+- [x] Template real pode ser selecionado no frontend.
+- [x] Backend gera campanha operacional usando `templateId`.
+- [x] Payload antigo continua funcionando.
+- [x] Registros continuam em `operational_market_generations`.
+- [x] Tudo permanece `PAUSED`.
+- [x] `metaPublishing = false`.
+- [x] `publishable = false`.
+- [x] `previewOnly = true`.
+- [x] Nenhuma chamada Meta REAL.
+- [x] Commit final criado com resumo.
+
+Implementação (P42):
+
+- `POST /api/generated-campaigns/operational-markets` aceita `templateId` opcional.
+- Quando `templateId` é enviado:
+  - busca em `campaign_templates`;
+  - resolve nome da campanha a partir de `payload.campaign.name` ou `template.name`;
+  - resolve nicho operacional a partir de `payload.operationalMarket.nicheParam`, `payload.nicheParam`, `payload.niche`, `payload.slug`, campos equivalentes em `payload.campaign`, `campaign.marketParam` ou fallback compacto de `template.name`;
+  - cria campanha local `draft` com `config.templateId`, `config.templateName`, `config.templateSource = "campaign_templates"` e `metaPublishing = false`.
+- Payload legado permanece suportado com `campaignName + niche + markets`.
+- `CampaignFlow` passou a exibir seleção de template no modo Mercados Operacionais.
+- Campo manual de nicho ficou como fallback legado/secundário.
+- Preview operacional usa o nicho efetivo do template quando selecionado.
+
+Validação (P42):
+
+- [2026-06-06 15:55] Criado template local de validação via `POST /api/campaign-templates`:
+  - nome: `Plantas BTN`;
+  - `payload.nicheParam = "PlantasBTN"`;
+  - sem Meta REAL.
+- [2026-06-06 15:56] `POST /api/generated-campaigns/operational-markets` com `templateId = 64f0d5da-4949-4425-b7cb-a18d33af0554` e mercados `ARM`, `AREU`, `ENCA` (OK).
+- Resultado por template:
+  - campanha local `draft`: `15952c8c-1a5d-4a69-b209-49a6d5b94ffc`;
+  - `market_param`: `ARM-PlantasBTN-FB`, `AREU-PlantasBTN-FB`, `ENCA-PlantasBTN-FB`;
+  - `utm_campaign`: código do mercado;
+  - `src`: igual ao `market_param`;
+  - todos `PAUSED`;
+  - `meta_publishing = false`;
+  - `publishable = false`;
+  - `previewOnly = true`.
+- [2026-06-06 15:56] Payload legado `campaignName + niche + markets` com `ARM`, `AREU` (OK; compatibilidade preservada).
+- [2026-06-06 15:57] `GET /api/generated-campaigns/15952c8c-1a5d-4a69-b209-49a6d5b94ffc/operational-markets` (OK; 3 registros retornados na visualização P41).
+- [2026-06-06 15:57] `node --check backend/src/routes/generatedCampaigns.js && node --check frontend/src/services/generatedCampaigns.js` (OK).
+- [2026-06-06 15:57] `npm --prefix frontend run build` (OK; aviso Vite de chunk grande mantido).
+- Confirmado:
+  - nenhuma Campaign Meta criada;
+  - nenhum AdSet Meta criado;
+  - nenhum Ad Meta criado;
+  - nenhuma chamada Meta REAL;
+  - nenhum `ACTIVE`;
+  - nenhuma alteração em scheduler/publicação.
+
+Arquivos alterados (P42):
+
+- `PLANS.md`
+- `backend/src/routes/generatedCampaigns.js`
+- `frontend/src/services/generatedCampaigns.js`
+- `frontend/src/pages/CampaignFlow.jsx`
+
+Pendências finais (P42):
+
+- P43: melhorar a fonte única do nicho/slug operacional no cadastro de templates para evitar fallback por nome.
+- P43/P44: antes de publicação real, criar etapa explícita de preview de payload Meta por template+mercado, ainda sem publicar.
