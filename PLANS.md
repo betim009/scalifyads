@@ -4887,3 +4887,77 @@ Pendências:
 
 - P46: criar UI operacional para solicitar geração de traduções por mercado.
 - P46/P47: decidir política de idiomas não suportados pelo LibreTranslate local (`Croata`, `Sérvio`, `Todos os idiomas`).
+
+## P46 — Interface Operacional para Traduções por Mercado
+
+Última atualização: [2026-06-06 17:45]
+
+Objetivo:
+Criar interface operacional para gerar e visualizar `payload.translationsByMarket` sem uso de Postman.
+
+Contexto:
+
+- P45 criou o endpoint `POST /api/campaign-templates/:templateId/translations-by-market/generate`.
+- `campaign_templates.payload.translationsByMarket` já persiste traduções por mercado.
+- A UI deve continuar local/operacional, sem publicação Meta.
+
+Regras:
+
+- Não chamar Meta REAL.
+- Não criar Campaign Meta.
+- Não criar AdSet Meta.
+- Não criar Ad Meta.
+- Não alterar `ACTIVE`.
+- Não alterar scheduler.
+- Não alterar publicação.
+- Não fazer refatoração grande.
+
+Tarefas:
+
+- [x] Adicionar seção `Traduções por Mercado` na visualização de Campaign Templates.
+- [x] Mostrar quantidade de `adVariants` do template base.
+- [x] Mostrar quantidade de mercados traduzidos.
+- [x] Permitir selecionar mercados com busca/filtro.
+- [x] Chamar endpoint de geração de traduções por mercado.
+- [x] Suportar checkbox `Sobrescrever traduções existentes`.
+- [x] Exibir idioma e quantidade de `adVariants` traduzidos por mercado.
+- [x] Permitir expandir mercado para ver `primaryText`, `headline` e `description`.
+- [x] Exibir aviso operacional de que nada foi publicado na Meta.
+- [x] Rodar build frontend.
+
+Implementação:
+
+- Adicionada seção `Traduções por Mercado` em `Campaign Templates (DB)`.
+- A seção lista mercados oficiais com busca por código, nome ou idioma.
+- Seleção padrão inicial: `ARM`, `AREU`, `ENCA`, `ENAU`.
+- O botão `Gerar Traduções` chama o endpoint do P45 com `markets` e `overwrite`.
+- Traduções persistidas aparecem agrupadas por mercado, com idioma e quantidade de `adVariants`.
+- Cada mercado pode ser expandido para revisar `primaryText`, `headline` e `description`.
+- A UI exibe aviso operacional: traduções locais e nenhum conteúdo publicado na Meta.
+
+Validações:
+
+- [2026-06-06 17:43] `npm --prefix frontend run build` (OK; apenas aviso existente de chunk acima de 500 kB).
+- [2026-06-06 17:44] Validação HTTP local do endpoint chamado pela UI com `ARM` e `ENCA` (OK; `translationsByMarket` persistido; template temporário removido após o teste).
+
+Arquivos alterados:
+
+- `PLANS.md`
+- `frontend/src/services/campaignTemplates.js`
+- `frontend/src/pages/metaTest/CampaignTemplatesSection.jsx`
+
+Critérios de aceite:
+
+- [x] Usuário consegue gerar traduções sem Postman.
+- [x] Traduções aparecem na tela.
+- [x] `overwrite=true` funciona via UI.
+- [x] Nenhuma chamada Meta REAL.
+- [x] Nenhuma publicação.
+- [x] Nenhum `ACTIVE`.
+- [x] Build frontend passando.
+- [x] Commit final criado com resumo.
+
+Pendências:
+
+- P47: criar experiência dedicada em `/templates` ou unificar `flow_templates` e `campaign_templates`, se isso fizer sentido operacional.
+- P47: política final para idiomas sem alvo seguro no LibreTranslate local.

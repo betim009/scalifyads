@@ -38,3 +38,17 @@ export async function applyCampaignTemplate(templateId, { name, countryCode, met
     generatedAds: Array.isArray(data?.generated_ads) ? data.generated_ads : [],
   };
 }
+
+export async function generateCampaignTemplateTranslationsByMarket(templateId, { markets, overwrite = false } = {}) {
+  const data = await apiPost(`/api/campaign-templates/${encodeURIComponent(String(templateId))}/translations-by-market/generate`, {
+    markets: Array.isArray(markets) ? markets : [],
+    overwrite: Boolean(overwrite),
+  });
+  return {
+    ok: true,
+    campaignTemplate: data?.campaign_template ?? null,
+    generated: Array.isArray(data?.generated) ? data.generated : [],
+    preserved: Array.isArray(data?.preserved) ? data.preserved : [],
+    overwrite: Boolean(data?.overwrite),
+  };
+}
