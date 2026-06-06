@@ -50,6 +50,33 @@ async function tryInsertGeneratedCampaignEvent(pool, generatedCampaignId, eventT
   }
 }
 
+function toOperationalMarketGenerationDto(row) {
+  const targetingPreview = row?.targeting_preview && typeof row.targeting_preview === 'object'
+    ? row.targeting_preview
+    : {}
+  const operationalTargeting =
+    targetingPreview?.operationalTargeting && typeof targetingPreview.operationalTargeting === 'object'
+      ? targetingPreview.operationalTargeting
+      : {}
+
+  return {
+    id: row.id,
+    campaignId: row.campaign_id,
+    marketCode: row.market_code,
+    marketName: row.market_name,
+    marketParam: row.market_param,
+    utmCampaign: row.utm_campaign,
+    src: row.src,
+    status: row.status,
+    resolvedCountries: Array.isArray(row.resolved_countries) ? row.resolved_countries : [],
+    targetingPreview,
+    publishable: targetingPreview.publishable === true || operationalTargeting.publishable === true,
+    previewOnly: targetingPreview.previewOnly === true || operationalTargeting.previewOnly === true,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  }
+}
+
 export function generatedCampaignsRouter() {
   const router = Router()
 
@@ -239,6 +266,41 @@ export function generatedCampaignsRouter() {
       } finally {
         client.release()
       }
+    })
+  )
+
+  router.get(
+    '/:campaignId/operational-markets',
+    asyncHandler(async (req, res) => {
+      if (!req.app.locals.dbEnabled) {
+        return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
+      }
+
+      const campaignId = req.params.campaignId
+      if (!isUuid(campaignId)) {
+        return jsonError(res, 400, 'Invalid campaignId')
+      }
+
+      const pool = getPool()
+      const { rowCount } = await pool.query(
+        `
+          SELECT 1
+          FROM campaigns
+          WHERE id = $1::uuid
+        `,
+        [campaignId]
+      )
+      if (rowCount === 0) {
+        return jsonError(res, 404, 'Campaign not found')
+      }
+
+      const rows = await listOperationalMarketGenerations(pool, { campaignId, limit: 200 })
+      return res.json({
+        ok: true,
+        campaignId,
+        operationalMarkets: rows.map(toOperationalMarketGenerationDto),
+        metaPublishing: false
+      })
     })
   )
 

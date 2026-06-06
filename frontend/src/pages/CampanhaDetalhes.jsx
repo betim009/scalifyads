@@ -1,8 +1,8 @@
 import { useNavigate, useParams } from "react-router-dom";
 import PageShell from "../components/PageShell.jsx";
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { getCampaign, generateCampaigns } from "../services/campaigns.js";
-import { listGeneratedCampaigns, markGeneratedPublished } from "../services/generatedCampaigns.js";
+import { listGeneratedCampaigns, listOperationalMarketsForCampaign, markGeneratedPublished } from "../services/generatedCampaigns.js";
 import { getGeneratedCampaignStructure, listGeneratedCampaignEvents } from "../services/generatedCampaigns.js";
 import { countryCodeToFlag } from "../services/fallbacks.js";
 import StatusBadge from "../components/StatusBadge.jsx";
@@ -16,6 +16,8 @@ export default function CampanhaDetalhes() {
   const navigate = useNavigate();
   const [campaign, setCampaign] = useState(null);
   const [generated, setGenerated] = useState([]);
+  const [operationalMarkets, setOperationalMarkets] = useState([]);
+  const [expandedOperationalMarkets, setExpandedOperationalMarkets] = useState({});
   const [generatedOnly, setGeneratedOnly] = useState(false);
   const [generatedStructure, setGeneratedStructure] = useState({ adSets: [], ads: [] });
   const [generatedEvents, setGeneratedEvents] = useState([]);
@@ -30,9 +32,15 @@ export default function CampanhaDetalhes() {
     setError("");
     try {
       setGeneratedOnly(false);
-      const [campaignRes, generatedRes] = await Promise.all([getCampaign(id), listGeneratedCampaigns({ campaignId: id })]);
+      const [campaignRes, generatedRes, operationalRes] = await Promise.all([
+        getCampaign(id),
+        listGeneratedCampaigns({ campaignId: id }),
+        listOperationalMarketsForCampaign(id).catch(() => ({ operationalMarkets: [] })),
+      ]);
       setCampaign(campaignRes.campaign);
       setGenerated(generatedRes.generatedCampaigns ?? []);
+      setOperationalMarkets(operationalRes.operationalMarkets ?? []);
+      setExpandedOperationalMarkets({});
       setGeneratedStructure({ adSets: [], ads: [] });
       setGeneratedEvents([]);
     } catch (err) {
@@ -42,6 +50,8 @@ export default function CampanhaDetalhes() {
           setGeneratedOnly(true);
           setCampaign(null);
           setGenerated([]);
+          setOperationalMarkets([]);
+          setExpandedOperationalMarkets({});
           const [structureRes, eventsRes] = await Promise.all([
             getGeneratedCampaignStructure(id),
             listGeneratedCampaignEvents(id, { limit: 50 }),
@@ -67,6 +77,7 @@ export default function CampanhaDetalhes() {
   }, [id]);
 
   const countryCodes = useMemo(() => campaign?.countryCodes ?? [], [campaign]);
+  const safeJson = (value) => JSON.stringify(value ?? null, null, 2);
 
 	  return (
 	    <PageShell
@@ -247,6 +258,125 @@ export default function CampanhaDetalhes() {
 	                  {loading ? "Carregando..." : "Nenhum país configurado."}
 	                </div>
 	              )}
+	            </div>
+	          </div>
+
+	          <div className="card" style={{ padding: 0, marginTop: 18 }}>
+	            <div style={{ padding: 18, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+	              <div>
+	                <div style={{ fontWeight: 900, fontSize: 18 }}>Mercados Operacionais</div>
+	                <div className="muted" style={{ marginTop: 6, fontWeight: 800 }}>
+	                  {loading ? "Carregando..." : `${operationalMarkets.length} item(ns)`}
+	                </div>
+	              </div>
+	              <StatusPill tone="muted">Preview only</StatusPill>
+	            </div>
+
+	            <div style={{ padding: "0 18px 16px" }}>
+	              <div style={{ padding: 14, border: "1px solid #bfdbfe", borderRadius: 8, color: "#1d4ed8", background: "#eff6ff" }}>
+	                <div style={{ fontWeight: 900 }}>Pré-visualização operacional.</div>
+	                <div style={{ marginTop: 4, fontWeight: 800, fontSize: 13 }}>
+	                  Nenhum objeto foi publicado na Meta.
+	                </div>
+	              </div>
+	            </div>
+
+	            <div style={{ borderTop: "1px solid #e5e7eb", overflowX: "auto" }}>
+	              <table className="dataTable" style={{ marginTop: 0 }}>
+	                <thead>
+	                  <tr>
+	                    <th>Mercado</th>
+	                    <th>Nome gerado</th>
+	                    <th>UTM</th>
+	                    <th>Status</th>
+	                    <th>Detalhes</th>
+	                  </tr>
+	                </thead>
+	                <tbody>
+	                  {operationalMarkets.map((market) => {
+	                    const isOpen = Boolean(expandedOperationalMarkets[market.id || market.marketCode]);
+	                    const rowKey = market.id || market.marketCode;
+	                    return (
+	                      <Fragment key={rowKey}>
+	                        <tr key={rowKey}>
+	                          <td style={{ fontWeight: 900 }}>
+	                            <div style={{ display: "grid", gap: 4 }}>
+	                              <span className="monoTag">{market.marketCode || "—"}</span>
+	                              <span className="muted" style={{ fontWeight: 800, fontSize: 12 }}>
+	                                {market.marketName || "—"}
+	                              </span>
+	                            </div>
+	                          </td>
+	                          <td>
+	                            <span className="monoTag">{market.marketParam || "—"}</span>
+	                          </td>
+	                          <td>
+	                            <span className="monoTag">{market.utmCampaign || "—"}</span>
+	                          </td>
+	                          <td>
+	                            <StatusPill tone={market.status === "PAUSED" ? "warn" : "muted"}>
+	                              {market.status || "—"}
+	                            </StatusPill>
+	                          </td>
+	                          <td>
+	                            <button
+	                              type="button"
+	                              className="pillOutline"
+	                              onClick={() =>
+	                                setExpandedOperationalMarkets((prev) => ({
+	                                  ...prev,
+	                                  [rowKey]: !prev[rowKey],
+	                                }))
+	                              }
+	                            >
+	                              {isOpen ? "Recolher" : "Expandir"}
+	                            </button>
+	                          </td>
+	                        </tr>
+	                        {isOpen ? (
+	                          <tr key={`${rowKey}-details`}>
+	                            <td colSpan={5}>
+	                              <div style={{ display: "grid", gap: 12, padding: "8px 0" }}>
+	                                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+	                                  <span className="monoTag">market_code: {market.marketCode || "—"}</span>
+	                                  <span className="monoTag">market_name: {market.marketName || "—"}</span>
+	                                  <span className="monoTag">market_param: {market.marketParam || "—"}</span>
+	                                  <span className="monoTag">utm_campaign: {market.utmCampaign || "—"}</span>
+	                                  <span className="monoTag">src: {market.src || "—"}</span>
+	                                  <span className="monoTag">
+	                                    resolved_countries: {(market.resolvedCountries || []).length}
+	                                  </span>
+	                                  <span className="monoTag">publishable: {market.publishable ? "true" : "false"}</span>
+	                                  <span className="monoTag">previewOnly: {market.previewOnly ? "true" : "false"}</span>
+	                                </div>
+	                                <div style={{ display: "grid", gap: 10 }}>
+	                                  <AdvancedDisclosure summary="resolved_countries" defaultOpen={false}>
+	                                    <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
+	                                      {safeJson(market.resolvedCountries || [])}
+	                                    </pre>
+	                                  </AdvancedDisclosure>
+	                                  <AdvancedDisclosure summary="targeting_preview" defaultOpen={false}>
+	                                    <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
+	                                      {safeJson(market.targetingPreview || {})}
+	                                    </pre>
+	                                  </AdvancedDisclosure>
+	                                </div>
+	                              </div>
+	                            </td>
+	                          </tr>
+	                        ) : null}
+	                      </Fragment>
+	                    );
+	                  })}
+	                  {!operationalMarkets.length ? (
+	                    <tr>
+	                      <td colSpan={5} className="muted" style={{ fontWeight: 800 }}>
+	                        {loading ? "Carregando..." : "Nenhum mercado operacional persistido para esta campanha."}
+	                      </td>
+	                    </tr>
+	                  ) : null}
+	                </tbody>
+	              </table>
 	            </div>
 	          </div>
 

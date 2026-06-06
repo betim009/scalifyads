@@ -4404,3 +4404,96 @@ Pendências finais (P39):
 - P40/P39B: decidir se o catálogo backend seguirá duplicado do frontend ou se haverá uma fonte compartilhada única.
 - P40: evoluir uma tela/listagem operacional para inspecionar todas as gerações por mercado.
 - P40/P41: antes de qualquer publicação real, definir contrato explícito para converter `resolved_countries` e exclusões em payload Meta real mantendo `PAUSED`.
+
+## P41 — Visualização Operacional de Mercados Persistidos
+
+Última atualização: [2026-06-06 15:18; 2026-06-06 15:29]
+
+Objetivo:
+Criar a visualização operacional das gerações persistidas em `operational_market_generations`, apenas para leitura/preview, sem Meta REAL e sem qualquer alteração em publicação.
+
+Contexto:
+
+- O motor operacional já gera e persiste mercados em `operational_market_generations`.
+- Registros persistidos possuem `campaign_id`, `market_code`, `market_name`, `market_param`, `resolved_countries`, `targeting_preview`, `utm_campaign`, `src` e `status`.
+- P39 validou o catálogo completo de 100 mercados com rollback.
+
+Regras:
+
+- Não criar Campaign Meta.
+- Não criar AdSet Meta.
+- Não criar Ad Meta.
+- Não alterar `ACTIVE`.
+- Não alterar `PAUSED`.
+- Não alterar scheduler.
+- Não mexer em publicação.
+
+Tarefas:
+
+- [x] Criar endpoint `GET /api/generated-campaigns/:campaignId/operational-markets`.
+- [x] Retornar payload camelCase para consumo direto do frontend.
+- [x] Adicionar service frontend para consultar mercados operacionais por campanha.
+- [x] Exibir seção "Mercados Operacionais" em `CampanhaDetalhes`.
+- [x] Exibir tabela com mercado, nome gerado, UTM e status.
+- [x] Implementar expansão por linha com dados completos.
+- [x] Exibir aviso: "Pré-visualização operacional. Nenhum objeto foi publicado na Meta."
+- [x] Validar endpoint localmente.
+- [x] Rodar build.
+- [x] Atualizar `PLANS.md` com evidências.
+
+Critérios de aceite:
+
+- [x] Endpoint funcionando.
+- [x] Frontend consumindo endpoint.
+- [x] Lista exibida corretamente.
+- [x] Expansão funcionando.
+- [x] Nenhuma chamada Meta.
+- [x] Nenhum `ACTIVE`.
+- [x] Nenhuma alteração em publicação.
+- [x] Commit final criado com resumo.
+
+Implementação (P41):
+
+- Criado endpoint `GET /api/generated-campaigns/:campaignId/operational-markets`.
+- Endpoint valida `campaignId`, confirma existência da campanha local e retorna:
+  - `marketCode`;
+  - `marketName`;
+  - `marketParam`;
+  - `utmCampaign`;
+  - `src`;
+  - `status`;
+  - `resolvedCountries`;
+  - `targetingPreview`;
+  - `publishable`;
+  - `previewOnly`.
+- Criado service `listOperationalMarketsForCampaign`.
+- `CampanhaDetalhes` passou a carregar mercados operacionais junto com campanha e campanhas geradas.
+- Seção "Mercados Operacionais" adicionada com:
+  - aviso operacional explícito;
+  - tabela de mercado/nome gerado/UTM/status;
+  - expansão por linha exibindo campos completos, países resolvidos e `targeting_preview`.
+
+Validação (P41):
+
+- [2026-06-06 15:29] `GET /api/generated-campaigns/3014761c-6814-43f7-b5df-17beacd4c227/operational-markets` (OK; 4 mercados: `ARM`, `AREU`, `ENCA`, `ENAU`; `metaPublishing = false`; todos `PAUSED`; todos `publishable = false`; todos `previewOnly = true`).
+- [2026-06-06 15:29] `node --check backend/src/routes/generatedCampaigns.js && node --check frontend/src/services/generatedCampaigns.js` (OK).
+- [2026-06-06 15:29] `npm --prefix frontend run build` (OK; aviso Vite de chunk grande mantido).
+- Confirmado:
+  - nenhuma Campaign Meta criada;
+  - nenhum AdSet Meta criado;
+  - nenhum Ad Meta criado;
+  - nenhuma chamada Meta REAL;
+  - nenhum `ACTIVE`;
+  - nenhuma alteração em scheduler/publicação.
+
+Arquivos alterados (P41):
+
+- `PLANS.md`
+- `backend/src/routes/generatedCampaigns.js`
+- `frontend/src/services/generatedCampaigns.js`
+- `frontend/src/pages/CampanhaDetalhes.jsx`
+
+Pendências finais (P41):
+
+- P42: decidir se a próxima tela operacional deve listar campanhas locais com mercados sem depender da tela legada de campanhas por país.
+- P42/P43: antes de publicação real, definir endpoint separado e explícito para preview de payload Meta, mantendo `PAUSED`.

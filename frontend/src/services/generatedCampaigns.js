@@ -25,6 +25,16 @@ export async function createOperationalMarketGeneration({ campaignId, campaignNa
   };
 }
 
+export async function listOperationalMarketsForCampaign(campaignId) {
+  const data = await apiGet(`/api/generated-campaigns/${encodeURIComponent(String(campaignId))}/operational-markets`);
+  return {
+    ok: true,
+    campaignId: data?.campaignId ?? null,
+    operationalMarkets: Array.isArray(data?.operationalMarkets) ? data.operationalMarkets : [],
+    metaPublishing: data?.metaPublishing === true,
+  };
+}
+
 export async function markGeneratedPublished(id, { metaCampaignId }) {
   const data = await apiPost(`/api/generated-campaigns/${encodeURIComponent(String(id))}/mark-published`, {
     metaCampaignId,
