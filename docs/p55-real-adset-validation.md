@@ -160,3 +160,146 @@ A falha ocorreu de forma segura:
 Antes de repetir a validacao REAL, o adapter operacional de targeting precisa ser ajustado para um formato de exclusao aceito pela Meta Graph API, preservando o suporte multi-pais e mantendo o fluxo legado intacto.
 
 Nota P55B: a correcao foi documentada em `docs/p55b-targeting-normalization-fix.md`. O payload real deixa de enviar `geo_locations.excluded_countries`; os paises excluidos sao removidos de `geo_locations.countries` e mantidos como metadados.
+
+## P55C - Repeticao apos correcao de targeting
+
+Validacao repetida apos o P55B, sem alteracao de codigo durante o teste.
+
+### Pre-condicoes
+
+Local:
+
+```json
+{
+  "operationalMarketGenerationId": "199c5ff6-0205-43a6-be34-a116e91ff6ba",
+  "generatedCampaignId": "3425b703-248a-4069-b2ba-89dab177461f",
+  "metaCampaignId": "120248694192270596",
+  "metaAdSetId": null,
+  "status": "PAUSED",
+  "metaRunMode": "REAL",
+  "generatedAdsets": 0,
+  "generatedAds": 0
+}
+```
+
+Graph antes da chamada:
+
+```json
+{
+  "id": "120248694192270596",
+  "name": "ARM-PlantasBTN-FB",
+  "status": "PAUSED",
+  "effective_status": "PAUSED",
+  "objective": "OUTCOME_SALES",
+  "account_id": "259174718403969",
+  "adsetsCount": 0,
+  "adsCount": 0
+}
+```
+
+Preview de targeting antes da chamada:
+
+```json
+{
+  "status": "PAUSED",
+  "countryCount": 82,
+  "hasTW": false,
+  "hasExcludedCountriesField": false,
+  "excludedCountryCodes": ["TW"]
+}
+```
+
+### Chamada executada
+
+```http
+POST /api/operational-market-generations/199c5ff6-0205-43a6-be34-a116e91ff6ba/publish-adset
+```
+
+Payload:
+
+```json
+{
+  "dailyBudgetCents": 1000,
+  "billingEvent": "IMPRESSIONS",
+  "optimizationGoal": "OFFSITE_CONVERSIONS",
+  "confirmPublishPausedAdSet": true
+}
+```
+
+### Resposta recebida
+
+```json
+{
+  "ok": false,
+  "error": {
+    "message": "Invalid parameter",
+    "details": {
+      "message": "Invalid parameter",
+      "type": "OAuthException",
+      "code": 100,
+      "error_subcode": 1815430,
+      "is_transient": false,
+      "error_user_title": "Selecione um objeto promovido para seu conjunto de anuncios.",
+      "error_user_msg": "Selecione um objeto promovido para seu conjunto de anuncios.",
+      "fbtrace_id": "Ah0T5jIK8__iugwT2VXLETb"
+    }
+  }
+}
+```
+
+### Validacao apos a tentativa
+
+Persistencia local:
+
+```json
+{
+  "generatedCampaignId": "3425b703-248a-4069-b2ba-89dab177461f",
+  "metaCampaignId": "120248694192270596",
+  "metaAdSetId": null,
+  "metaAdSetStatus": null,
+  "metaRunMode": "REAL",
+  "generatedAdsets": 0,
+  "generatedAds": 0
+}
+```
+
+Graph apos a tentativa:
+
+```json
+{
+  "id": "120248694192270596",
+  "name": "ARM-PlantasBTN-FB",
+  "status": "PAUSED",
+  "effective_status": "PAUSED",
+  "objective": "OUTCOME_SALES",
+  "account_id": "259174718403969",
+  "adsetsCount": 0,
+  "adsets": [],
+  "adsCount": 0,
+  "ads": []
+}
+```
+
+### Resultado P55C
+
+O criterio de aceite principal do P55C nao foi atingido: nenhum AdSet REAL foi criado.
+
+A correcao de targeting do P55B foi confirmada no preview operacional:
+
+- ARM manteve 82 paises em `geo_locations.countries`;
+- `TW` nao aparece em `countries`;
+- `geo_locations.excluded_countries` nao existe no payload final.
+
+A chamada REAL avancou alem do erro anterior de `excluded_countries`, mas a Meta bloqueou a criacao por falta de objeto promovido (`promoted_object`) para `optimizationGoal = OFFSITE_CONVERSIONS`.
+
+Estado final seguro:
+
+- Campaign continuou `PAUSED`;
+- nenhum AdSet local criado;
+- nenhum AdSet Meta criado;
+- nenhum Creative criado;
+- nenhum Ad criado;
+- nenhum `ACTIVE`;
+- nenhum lote executado.
+
+Antes de repetir a validacao REAL, o endpoint precisa aceitar e enviar o `promoted_object` exigido pela Meta para AdSets com `OFFSITE_CONVERSIONS`, preservando o status `PAUSED` e o escopo de criar somente AdSet.
