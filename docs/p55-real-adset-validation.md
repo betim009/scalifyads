@@ -305,3 +305,105 @@ Estado final seguro:
 Antes de repetir a validacao REAL, o endpoint precisa aceitar e enviar o `promoted_object` exigido pela Meta para AdSets com `OFFSITE_CONVERSIONS`, preservando o status `PAUSED` e o escopo de criar somente AdSet.
 
 Nota P55D: a correcao foi documentada em `docs/p55d-promoted-object-adset.md`. Para `optimizationGoal = OFFSITE_CONVERSIONS`, o endpoint passa a exigir `promotedObject` e o helper Meta serializa `promoted_object` no payload real.
+
+## P55E - Tentativa com promotedObject
+
+Validacao planejada para repetir a criacao REAL de 1 AdSet Meta `PAUSED`, agora com `promotedObject`.
+
+### Pre-condicoes verificadas
+
+Linha operacional:
+
+```json
+{
+  "operationalMarketGenerationId": "199c5ff6-0205-43a6-be34-a116e91ff6ba",
+  "marketCode": "ARM",
+  "marketParam": "ARM-PlantasBTN-FB",
+  "generatedCampaignId": "3425b703-248a-4069-b2ba-89dab177461f",
+  "metaCampaignId": "120248694192270596",
+  "metaAdSetId": null,
+  "status": "PAUSED",
+  "metaRunMode": "REAL",
+  "metaAdAccountId": "act_259174718403969",
+  "generatedAdsets": 0,
+  "generatedAds": 0
+}
+```
+
+Graph da Campaign antes da chamada:
+
+```json
+{
+  "id": "120248694192270596",
+  "name": "ARM-PlantasBTN-FB",
+  "status": "PAUSED",
+  "effective_status": "PAUSED",
+  "objective": "OUTCOME_SALES",
+  "account_id": "259174718403969",
+  "adsetsCount": 0,
+  "adsets": [],
+  "adsCount": 0,
+  "ads": []
+}
+```
+
+### Descoberta de Pixel
+
+O payload P55E exige um Pixel real:
+
+```json
+{
+  "promotedObject": {
+    "pixel_id": "PIXEL_ID_REAL_AQUI",
+    "custom_event_type": "PURCHASE"
+  }
+}
+```
+
+Nao havia `META_PIXEL_ID`, `PIXEL_ID` ou variavel equivalente no ambiente local.
+
+Consultas Graph em modo leitura na conta `act_259174718403969`:
+
+```json
+{
+  "edge": "adspixels",
+  "ok": true,
+  "count": 0,
+  "data": []
+}
+```
+
+```json
+{
+  "edge": "customconversions",
+  "ok": true,
+  "count": 0,
+  "data": []
+}
+```
+
+Tambem nao foi encontrado `pixel_id`, `custom_conversion_id` ou equivalente no banco local.
+
+### Resultado P55E
+
+O endpoint de criacao real nao foi chamado.
+
+Motivo: falta de `pixel_id` real para montar o `promotedObject` obrigatorio de `OFFSITE_CONVERSIONS`.
+
+Executar a chamada com placeholder ou Pixel inventado nao validaria o criterio de aceite e poderia gerar apenas nova falha externa nao informativa.
+
+Estado final:
+
+- Campaign continua `PAUSED`;
+- nenhum AdSet local criado;
+- nenhum AdSet Meta criado;
+- nenhum Creative criado;
+- nenhum Ad criado;
+- nenhum `ACTIVE`;
+- nenhum lote executado.
+
+Para repetir o P55E, e necessario fornecer um destes conjuntos reais da conta Meta:
+
+- `promotedObject.pixel_id` + `promotedObject.custom_event_type`;
+- ou `promotedObject.custom_conversion_id`;
+- ou `promotedObject.offsite_conversion_event_id`.
