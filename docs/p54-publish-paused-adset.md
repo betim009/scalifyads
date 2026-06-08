@@ -26,6 +26,10 @@ Payload:
   "dailyBudgetCents": 1000,
   "billingEvent": "IMPRESSIONS",
   "optimizationGoal": "OFFSITE_CONVERSIONS",
+  "promotedObject": {
+    "pixel_id": "123456789012345",
+    "custom_event_type": "PURCHASE"
+  },
   "confirmPublishPausedAdSet": true
 }
 ```
@@ -51,6 +55,7 @@ O endpoint exige:
 - `dailyBudgetCents` inteiro positivo;
 - `billingEvent` preenchido;
 - `optimizationGoal` preenchido;
+- `promotedObject` quando `optimizationGoal = OFFSITE_CONVERSIONS`;
 - `confirmPublishPausedAdSet === true`;
 - token Meta resolvido por `resolveAccessToken`.
 

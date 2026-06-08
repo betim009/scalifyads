@@ -141,6 +141,54 @@ function normalizeTargeting(value) {
   }
 }
 
+function normalizePromotedObject(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+
+  const allowedStringFields = [
+    'application_id',
+    'conversion_goal_id',
+    'custom_conversion_id',
+    'custom_event_str',
+    'custom_event_type',
+    'event_id',
+    'mcme_conversion_id',
+    'object_store_url',
+    'offline_conversion_data_set_id',
+    'offsite_conversion_event_id',
+    'page_id',
+    'pixel_id',
+    'product_catalog_id',
+    'product_item_id',
+    'product_set_id'
+  ]
+
+  const normalized = {}
+  for (const field of allowedStringFields) {
+    const item = normalizeNonEmptyString(value[field])
+    if (item) normalized[field] = item
+  }
+
+  const pixelRule = normalizeNonEmptyString(value.pixel_rule)
+  if (pixelRule) {
+    normalized.pixel_rule = pixelRule
+  } else if (value.pixel_rule && typeof value.pixel_rule === 'object' && !Array.isArray(value.pixel_rule)) {
+    normalized.pixel_rule = JSON.stringify(value.pixel_rule)
+  }
+
+  const pixelAggregationRule = normalizeNonEmptyString(value.pixel_aggregation_rule)
+  if (pixelAggregationRule) {
+    normalized.pixel_aggregation_rule = pixelAggregationRule
+  } else if (
+    value.pixel_aggregation_rule &&
+    typeof value.pixel_aggregation_rule === 'object' &&
+    !Array.isArray(value.pixel_aggregation_rule)
+  ) {
+    normalized.pixel_aggregation_rule = JSON.stringify(value.pixel_aggregation_rule)
+  }
+
+  return Object.keys(normalized).length > 0 ? normalized : null
+}
+
 function normalizePositiveInt(value) {
   const n = Number(value)
   if (!Number.isFinite(n)) return null
@@ -187,7 +235,9 @@ export async function metaCreateAdSet({
   status = 'PAUSED',
   bidStrategy,
   bidAmount,
-  bidConstraints
+  bidConstraints,
+  promotedObject,
+  promoted_object
 } = {}) {
   const act = normalizeMetaAdAccountId(metaAdAccountId)
   if (!act) {
@@ -253,6 +303,7 @@ export async function metaCreateAdSet({
   const ba = bidAmount === undefined || bidAmount === null ? null : normalizePositiveInt(bidAmount)
   const bcRaw = bidConstraints ?? null
   const bc = bcRaw && typeof bcRaw === 'object' ? bcRaw : null
+  const po = normalizePromotedObject(promotedObject ?? promoted_object)
 
   const params = new URLSearchParams()
   params.set('access_token', token)
@@ -266,6 +317,7 @@ export async function metaCreateAdSet({
   if (bs) params.set('bid_strategy', bs)
   if (ba) params.set('bid_amount', String(ba))
   if (bc) params.set('bid_constraints', JSON.stringify(bc))
+  if (po) params.set('promoted_object', JSON.stringify(po))
 
   const json = await fetchJson(buildUrl(`${act}/adsets`), { method: 'POST', body: params, retries: 3 })
   const id = normalizeNonEmptyString(json?.id)

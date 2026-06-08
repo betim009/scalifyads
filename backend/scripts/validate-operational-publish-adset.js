@@ -2,6 +2,7 @@ import { initDb, getPool, closeDb } from '../src/db.js'
 import { generateOperationalMarkets } from '../src/lib/operationalMarketGeneration.js'
 import { insertOperationalMarketGeneration } from '../src/services/operationalMarketGenerations.js'
 import { publishPausedOperationalAdSet } from '../src/services/operationalMarketAdSetPublisher.js'
+import { metaCreateAdSet } from '../src/meta/adsets.js'
 
 function assert(condition, message) {
   if (!condition) throw new Error(message)
@@ -15,6 +16,66 @@ async function expectError(label, fn, expectedStatus) {
     return err
   }
   throw new Error(`${label}: expected error`)
+}
+
+async function validateMetaCreateAdSetPromotedObjectSerialization() {
+  const originalFetch = globalThis.fetch
+  const captured = []
+
+  globalThis.fetch = async (url, options = {}) => {
+    captured.push({ url: String(url), options })
+    if (options.method === 'POST') {
+      return new Response(JSON.stringify({ id: 'stub-meta-adset-promoted-object' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+    return new Response(
+      JSON.stringify({
+        id: 'stub-meta-adset-promoted-object',
+        name: 'ARM-PlantasBTN-FB',
+        campaign_id: 'stub-meta-campaign-p55d',
+        status: 'PAUSED',
+        effective_status: 'PAUSED'
+      }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    )
+  }
+
+  try {
+    const created = await metaCreateAdSet({
+      metaAdAccountId: 'act_123456789',
+      metaCampaignId: 'stub-meta-campaign-p55d',
+      name: 'ARM-PlantasBTN-FB',
+      targeting: { geo_locations: { countries: ['AE', 'BR'] } },
+      dailyBudgetCents: 1000,
+      billingEvent: 'IMPRESSIONS',
+      optimizationGoal: 'OFFSITE_CONVERSIONS',
+      promotedObject: {
+        pixel_id: '123456789012345',
+        custom_event_type: 'PURCHASE'
+      },
+      accessToken: 'fake-token-no-meta-call'
+    })
+
+    assert(created.id === 'stub-meta-adset-promoted-object', 'metaCreateAdSet stub response mismatch')
+    const post = captured.find((call) => call.options?.method === 'POST')
+    assert(post, 'Expected one POST call in mocked metaCreateAdSet')
+    const body = post.options.body
+    assert(body instanceof URLSearchParams, 'Expected URLSearchParams body')
+    assert(body.get('status') === 'PAUSED', 'metaCreateAdSet must force PAUSED')
+    assert(body.get('optimization_goal') === 'OFFSITE_CONVERSIONS', 'Expected OFFSITE_CONVERSIONS')
+    const targeting = JSON.parse(body.get('targeting'))
+    assert(!Object.prototype.hasOwnProperty.call(targeting.geo_locations, 'excluded_countries'), 'targeting should not contain excluded_countries')
+    const promotedObject = JSON.parse(body.get('promoted_object'))
+    assert(promotedObject.pixel_id === '123456789012345', 'promoted_object.pixel_id mismatch')
+    assert(promotedObject.custom_event_type === 'PURCHASE', 'promoted_object.custom_event_type mismatch')
+  } finally {
+    globalThis.fetch = originalFetch
+  }
 }
 
 async function main() {
@@ -36,6 +97,7 @@ async function main() {
     dailyBudgetCents,
     billingEvent,
     optimizationGoal,
+    promotedObject,
     status
   }) => {
     createCalls += 1
@@ -54,6 +116,8 @@ async function main() {
     assert(dailyBudgetCents === 1000, 'Unexpected dailyBudgetCents in createAdSet stub')
     assert(billingEvent === 'IMPRESSIONS', 'Unexpected billingEvent in createAdSet stub')
     assert(optimizationGoal === 'OFFSITE_CONVERSIONS', 'Unexpected optimizationGoal in createAdSet stub')
+    assert(promotedObject?.pixel_id === '123456789012345', 'Expected promotedObject.pixel_id')
+    assert(promotedObject?.custom_event_type === 'PURCHASE', 'Expected promotedObject.custom_event_type')
     assert(status === 'PAUSED', 'AdSet status should be forced to PAUSED')
     return {
       id: 'stub-meta-adset-p54',
@@ -93,6 +157,10 @@ async function main() {
       dailyBudgetCents: 1000,
       billingEvent: 'IMPRESSIONS',
       optimizationGoal: 'OFFSITE_CONVERSIONS',
+      promotedObject: {
+        pixel_id: '123456789012345',
+        custom_event_type: 'PURCHASE'
+      },
       confirmPublishPausedAdSet: true,
       accessToken: 'fake-token-no-meta-call',
       createAdSet: createAdSetStub
@@ -117,6 +185,25 @@ async function main() {
       'missing optimizationGoal',
       () => publishPausedOperationalAdSet({ ...base, optimizationGoal: null }),
       400
+    )
+    await expectError(
+      'missing promotedObject for OFFSITE_CONVERSIONS',
+      () => publishPausedOperationalAdSet({ ...base, promotedObject: null }),
+      400
+    )
+    await expectError(
+      'incomplete promotedObject for OFFSITE_CONVERSIONS',
+      () => publishPausedOperationalAdSet({ ...base, promotedObject: { pixel_id: '123456789012345' } }),
+      400
+    )
+    const nonOffsiteError = await expectError(
+      'non-OFFSITE without promotedObject',
+      () => publishPausedOperationalAdSet({ ...base, optimizationGoal: 'REACH', promotedObject: null }),
+      400
+    )
+    assert(
+      nonOffsiteError.message === 'Operational market generation has no published Meta Campaign',
+      'Non-OFFSITE without promotedObject should proceed to campaign validation'
     )
     await expectError('missing published campaign', () => publishPausedOperationalAdSet(base), 400)
     assert(createCalls === 0, 'Validation failures must not call createAdSet')
@@ -218,6 +305,8 @@ async function main() {
     assert(duplicate.metaAdSetId === result.metaAdSetId, 'Duplicate should return existing metaAdSetId')
     assert(createCalls === 1, 'Duplicate call must not call createAdSet again')
 
+    await validateMetaCreateAdSetPromotedObjectSerialization()
+
     await client.query('ROLLBACK')
 
     console.log(
@@ -237,12 +326,17 @@ async function main() {
           created: result.created,
           duplicateCreated: duplicate.created,
           createAdSetCalls: createCalls,
+          metaCreateAdSetPromotedObjectSerialization: true,
           targeting: {
             countryCount: result.targeting.geo_locations.countries.length,
             hasInvalidExcludedCountriesField: Object.prototype.hasOwnProperty.call(
               result.targeting.geo_locations,
               'excluded_countries'
             )
+          },
+          promotedObject: {
+            pixelId: result.promotedObject?.pixel_id,
+            customEventType: result.promotedObject?.custom_event_type
           }
         },
         null,

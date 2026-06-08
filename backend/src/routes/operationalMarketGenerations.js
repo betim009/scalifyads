@@ -216,6 +216,7 @@ export function operationalMarketGenerationsRouter() {
           bidStrategy: req.body?.bidStrategy,
           bidAmount: req.body?.bidAmount,
           bidConstraints: req.body?.bidConstraints,
+          promotedObject: req.body?.promotedObject ?? req.body?.promoted_object,
           accessToken,
           createAdSet: metaCreateAdSet
         })

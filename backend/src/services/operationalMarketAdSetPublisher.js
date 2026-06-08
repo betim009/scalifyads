@@ -13,6 +13,47 @@ function normalizePositiveInt(value) {
   return i > 0 ? i : null
 }
 
+function normalizePromotedObject(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+
+  const normalized = {}
+  for (const [key, item] of Object.entries(value)) {
+    if (item && typeof item === 'object' && !Array.isArray(item)) {
+      normalized[key] = JSON.stringify(item)
+      continue
+    }
+
+    const stringValue = normalizeNonEmptyString(item)
+    if (stringValue) normalized[key] = stringValue
+  }
+
+  return Object.keys(normalized).length > 0 ? normalized : null
+}
+
+function requiresPromotedObject(optimizationGoal) {
+  return normalizeNonEmptyString(optimizationGoal)?.toUpperCase() === 'OFFSITE_CONVERSIONS'
+}
+
+function validateOffsitePromotedObject(promotedObject) {
+  if (!promotedObject) {
+    return ['promotedObject is required when optimizationGoal is OFFSITE_CONVERSIONS']
+  }
+
+  const hasPixelEvent =
+    Boolean(normalizeNonEmptyString(promotedObject.pixel_id)) &&
+    Boolean(normalizeNonEmptyString(promotedObject.custom_event_type))
+  const hasCustomConversion = Boolean(normalizeNonEmptyString(promotedObject.custom_conversion_id))
+  const hasOffsiteConversionEvent = Boolean(normalizeNonEmptyString(promotedObject.offsite_conversion_event_id))
+
+  if (!hasPixelEvent && !hasCustomConversion && !hasOffsiteConversionEvent) {
+    return [
+      'promotedObject for OFFSITE_CONVERSIONS must include pixel_id + custom_event_type, custom_conversion_id, or offsite_conversion_event_id'
+    ]
+  }
+
+  return []
+}
+
 function normalizeCreatedAdSet(created) {
   const id = normalizeNonEmptyString(created?.id)
   if (!id) {
@@ -153,7 +194,9 @@ export async function publishPausedOperationalAdSet({
   createAdSet,
   bidStrategy,
   bidAmount,
-  bidConstraints
+  bidConstraints,
+  promotedObject,
+  promoted_object
 } = {}) {
   if (!pool && !providedClient) throw new Error('pool is required')
   if (typeof createAdSet !== 'function') throw new Error('createAdSet is required')
@@ -182,6 +225,15 @@ export async function publishPausedOperationalAdSet({
   if (!og) {
     const err = new Error('optimizationGoal is required')
     err.status = 400
+    throw err
+  }
+
+  const normalizedPromotedObject = normalizePromotedObject(promotedObject ?? promoted_object)
+  const promotedObjectErrors = requiresPromotedObject(og) ? validateOffsitePromotedObject(normalizedPromotedObject) : []
+  if (promotedObjectErrors.length > 0) {
+    const err = new Error('promotedObject is required for OFFSITE_CONVERSIONS')
+    err.status = 400
+    err.details = { errors: promotedObjectErrors }
     throw err
   }
 
@@ -273,6 +325,7 @@ export async function publishPausedOperationalAdSet({
         bidStrategy: normalizeNonEmptyString(bidStrategy) ?? 'LOWEST_COST_WITHOUT_CAP',
         bidAmount,
         bidConstraints,
+        promotedObject: normalizedPromotedObject,
         accessToken: token,
         status: 'PAUSED'
       })
@@ -296,6 +349,7 @@ export async function publishPausedOperationalAdSet({
       operationalMarketGenerationId: row.id,
       targeting: targetingResult.targeting,
       targetingMetadata: targetingResult.targetingMetadata,
+      promotedObject: normalizedPromotedObject,
       duplicated: false,
       created: {
         campaign: false,

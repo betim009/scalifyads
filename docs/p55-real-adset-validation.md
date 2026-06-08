@@ -303,3 +303,5 @@ Estado final seguro:
 - nenhum lote executado.
 
 Antes de repetir a validacao REAL, o endpoint precisa aceitar e enviar o `promoted_object` exigido pela Meta para AdSets com `OFFSITE_CONVERSIONS`, preservando o status `PAUSED` e o escopo de criar somente AdSet.
+
+Nota P55D: a correcao foi documentada em `docs/p55d-promoted-object-adset.md`. Para `optimizationGoal = OFFSITE_CONVERSIONS`, o endpoint passa a exigir `promotedObject` e o helper Meta serializa `promoted_object` no payload real.
