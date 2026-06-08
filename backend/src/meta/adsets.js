@@ -118,6 +118,37 @@ function normalizeCountryCode(value) {
   return code
 }
 
+function normalizeTargeting(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const geo = value.geo_locations
+  if (!geo || typeof geo !== 'object' || Array.isArray(geo)) return null
+
+  const countries = Array.isArray(geo.countries)
+    ? geo.countries.map(normalizeCountryCode).filter(Boolean)
+    : []
+  const uniqueCountries = [...new Set(countries)]
+  if (uniqueCountries.length === 0) return null
+
+  const normalizedGeo = {
+    ...geo,
+    countries: uniqueCountries
+  }
+
+  if (Array.isArray(geo.excluded_countries)) {
+    const excluded = [...new Set(geo.excluded_countries.map(normalizeCountryCode).filter(Boolean))]
+    if (excluded.length > 0) {
+      normalizedGeo.excluded_countries = excluded
+    } else {
+      delete normalizedGeo.excluded_countries
+    }
+  }
+
+  return {
+    ...value,
+    geo_locations: normalizedGeo
+  }
+}
+
 function normalizePositiveInt(value) {
   const n = Number(value)
   if (!Number.isFinite(n)) return null
@@ -156,6 +187,7 @@ export async function metaCreateAdSet({
   metaCampaignId,
   name,
   countryCode,
+  targeting,
   dailyBudgetCents,
   billingEvent,
   optimizationGoal,
@@ -186,9 +218,10 @@ export async function metaCreateAdSet({
     throw err
   }
 
-  const cc = normalizeCountryCode(countryCode)
-  if (!cc) {
-    const err = new Error('countryCode is required (expected ISO-2)')
+  const structuredTargeting = normalizeTargeting(targeting)
+  const cc = structuredTargeting ? null : normalizeCountryCode(countryCode)
+  if (!structuredTargeting && !cc) {
+    const err = new Error('countryCode or targeting.geo_locations.countries is required')
     err.status = 400
     throw err
   }
@@ -222,7 +255,7 @@ export async function metaCreateAdSet({
   }
 
   const forcedStatus = 'PAUSED'
-  const targeting = { geo_locations: { countries: [cc] } }
+  const targetingPayload = structuredTargeting ?? { geo_locations: { countries: [cc] } }
 
   const bs = normalizeNonEmptyString(bidStrategy)
   const ba = bidAmount === undefined || bidAmount === null ? null : normalizePositiveInt(bidAmount)
@@ -236,7 +269,7 @@ export async function metaCreateAdSet({
   params.set('daily_budget', String(budget))
   params.set('billing_event', be)
   params.set('optimization_goal', og)
-  params.set('targeting', JSON.stringify(targeting))
+  params.set('targeting', JSON.stringify(targetingPayload))
   params.set('status', forcedStatus)
   if (bs) params.set('bid_strategy', bs)
   if (ba) params.set('bid_amount', String(ba))
