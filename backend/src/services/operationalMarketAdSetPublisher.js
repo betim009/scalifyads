@@ -54,6 +54,12 @@ function validateOffsitePromotedObject(promotedObject) {
   return []
 }
 
+function resolveComplianceSection(targeting) {
+  const countries = targeting?.geo_locations?.countries
+  if (Array.isArray(countries) && countries.includes('SG')) return 'SINGAPORE_UNIVERSAL'
+  return null
+}
+
 function normalizeCreatedAdSet(created) {
   const id = normalizeNonEmptyString(created?.id)
   if (!id) {
@@ -313,6 +319,8 @@ export async function publishPausedOperationalAdSet({
       throw err
     }
 
+    const complianceSection = resolveComplianceSection(targetingResult.targeting)
+
     const createdAdSet = normalizeCreatedAdSet(
       await createAdSet({
         metaAdAccountId,
@@ -326,6 +334,7 @@ export async function publishPausedOperationalAdSet({
         bidAmount,
         bidConstraints,
         promotedObject: normalizedPromotedObject,
+        complianceSection,
         accessToken: token,
         status: 'PAUSED'
       })
@@ -350,6 +359,7 @@ export async function publishPausedOperationalAdSet({
       targeting: targetingResult.targeting,
       targetingMetadata: targetingResult.targetingMetadata,
       promotedObject: normalizedPromotedObject,
+      complianceSection,
       duplicated: false,
       created: {
         campaign: false,

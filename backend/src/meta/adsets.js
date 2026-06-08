@@ -237,7 +237,9 @@ export async function metaCreateAdSet({
   bidAmount,
   bidConstraints,
   promotedObject,
-  promoted_object
+  promoted_object,
+  complianceSection,
+  compliance_section
 } = {}) {
   const act = normalizeMetaAdAccountId(metaAdAccountId)
   if (!act) {
@@ -304,6 +306,7 @@ export async function metaCreateAdSet({
   const bcRaw = bidConstraints ?? null
   const bc = bcRaw && typeof bcRaw === 'object' ? bcRaw : null
   const po = normalizePromotedObject(promotedObject ?? promoted_object)
+  const cs = normalizeNonEmptyString(complianceSection ?? compliance_section)
 
   const params = new URLSearchParams()
   params.set('access_token', token)
@@ -318,6 +321,7 @@ export async function metaCreateAdSet({
   if (ba) params.set('bid_amount', String(ba))
   if (bc) params.set('bid_constraints', JSON.stringify(bc))
   if (po) params.set('promoted_object', JSON.stringify(po))
+  if (cs) params.set('compliance_section', cs)
 
   const json = await fetchJson(buildUrl(`${act}/adsets`), { method: 'POST', body: params, retries: 3 })
   const id = normalizeNonEmptyString(json?.id)

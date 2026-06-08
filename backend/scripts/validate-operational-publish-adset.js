@@ -58,6 +58,7 @@ async function validateMetaCreateAdSetPromotedObjectSerialization() {
         pixel_id: '123456789012345',
         custom_event_type: 'PURCHASE'
       },
+      complianceSection: 'SINGAPORE_UNIVERSAL',
       accessToken: 'fake-token-no-meta-call'
     })
 
@@ -68,6 +69,7 @@ async function validateMetaCreateAdSetPromotedObjectSerialization() {
     assert(body instanceof URLSearchParams, 'Expected URLSearchParams body')
     assert(body.get('status') === 'PAUSED', 'metaCreateAdSet must force PAUSED')
     assert(body.get('optimization_goal') === 'OFFSITE_CONVERSIONS', 'Expected OFFSITE_CONVERSIONS')
+    assert(body.get('compliance_section') === 'SINGAPORE_UNIVERSAL', 'Expected SINGAPORE_UNIVERSAL compliance_section')
     const targeting = JSON.parse(body.get('targeting'))
     assert(!Object.prototype.hasOwnProperty.call(targeting.geo_locations, 'excluded_countries'), 'targeting should not contain excluded_countries')
     const promotedObject = JSON.parse(body.get('promoted_object'))
@@ -98,6 +100,7 @@ async function main() {
     billingEvent,
     optimizationGoal,
     promotedObject,
+    complianceSection,
     status
   }) => {
     createCalls += 1
@@ -118,6 +121,7 @@ async function main() {
     assert(optimizationGoal === 'OFFSITE_CONVERSIONS', 'Unexpected optimizationGoal in createAdSet stub')
     assert(promotedObject?.pixel_id === '123456789012345', 'Expected promotedObject.pixel_id')
     assert(promotedObject?.custom_event_type === 'PURCHASE', 'Expected promotedObject.custom_event_type')
+    assert(complianceSection === 'SINGAPORE_UNIVERSAL', 'ARM AdSet should include SINGAPORE_UNIVERSAL complianceSection')
     assert(status === 'PAUSED', 'AdSet status should be forced to PAUSED')
     return {
       id: 'stub-meta-adset-p54',
@@ -327,6 +331,7 @@ async function main() {
           duplicateCreated: duplicate.created,
           createAdSetCalls: createCalls,
           metaCreateAdSetPromotedObjectSerialization: true,
+          complianceSection: result.complianceSection,
           targeting: {
             countryCount: result.targeting.geo_locations.countries.length,
             hasInvalidExcludedCountriesField: Object.prototype.hasOwnProperty.call(
