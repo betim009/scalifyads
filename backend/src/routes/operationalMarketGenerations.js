@@ -7,8 +7,10 @@ import { buildOperationalPublishPreview } from '../lib/operationalPublishPreview
 import { resolveAccessToken } from '../meta/accessToken.js'
 import { metaCreateCampaign } from '../meta/campaigns.js'
 import { metaCreateAdSet } from '../meta/adsets.js'
+import { metaCreateAdCreative } from '../meta/creatives.js'
 import { publishPausedOperationalCampaign } from '../services/operationalMarketCampaignPublisher.js'
 import { publishPausedOperationalAdSet } from '../services/operationalMarketAdSetPublisher.js'
+import { publishOperationalCreative } from '../services/operationalMarketCreativePublisher.js'
 import { resolveAuthUser } from '../lib/internalAuth.js'
 
 function isPlainObject(value) {
@@ -225,6 +227,42 @@ export function operationalMarketGenerationsRouter() {
       } catch (err) {
         const status = typeof err?.status === 'number' ? err.status : 502
         return jsonError(res, status, err?.message ?? 'Operational AdSet publish failed', err?.details)
+      }
+    })
+  )
+
+  router.post(
+    '/:id/publish-creative',
+    asyncHandler(async (req, res) => {
+      if (!req.app.locals.dbEnabled) {
+        return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
+      }
+
+      const id = req.params.id
+      if (!isUuid(id)) {
+        return jsonError(res, 400, 'Invalid operational market generation id')
+      }
+
+      if (Array.isArray(req.body?.operationalMarketGenerationIds) || Array.isArray(req.body?.ids)) {
+        return jsonError(res, 400, 'Batch publishing is not allowed')
+      }
+
+      const pool = getPool()
+      const accessToken = await resolveAccessToken(pool, req)
+
+      try {
+        const result = await publishOperationalCreative({
+          pool,
+          operationalMarketGenerationId: id,
+          body: req.body ?? {},
+          accessToken,
+          createCreative: metaCreateAdCreative
+        })
+
+        return res.status(result.created?.creative ? 201 : 200).json(result)
+      } catch (err) {
+        const status = typeof err?.status === 'number' ? err.status : 502
+        return jsonError(res, status, err?.message ?? 'Operational Creative publish failed', err?.details)
       }
     })
   )
