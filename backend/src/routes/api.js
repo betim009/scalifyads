@@ -16,6 +16,7 @@ import { campaignTemplatesRouter } from './campaignTemplates.js'
 import { authRouter } from './auth.js'
 import { flowTemplatesRouter } from './flowTemplates.js'
 import { metaAccountsRouter } from './metaAccounts.js'
+import { operationalMarketGenerationsRouter } from './operationalMarketGenerations.js'
 
 export function apiRouter() {
   const router = Router()
@@ -30,6 +31,7 @@ export function apiRouter() {
   router.use('/objectives', objectivesRouter())
   router.use('/campaigns', campaignsRouter())
   router.use('/generated-campaigns', generatedCampaignsRouter())
+  router.use('/operational-market-generations', operationalMarketGenerationsRouter())
   router.use('/meta', metaRouter())
   router.use('/finance', financeRouter())
   router.use('/automation', automationRouter())
