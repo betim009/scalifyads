@@ -85,9 +85,6 @@ export function buildOperationalMarketTargeting({ marketCode, resolvedCountries,
   const geoLocations = {
     countries: finalCountries
   }
-  if (excluded.length > 0) {
-    geoLocations.excluded_countries = excluded
-  }
 
   return {
     ok: errors.length === 0,
@@ -98,6 +95,10 @@ export function buildOperationalMarketTargeting({ marketCode, resolvedCountries,
     removedExcludedCountries: countries.filter((countryCode) => excludedSet.has(countryCode)),
     targeting: {
       geo_locations: geoLocations
+    },
+    targetingMetadata: {
+      excludedCountryCodes: excluded,
+      removedExcludedCountries: countries.filter((countryCode) => excludedSet.has(countryCode))
     },
     publishable: false,
     previewOnly: true,
@@ -117,7 +118,7 @@ export function buildOperationalMarketTargetingPreview(input = {}) {
     finalPayloadPreview: result.ok ? { targeting: result.targeting } : null,
     publishable: false,
     previewOnly: true,
-    reason: 'P53B operational targeting adapter preview only; real Meta AdSet creation still uses legacy countryCode path.'
+    reason: 'Operational targeting preview. Excluded countries are removed from geo_locations.countries and exposed as metadata, not sent as geo_locations.excluded_countries.'
   }
 }
 

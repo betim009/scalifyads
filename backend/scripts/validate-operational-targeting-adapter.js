@@ -35,11 +35,15 @@ function validateMarket(market, expected) {
   assert(targeting.targeting?.geo_locations, `${market.marketCode} geo_locations missing`)
 
   const countries = targeting.targeting.geo_locations.countries
-  const excluded = targeting.targeting.geo_locations.excluded_countries ?? []
+  const excluded = targeting.excludedCountryCodes ?? []
   assert(Array.isArray(countries), `${market.marketCode} countries should be an array`)
   assert(countries.length === expected.countryCount, `${market.marketCode} expected ${expected.countryCount} countries, got ${countries.length}`)
   assert(countDuplicates(countries) === 0, `${market.marketCode} countries should not contain duplicates`)
   assert(countries.every((code) => /^[A-Z]{2}$/.test(code)), `${market.marketCode} countries should be ISO-2`)
+  assert(
+    !Object.prototype.hasOwnProperty.call(targeting.targeting.geo_locations, 'excluded_countries'),
+    `${market.marketCode} real Meta payload must not contain geo_locations.excluded_countries`
+  )
   assert(excluded.length === expected.excludedCount, `${market.marketCode} expected ${expected.excludedCount} exclusions, got ${excluded.length}`)
   assert(excluded.every((code) => !countries.includes(code)), `${market.marketCode} excluded countries should not remain in countries`)
 
@@ -59,6 +63,10 @@ function validateMarket(market, expected) {
   })
   assert(preview.ok, `${market.marketCode} preview should be ok`)
   assert(preview.finalPayloadPreview?.targeting?.geo_locations?.countries?.length === expected.countryCount, `${market.marketCode} preview country count mismatch`)
+  assert(
+    !Object.prototype.hasOwnProperty.call(preview.finalPayloadPreview.targeting.geo_locations, 'excluded_countries'),
+    `${market.marketCode} preview payload must not contain geo_locations.excluded_countries`
+  )
 
   return {
     marketCode: market.marketCode,
@@ -66,6 +74,8 @@ function validateMarket(market, expected) {
     countryCount: countries.length,
     excludedCount: excluded.length,
     targeting: targeting.targeting,
+    excludedCountryCodes: targeting.excludedCountryCodes,
+    removedExcludedCountries: targeting.removedExcludedCountries,
     preview: preview.finalPayloadPreview,
     publishable: targeting.publishable,
     previewOnly: targeting.previewOnly

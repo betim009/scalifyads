@@ -295,6 +295,7 @@ export async function publishPausedOperationalAdSet({
       generatedAdSetId: persisted.generatedAdSetId,
       operationalMarketGenerationId: row.id,
       targeting: targetingResult.targeting,
+      targetingMetadata: targetingResult.targetingMetadata,
       duplicated: false,
       created: {
         campaign: false,

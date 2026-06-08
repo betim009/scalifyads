@@ -56,9 +56,12 @@ Saida:
   "removedExcludedCountries": ["..."],
   "targeting": {
     "geo_locations": {
-      "countries": ["..."],
-      "excluded_countries": ["..."]
+      "countries": ["..."]
     }
+  },
+  "targetingMetadata": {
+    "excludedCountryCodes": ["..."],
+    "removedExcludedCountries": ["..."]
   },
   "publishable": false,
   "previewOnly": true,
@@ -72,7 +75,7 @@ Regras do adapter:
 - Normaliza paises para ISO-2.
 - Remove duplicidades.
 - Remove paises excluidos da lista final `countries`.
-- Expõe exclusoes em `geo_locations.excluded_countries` quando existirem.
+- Expõe exclusoes em metadados (`excludedCountryCodes`/`removedExcludedCountries`), fora do payload Meta.
 - Retorna erro se a lista final ficar vazia.
 - Mantem `publishable=false` e `previewOnly=true`.
 
@@ -86,11 +89,12 @@ Regras do adapter:
   "finalPayloadPreview": {
     "targeting": {
       "geo_locations": {
-        "countries": ["..."],
-        "excluded_countries": ["..."]
+        "countries": ["..."]
       }
     }
   },
+  "excludedCountryCodes": ["..."],
+  "removedExcludedCountries": ["..."],
   "publishable": false,
   "previewOnly": true
 }
@@ -137,8 +141,7 @@ Payload final:
       "NP", "NZ", "OM", "PG", "PH", "PK", "PT", "PY", "QA", "RO",
       "SA", "SG", "SN", "SR", "TL", "TN", "TR", "US", "VE", "VN",
       "XK", "ZA"
-    ],
-    "excluded_countries": ["TW"]
+    ]
   }
 }
 ```
@@ -170,8 +173,7 @@ Payload final:
       "ES", "FI", "FR", "GB", "GR", "HR", "HU", "IE", "IS", "IT",
       "LI", "LT", "LU", "LV", "MT", "NL", "NO", "PL", "PT", "RO",
       "SE", "SI", "SK"
-    ],
-    "excluded_countries": ["AL", "BA", "ME", "MK", "XK"]
+    ]
   }
 }
 ```
@@ -250,7 +252,8 @@ Fluxo operacional preparado:
 ```text
 resolvedCountries + excludedCountryCodes
 -> buildOperationalMarketTargeting
--> geo_locations.countries + geo_locations.excluded_countries
+-> geo_locations.countries
+-> excludedCountryCodes em metadados
 ```
 
 O P53B nao conecta esse adapter ao endpoint real de criacao de AdSet. Essa conexao deve acontecer em etapa futura, com aprovacao explicita e mantendo `PAUSED`.

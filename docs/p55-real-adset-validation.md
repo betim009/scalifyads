@@ -158,3 +158,5 @@ A falha ocorreu de forma segura:
 - nenhum `ACTIVE` foi introduzido.
 
 Antes de repetir a validacao REAL, o adapter operacional de targeting precisa ser ajustado para um formato de exclusao aceito pela Meta Graph API, preservando o suporte multi-pais e mantendo o fluxo legado intacto.
+
+Nota P55B: a correcao foi documentada em `docs/p55b-targeting-normalization-fix.md`. O payload real deixa de enviar `geo_locations.excluded_countries`; os paises excluidos sao removidos de `geo_locations.countries` e mantidos como metadados.

@@ -79,11 +79,12 @@ O payload enviado para `metaCreateAdSet` usa `targeting` estruturado:
 ```json
 {
   "geo_locations": {
-    "countries": ["AE", "..."],
-    "excluded_countries": ["TW"]
+    "countries": ["AE", "..."]
   }
 }
 ```
+
+Paises excluidos continuam rastreados como metadados (`excludedCountryCodes`), mas nao sao enviados como `geo_locations.excluded_countries`.
 
 O fluxo operacional nao usa `countryCode` legado para criar esse AdSet.
 
@@ -181,9 +182,12 @@ Resposta de duplicidade esperada:
   "operationalMarketGenerationId": "...",
   "targeting": {
     "geo_locations": {
-      "countries": ["AE", "..."],
-      "excluded_countries": ["TW"]
+      "countries": ["AE", "..."]
     }
+  },
+  "targetingMetadata": {
+    "excludedCountryCodes": ["TW"],
+    "removedExcludedCountries": []
   },
   "created": {
     "campaign": false,

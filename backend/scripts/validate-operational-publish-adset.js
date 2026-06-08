@@ -47,8 +47,10 @@ async function main() {
     assert(targeting.geo_locations.countries.length === 82, 'ARM should target 82 resolved countries after exclusions')
     assert(targeting.geo_locations.countries.includes('AE'), 'ARM targeting should include AE')
     assert(!targeting.geo_locations.countries.includes('TW'), 'ARM targeting should remove excluded TW')
-    assert(Array.isArray(targeting.geo_locations.excluded_countries), 'Excluded countries should be present for ARM')
-    assert(targeting.geo_locations.excluded_countries.includes('TW'), 'ARM should include TW in excluded_countries')
+    assert(
+      !Object.prototype.hasOwnProperty.call(targeting.geo_locations, 'excluded_countries'),
+      'Operational AdSet payload must not send geo_locations.excluded_countries'
+    )
     assert(dailyBudgetCents === 1000, 'Unexpected dailyBudgetCents in createAdSet stub')
     assert(billingEvent === 'IMPRESSIONS', 'Unexpected billingEvent in createAdSet stub')
     assert(optimizationGoal === 'OFFSITE_CONVERSIONS', 'Unexpected optimizationGoal in createAdSet stub')
@@ -237,7 +239,10 @@ async function main() {
           createAdSetCalls: createCalls,
           targeting: {
             countryCount: result.targeting.geo_locations.countries.length,
-            excludedCountries: result.targeting.geo_locations.excluded_countries
+            hasInvalidExcludedCountriesField: Object.prototype.hasOwnProperty.call(
+              result.targeting.geo_locations,
+              'excluded_countries'
+            )
           }
         },
         null,

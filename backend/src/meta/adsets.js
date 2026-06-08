@@ -133,15 +133,7 @@ function normalizeTargeting(value) {
     ...geo,
     countries: uniqueCountries
   }
-
-  if (Array.isArray(geo.excluded_countries)) {
-    const excluded = [...new Set(geo.excluded_countries.map(normalizeCountryCode).filter(Boolean))]
-    if (excluded.length > 0) {
-      normalizedGeo.excluded_countries = excluded
-    } else {
-      delete normalizedGeo.excluded_countries
-    }
-  }
+  delete normalizedGeo.excluded_countries
 
   return {
     ...value,
