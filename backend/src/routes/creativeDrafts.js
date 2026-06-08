@@ -43,6 +43,7 @@ export function creativeDraftsRouter() {
             cd.destination_url,
             cd.status,
             cd.meta_creative_id,
+            cd.meta_status,
             cd.created_at,
             ca.stored_name AS asset_stored_name,
             ca.original_name AS asset_original_name,

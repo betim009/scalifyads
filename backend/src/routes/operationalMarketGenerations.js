@@ -6,13 +6,18 @@ import { isUuid } from '../lib/validate.js'
 import { buildOperationalPublishPreview } from '../lib/operationalPublishPreview.js'
 import { resolveAccessToken } from '../meta/accessToken.js'
 import { metaCreateCampaign } from '../meta/campaigns.js'
+import { metaFetchCampaign } from '../meta/campaigns.js'
 import { metaCreateAdSet } from '../meta/adsets.js'
+import { metaFetchAdSet } from '../meta/adsets.js'
 import { metaCreateAdCreative } from '../meta/creatives.js'
+import { metaFetchAdCreative } from '../meta/creatives.js'
 import { metaCreateAd } from '../meta/ads.js'
+import { metaFetchAd } from '../meta/ads.js'
 import { publishPausedOperationalCampaign } from '../services/operationalMarketCampaignPublisher.js'
 import { publishPausedOperationalAdSet } from '../services/operationalMarketAdSetPublisher.js'
 import { publishOperationalCreative } from '../services/operationalMarketCreativePublisher.js'
 import { publishPausedOperationalAd } from '../services/operationalMarketAdPublisher.js'
+import { syncOperationalMetaStatuses } from '../services/operationalMetaStatusSync.js'
 import { resolveAuthUser } from '../lib/internalAuth.js'
 
 function isPlainObject(value) {
@@ -301,6 +306,44 @@ export function operationalMarketGenerationsRouter() {
       } catch (err) {
         const status = typeof err?.status === 'number' ? err.status : 502
         return jsonError(res, status, err?.message ?? 'Operational Ad publish failed', err?.details)
+      }
+    })
+  )
+
+  router.post(
+    '/:id/sync-meta-status',
+    asyncHandler(async (req, res) => {
+      if (!req.app.locals.dbEnabled) {
+        return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
+      }
+
+      const id = req.params.id
+      if (!isUuid(id)) {
+        return jsonError(res, 400, 'Invalid operational market generation id')
+      }
+
+      if (Array.isArray(req.body?.operationalMarketGenerationIds) || Array.isArray(req.body?.ids)) {
+        return jsonError(res, 400, 'Batch status sync is not allowed')
+      }
+
+      const pool = getPool()
+      const accessToken = await resolveAccessToken(pool, req)
+
+      try {
+        const result = await syncOperationalMetaStatuses({
+          pool,
+          operationalMarketGenerationId: id,
+          accessToken,
+          fetchCampaign: metaFetchCampaign,
+          fetchAdSet: metaFetchAdSet,
+          fetchCreative: metaFetchAdCreative,
+          fetchAd: metaFetchAd
+        })
+
+        return res.json(result)
+      } catch (err) {
+        const status = typeof err?.status === 'number' ? err.status : 502
+        return jsonError(res, status, err?.message ?? 'Operational Meta status sync failed', err?.details)
       }
     })
   )

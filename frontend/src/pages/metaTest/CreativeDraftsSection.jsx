@@ -360,8 +360,9 @@ export default function CreativeDraftsSection({
               <th>ID</th>
               <th>Asset</th>
               <th>Headline</th>
-              <th>Status</th>
+              <th>Status local</th>
               <th>Meta creative</th>
+              <th>Meta status</th>
               <th>Ação</th>
             </tr>
           </thead>
@@ -378,6 +379,7 @@ export default function CreativeDraftsSection({
                 <td style={{ fontWeight: 900 }}>{d.headline || "—"}</td>
                 <td className="muted" style={{ fontWeight: 900 }}>{d.status || "—"}</td>
                 <td className="muted" style={{ fontWeight: 800 }}>{d.meta_creative_id || "—"}</td>
+                <td className="muted" style={{ fontWeight: 900 }}>{d.meta_status || "—"}</td>
                 <td>
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                     <button
@@ -404,7 +406,7 @@ export default function CreativeDraftsSection({
             ))}
             {!drafts.length && !loading ? (
               <tr>
-                <td colSpan={7} className="muted" style={{ fontWeight: 800 }}>
+                <td colSpan={8} className="muted" style={{ fontWeight: 800 }}>
                   Vazio. Crie um draft acima.
                 </td>
               </tr>

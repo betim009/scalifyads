@@ -179,8 +179,8 @@ export default function GeneratedCampaignsSection({
               <th>Última ação</th>
               <th>OK</th>
               <th>Meta Campaign ID</th>
-              <th>Status Meta</th>
-              <th>Effective</th>
+              <th>Campaign configured_status</th>
+              <th>Campaign effective_status</th>
               <th>AdSet (Meta)</th>
               <th>Ad (Meta)</th>
               <th>Ação</th>
@@ -279,13 +279,19 @@ export default function GeneratedCampaignsSection({
                   <td className="muted" style={{ fontWeight: 800 }}>
                     <div>{gc.meta_adset_id || "—"}</div>
                     <div style={{ marginTop: 4, fontWeight: 900 }}>
-                      {(gc.meta_adset_status || "—") + " / " + (gc.meta_adset_effective_status || "—")}
+                      configured: {gc.meta_adset_status || "—"}
+                    </div>
+                    <div style={{ marginTop: 4, fontWeight: 900 }}>
+                      effective: {gc.meta_adset_effective_status || "—"}
                     </div>
                   </td>
                   <td className="muted" style={{ fontWeight: 800 }}>
                     <div>{gc.meta_ad_id || "—"}</div>
                     <div style={{ marginTop: 4, fontWeight: 900 }}>
-                      {(gc.meta_ad_status || "—") + " / " + (gc.meta_ad_effective_status || "—")}
+                      configured: {gc.meta_ad_status || "—"}
+                    </div>
+                    <div style={{ marginTop: 4, fontWeight: 900 }}>
+                      effective: {gc.meta_ad_effective_status || "—"}
                     </div>
                   </td>
                   <td>
@@ -315,7 +321,7 @@ export default function GeneratedCampaignsSection({
             })}
             {!viewRows.length ? (
               <tr>
-                <td colSpan={12} className="muted" style={{ fontWeight: 800 }}>
+                <td colSpan={13} className="muted" style={{ fontWeight: 800 }}>
                   {totalCount
                     ? "Vazio (filtros atuais)."
                     : localLoading

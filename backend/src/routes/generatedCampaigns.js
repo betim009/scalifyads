@@ -430,6 +430,7 @@ export function generatedCampaignsRouter() {
             meta_adset_id,
             name,
             status,
+            configured_status,
             effective_status,
             created_at
           FROM generated_adsets
@@ -450,6 +451,7 @@ export function generatedCampaignsRouter() {
             meta_ad_id,
             name,
             status,
+            configured_status,
             effective_status,
             created_at
           FROM generated_ads

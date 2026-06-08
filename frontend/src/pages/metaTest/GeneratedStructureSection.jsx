@@ -69,8 +69,8 @@ export default function GeneratedStructureSection({
               <th>ID (DB)</th>
               <th>Meta ID</th>
               <th>Nome</th>
-              <th>Status</th>
-              <th>Effective</th>
+              <th>configured_status</th>
+              <th>effective_status</th>
               <th>Creative</th>
               <th>Ref</th>
             </tr>
@@ -85,7 +85,7 @@ export default function GeneratedStructureSection({
                 <td className="muted" style={{ fontWeight: 800 }}>{row.id}</td>
                 <td className="muted" style={{ fontWeight: 800 }}>{row.meta_adset_id || "—"}</td>
                 <td style={{ fontWeight: 900 }}>{row.name || "—"}</td>
-                <td className="muted" style={{ fontWeight: 900 }}>{row.status || "—"}</td>
+                <td className="muted" style={{ fontWeight: 900 }}>{row.configured_status || row.status || "—"}</td>
                 <td className="muted" style={{ fontWeight: 900 }}>{row.effective_status || "—"}</td>
                 <td className="muted" style={{ fontWeight: 800 }}>—</td>
                 <td className="muted" style={{ fontWeight: 800 }}>
@@ -102,7 +102,7 @@ export default function GeneratedStructureSection({
                 <td className="muted" style={{ fontWeight: 800 }}>{row.id}</td>
                 <td className="muted" style={{ fontWeight: 800 }}>{row.meta_ad_id || "—"}</td>
                 <td style={{ fontWeight: 900 }}>{row.name || "—"}</td>
-                <td className="muted" style={{ fontWeight: 900 }}>{row.status || "—"}</td>
+                <td className="muted" style={{ fontWeight: 900 }}>{row.configured_status || row.status || "—"}</td>
                 <td className="muted" style={{ fontWeight: 900 }}>{row.effective_status || "—"}</td>
                 <td className="muted" style={{ fontWeight: 800 }}>{row.creative_draft_id || "—"}</td>
                 <td className="muted" style={{ fontWeight: 800 }}>
