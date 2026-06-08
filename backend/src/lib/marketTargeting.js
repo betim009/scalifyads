@@ -55,6 +55,72 @@ export function resolveMarketTargetingInput({ marketCode, resolvedCountries, exc
   }
 }
 
+export function buildOperationalMarketTargeting({ marketCode, resolvedCountries, excludedCountryCodes, targetingPreview } = {}) {
+  const code = normalizeMarketCode(marketCode)
+  const preview = normalizeOptionalObject(targetingPreview) ?? {}
+  const previewOperationalTargeting = normalizeOptionalObject(preview.operationalTargeting) ?? {}
+  const countries = normalizeIsoCountryCodes(
+    resolvedCountries ??
+      preview.resolvedCountries ??
+      preview.resolved_countries ??
+      previewOperationalTargeting.resolvedCountries ??
+      previewOperationalTargeting.resolved_countries
+  )
+  const excluded = normalizeIsoCountryCodes(
+    excludedCountryCodes ??
+      preview.excludedCountryCodes ??
+      preview.excluded_country_codes ??
+      preview.excludedCountries ??
+      preview.excluded_countries
+  )
+
+  const excludedSet = new Set(excluded)
+  const finalCountries = countries.filter((countryCode) => !excludedSet.has(countryCode))
+  const errors = []
+
+  if (!code) errors.push('Invalid marketCode')
+  if (countries.length === 0) errors.push('resolvedCountries must include at least one ISO-2 country code')
+  if (finalCountries.length === 0) errors.push('targeting countries must include at least one country after exclusions')
+
+  const geoLocations = {
+    countries: finalCountries
+  }
+  if (excluded.length > 0) {
+    geoLocations.excluded_countries = excluded
+  }
+
+  return {
+    ok: errors.length === 0,
+    errors,
+    marketCode: code,
+    resolvedCountries: countries,
+    excludedCountryCodes: excluded,
+    removedExcludedCountries: countries.filter((countryCode) => excludedSet.has(countryCode)),
+    targeting: {
+      geo_locations: geoLocations
+    },
+    publishable: false,
+    previewOnly: true,
+    source: 'operational_market_targeting'
+  }
+}
+
+export function buildOperationalMarketTargetingPreview(input = {}) {
+  const result = buildOperationalMarketTargeting(input)
+  return {
+    ok: result.ok,
+    errors: result.errors,
+    marketCode: result.marketCode,
+    resolvedCountries: result.resolvedCountries,
+    excludedCountryCodes: result.excludedCountryCodes,
+    removedExcludedCountries: result.removedExcludedCountries,
+    finalPayloadPreview: result.ok ? { targeting: result.targeting } : null,
+    publishable: false,
+    previewOnly: true,
+    reason: 'P53B operational targeting adapter preview only; real Meta AdSet creation still uses legacy countryCode path.'
+  }
+}
+
 export function buildMarketTargetingTechnicalPreview(input = {}) {
   const resolved = resolveMarketTargetingInput(input)
   const futureGeoLocations = resolved.ok

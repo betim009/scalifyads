@@ -1,3 +1,5 @@
+import { buildOperationalMarketTargeting } from './marketTargeting.js'
+
 function isPlainObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
@@ -155,8 +157,15 @@ export function buildOperationalPublishPreview({ operationalGeneration, campaign
 
   const targetingPreview = isPlainObject(row.targeting_preview) ? row.targeting_preview : {}
   const resolvedCountries = Array.isArray(row.resolved_countries) ? row.resolved_countries : []
-  const futureTargeting =
-    isPlainObject(targetingPreview?.futurePayloadPreview?.targeting)
+  const operationalTargeting = buildOperationalMarketTargeting({
+    marketCode,
+    resolvedCountries,
+    excludedCountryCodes: targetingPreview?.excludedCountryCodes,
+    targetingPreview
+  })
+  const futureTargeting = operationalTargeting.ok
+    ? operationalTargeting.targeting
+    : isPlainObject(targetingPreview?.futurePayloadPreview?.targeting)
       ? targetingPreview.futurePayloadPreview.targeting
       : {
           geo_locations: {
@@ -269,6 +278,8 @@ export function buildOperationalPublishPreview({ operationalGeneration, campaign
       status: 'PAUSED',
       source: {
         resolvedCountries,
+        excludedCountryCodes: operationalTargeting.excludedCountryCodes,
+        removedExcludedCountries: operationalTargeting.removedExcludedCountries,
         targetingPreview,
         previewOnly: true
       }
