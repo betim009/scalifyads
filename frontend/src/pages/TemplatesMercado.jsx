@@ -63,6 +63,12 @@ function normalizeAsset(asset) {
   };
 }
 
+function withAutoThumbnail(entry, thumbnailAsset) {
+  const thumb = normalizeAsset(thumbnailAsset);
+  if (!entry || !thumb || !thumb.mimeType?.startsWith("image/")) return entry;
+  return { ...entry, thumbnail: thumb };
+}
+
 function getPayload(template) {
   return normalizeObject(template?.payload);
 }
@@ -255,6 +261,19 @@ function mergeResult(row, result, step) {
   };
 }
 
+function rowsWith(rows, predicate) {
+  return (rows || []).filter(predicate).length;
+}
+
+function actionState({ rows, busyStep, step, runningStep, canRun, completeCount, errorCount, blockedReason }) {
+  if (busyStep === runningStep) return { label: "Em execução", tone: "info", disabled: true, title: "Etapa em execução." };
+  if (errorCount > 0) return { label: "Erro", tone: "bad", disabled: false, title: "Há erro em pelo menos um mercado. Você pode tentar novamente." };
+  if (!canRun) return { label: "Bloqueado", tone: "muted", disabled: true, title: blockedReason };
+  if (completeCount > 0 && completeCount === rows.length) return { label: "Concluído", tone: "good", disabled: false, title: "Etapa concluída para todos os mercados." };
+  if (completeCount > 0) return { label: "Parcial", tone: "warn", disabled: false, title: "Etapa concluída em parte dos mercados." };
+  return { label: "Disponível", tone: "info", disabled: false, title: "Pronto para executar." };
+}
+
 function Field({ label, hint, children }) {
   return (
     <div style={{ display: "grid", gap: 8 }}>
@@ -284,6 +303,27 @@ function SelectLike({ value, onChange, options, disabled }) {
         </option>
       ))}
     </select>
+  );
+}
+
+function PublishActionButton({ title, state, onClick, primary = false }) {
+  return (
+    <div className="card" style={{ padding: 12, display: "grid", gap: 8, minWidth: 210, flex: "1 1 210px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
+        <div style={{ fontWeight: 950 }}>{title}</div>
+        <StatusPill tone={state.tone}>{state.label}</StatusPill>
+      </div>
+      <button
+        type="button"
+        className={primary ? "templatesBtnPrimary" : "templatesBtnOutline"}
+        disabled={state.disabled}
+        title={state.title}
+        onClick={onClick}
+      >
+        {state.label === "Em execução" ? "Executando..." : title}
+      </button>
+      <div className="muted" style={{ fontWeight: 800, fontSize: 12 }}>{state.title}</div>
+    </div>
   );
 }
 
@@ -327,9 +367,69 @@ export default function TemplatesMercado() {
   const previewVariant = normalizeObject(previewTranslation?.adVariants?.[0]);
   const baseVariant = normalizeObject(form.adVariants?.[0]);
   const previewMedia = normalizeObject(form.mediaByMarket?.[previewMarket.code]?.A || form.mediaByMarket?.default?.A);
+  const previewAssetType = previewMedia.creativeAssetId
+    ? previewMedia.mimeType?.startsWith("video/")
+      ? "vídeo"
+      : previewMedia.mimeType?.startsWith("image/")
+        ? "imagem"
+        : "asset"
+    : "link";
   const backendBase = getBackendBaseUrl();
   const hasBaseText = adVariantsWithText(form.adVariants).length > 0;
   const canUseRows = rows.length > 0;
+  const campaignCount = rowsWith(rows, (row) => row.metaCampaignId);
+  const adSetCount = rowsWith(rows, (row) => row.metaAdSetId);
+  const creativeCount = rowsWith(rows, (row) => row.metaCreativeId);
+  const adCount = rowsWith(rows, (row) => row.metaAdId);
+  const anyMetaCount = rowsWith(rows, (row) => row.metaCampaignId || row.metaAdSetId || row.metaCreativeId || row.metaAdId);
+  const errorCount = rowsWith(rows, (row) => row.error);
+  const actions = {
+    campaign: actionState({
+      rows,
+      busyStep,
+      runningStep: "campaign",
+      canRun: canUseRows,
+      completeCount: campaignCount,
+      errorCount,
+      blockedReason: "Gere o operacional primeiro.",
+    }),
+    adset: actionState({
+      rows,
+      busyStep,
+      runningStep: "adset",
+      canRun: canUseRows && campaignCount > 0,
+      completeCount: adSetCount,
+      errorCount,
+      blockedReason: "Publique a Campaign primeiro.",
+    }),
+    creative: actionState({
+      rows,
+      busyStep,
+      runningStep: "creative",
+      canRun: canUseRows && adSetCount > 0,
+      completeCount: creativeCount,
+      errorCount,
+      blockedReason: "Publique o AdSet primeiro.",
+    }),
+    ad: actionState({
+      rows,
+      busyStep,
+      runningStep: "ad",
+      canRun: canUseRows && creativeCount > 0,
+      completeCount: adCount,
+      errorCount,
+      blockedReason: "Publique o Creative primeiro.",
+    }),
+    sync: actionState({
+      rows,
+      busyStep,
+      runningStep: "sync",
+      canRun: canUseRows && anyMetaCount > 0,
+      completeCount: 0,
+      errorCount: 0,
+      blockedReason: "Crie pelo menos um objeto Meta primeiro.",
+    }),
+  };
 
   useEffect(() => {
     refreshAll();
@@ -406,10 +506,10 @@ export default function TemplatesMercado() {
     if (!file) return;
     await runStep("asset", async () => {
       const res = await uploadCreativeAsset(file);
-      const entry = normalizeAsset(res.creativeAsset);
+      const entry = withAutoThumbnail(normalizeAsset(res.creativeAsset), res.autoThumbnailAsset);
       if (!entry) throw new Error("Falha ao obter asset após upload.");
       setMarketMedia(marketCode, adKey, entry);
-      await refreshAll({ selectId: selectedId });
+      setCreativeAssets((prev) => [res.creativeAsset, ...(res.autoThumbnailAsset ? [res.autoThumbnailAsset] : []), ...prev].filter(Boolean));
       setNotice(`Asset definido para ${marketCode} Ad ${adKey}.`);
     });
   }
@@ -539,6 +639,17 @@ export default function TemplatesMercado() {
     }
   }
 
+  async function runOneRow(row, step, handler) {
+    if (!row?.id) return;
+    updateRow(row.id, (current) => ({ ...current, step: `${step}...`, error: "" }));
+    try {
+      const result = await handler(row);
+      updateRow(row.id, (current) => mergeResult(current, result, step));
+    } catch (err) {
+      updateRow(row.id, (current) => ({ ...current, step, ok: false, error: formatBackendError(err), lastResult: err?.body ?? null }));
+    }
+  }
+
   async function publishCampaigns() {
     await runStep("campaign", async () => {
       if (!metaAdAccountId) throw new Error("Falta conta Meta / metaAdAccountId.");
@@ -548,6 +659,7 @@ export default function TemplatesMercado() {
 
   async function publishAdSets() {
     await runStep("adset", async () => {
+      if (campaignCount === 0) throw new Error("Publique a Campaign primeiro.");
       await runRows("AdSet publicado", (row) =>
         publishOperationalAdSet(row.id, {
           dailyBudgetCents: Number(form.dailyBudgetCents) || 1000,
@@ -560,19 +672,23 @@ export default function TemplatesMercado() {
 
   async function publishCreatives() {
     await runStep("creative", async () => {
+      if (adSetCount === 0) throw new Error("Publique o AdSet primeiro.");
       if (!pageId) throw new Error("Falta Page ID para publicar Creative.");
+      await saveTranslationsOnly();
       await runRows("Creative publicado", (row) => publishOperationalCreative(row.id, { pageId, instagramActorId, ctaType: form.ctaType }));
     });
   }
 
   async function publishAds() {
     await runStep("ad", async () => {
+      if (creativeCount === 0) throw new Error("Publique o Creative primeiro.");
       await runRows("Ad publicado", (row) => publishOperationalAd(row.id));
     });
   }
 
   async function syncStatus() {
     await runStep("sync", async () => {
+      if (anyMetaCount === 0) throw new Error("Crie pelo menos um objeto Meta primeiro.");
       await runRows("Status sincronizado", (row) => syncOperationalMetaStatus(row.id));
     });
   }
@@ -868,6 +984,10 @@ export default function TemplatesMercado() {
                   <div style={{ fontWeight: 950 }}>{previewVariant.headline || baseVariant.headline || "Headline ausente."}</div>
                   <div className="muted" style={{ fontWeight: 800 }}>{previewVariant.description || baseVariant.description || "Descrição ausente."}</div>
                   <div className="monoTag">{form.destinationUrl || "URL ausente"}</div>
+                  <div className="templatesHintBox">
+                    Tipo do Creative: {previewAssetType}
+                    {previewAssetType === "link" ? " · Nenhum asset selecionado. Creative será criado como link." : " · Asset será enviado para o Creative Meta."}
+                  </div>
                   {previewMedia.url && previewMedia.mimeType?.startsWith("video/") ? (
                     <CompactVideoPreview src={`${backendBase}${previewMedia.url}`} label={`${previewMarket.code} Ad A`} size="sm" />
                   ) : previewMedia.url && previewMedia.mimeType?.startsWith("image/") ? (
@@ -885,33 +1005,48 @@ export default function TemplatesMercado() {
             <div className="templatesHintBox" style={{ marginTop: 12 }}>
               Nenhuma publicação Meta acontece automaticamente. Cada botão abaixo executa uma etapa explícita e cria objetos em PAUSED.
             </div>
-            <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <button type="button" className="templatesBtnPrimary" disabled={Boolean(busyStep) || !selectedId} onClick={generateOperational}>
-                Gerar Operacional
-              </button>
-              <button type="button" className="templatesBtnOutline" disabled={Boolean(busyStep) || !canUseRows} onClick={publishCampaigns}>Publicar Campaign</button>
-              <button type="button" className="templatesBtnOutline" disabled={Boolean(busyStep) || !canUseRows} onClick={publishAdSets}>Publicar AdSet</button>
-              <button type="button" className="templatesBtnOutline" disabled={Boolean(busyStep) || !canUseRows} onClick={publishCreatives}>Publicar Creative</button>
-              <button type="button" className="templatesBtnOutline" disabled={Boolean(busyStep) || !canUseRows} onClick={publishAds}>Publicar Ad</button>
-              <button type="button" className="templatesBtnPrimary" disabled={Boolean(busyStep) || !canUseRows} onClick={syncStatus}>Sincronizar Status</button>
+            <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
+              <div className="card" style={{ padding: 12, borderColor: "#bfdbfe", background: "#eff6ff" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+                  <div>
+                    <div style={{ fontWeight: 950, color: "#1d4ed8" }}>Gerar linhas operacionais</div>
+                    <div style={{ marginTop: 4, fontWeight: 800, color: "#1d4ed8", fontSize: 12 }}>
+                      Cria os registros por mercado e os nomes como ARM-{form.nicheParam || "Niche"}-FB.
+                    </div>
+                  </div>
+                  <button type="button" className="templatesBtnPrimary" disabled={Boolean(busyStep) || !selectedId} onClick={generateOperational}>
+                    {busyStep === "operational" ? "Gerando..." : rows.length ? "Gerar novamente" : "Gerar Operacional"}
+                  </button>
+                </div>
+                {campaignId ? <div className="monoTag" style={{ marginTop: 10 }}>campaign_id: {campaignId}</div> : null}
+              </div>
+
+              <div>
+                <div style={{ fontWeight: 950, marginBottom: 8 }}>Bloco A · Ações de publicação Meta</div>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <PublishActionButton title="Publicar Campaign" state={actions.campaign} onClick={publishCampaigns} />
+                  <PublishActionButton title="Publicar AdSet" state={actions.adset} onClick={publishAdSets} />
+                  <PublishActionButton title="Publicar Creative" state={actions.creative} onClick={publishCreatives} />
+                  <PublishActionButton title="Publicar Ad" state={actions.ad} onClick={publishAds} />
+                  <PublishActionButton title="Sincronizar Status" state={actions.sync} onClick={syncStatus} primary />
+                </div>
+              </div>
             </div>
             {busyStep ? <div className="muted" style={{ marginTop: 10, fontWeight: 850 }}>Executando: {busyStep}</div> : null}
-            {campaignId ? <div className="monoTag" style={{ marginTop: 12 }}>campaign_id: {campaignId}</div> : null}
+          </section>
 
-            <div style={{ marginTop: 14, overflowX: "auto" }}>
+          <section className="templatesCard">
+            <div className="templatesCardLabel">Bloco B · Resultados publicados por mercado</div>
+            <div style={{ marginTop: 12, overflowX: "auto" }}>
               <table className="dataTable" style={{ marginTop: 0 }}>
                 <thead>
                   <tr>
                     <th>Mercado</th>
                     <th>Nome gerado</th>
-                    <th>Campaign</th>
-                    <th>AdSet</th>
-                    <th>Creative</th>
-                    <th>Ad</th>
-                    <th>configured_status</th>
-                    <th>effective_status</th>
-                    <th>Etapa</th>
-                    <th>Técnico</th>
+                    <th>Objetos Meta</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                    <th>Detalhes técnicos</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -919,18 +1054,49 @@ export default function TemplatesMercado() {
                     <tr key={row.id}>
                       <td><span className="monoTag">{row.marketCode || "—"}</span></td>
                       <td><span className="monoTag">{row.marketParam || "—"}</span></td>
-                      <td><span className="monoTag">{row.metaCampaignId || "—"}</span></td>
-                      <td><span className="monoTag">{row.metaAdSetId || "—"}</span></td>
-                      <td><span className="monoTag">{row.metaCreativeId || "—"}</span></td>
-                      <td><span className="monoTag">{row.metaAdId || "—"}</span></td>
-                      <td>{row.configuredStatus || "—"}</td>
-                      <td>{row.effectiveStatus || "—"}</td>
                       <td>
-                        <StatusPill tone={row.ok ? "info" : "bad"}>{row.error ? "erro" : row.step || "—"}</StatusPill>
+                        <div style={{ display: "grid", gap: 4 }}>
+                          <span className="monoTag">Campaign: {row.metaCampaignId || "—"}</span>
+                          <span className="monoTag">AdSet: {row.metaAdSetId || "—"}</span>
+                          <span className="monoTag">Creative: {row.metaCreativeId || "—"}</span>
+                          <span className="monoTag">Ad: {row.metaAdId || "—"}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ display: "grid", gap: 6 }}>
+                          <StatusPill tone={row.ok ? "info" : "bad"}>{row.error ? "erro" : row.step || "—"}</StatusPill>
+                          <div className="muted" style={{ fontWeight: 800, fontSize: 12 }}>
+                            configured: {row.configuredStatus || "—"} · effective: {row.effectiveStatus || "—"}
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                          <button type="button" className="templatesBtnOutline" disabled={Boolean(busyStep) || Boolean(row.metaCampaignId)} onClick={() => runOneRow(row, "Campaign publicada", (item) => publishOperationalCampaign(item.id, { metaAdAccountId, objective: form.objective }))}>
+                            Campaign
+                          </button>
+                          <button type="button" className="templatesBtnOutline" disabled={Boolean(busyStep) || !row.metaCampaignId || Boolean(row.metaAdSetId)} onClick={() => runOneRow(row, "AdSet publicado", (item) => publishOperationalAdSet(item.id, { dailyBudgetCents: Number(form.dailyBudgetCents) || 1000, billingEvent: form.billingEvent, optimizationGoal: form.optimizationGoal }))}>
+                            AdSet
+                          </button>
+                          <button
+                            type="button"
+                            className="templatesBtnOutline"
+                            disabled={Boolean(busyStep) || !row.metaAdSetId || Boolean(row.metaCreativeId)}
+                            onClick={async () => {
+                              await saveTranslationsOnly();
+                              await runOneRow(row, "Creative publicado", (item) => publishOperationalCreative(item.id, { pageId, instagramActorId, ctaType: form.ctaType }));
+                            }}
+                          >
+                            Creative
+                          </button>
+                          <button type="button" className="templatesBtnOutline" disabled={Boolean(busyStep) || !row.metaCreativeId || Boolean(row.metaAdId)} onClick={() => runOneRow(row, "Ad publicado", (item) => publishOperationalAd(item.id))}>
+                            Ad
+                          </button>
+                        </div>
                         {row.error ? <div style={{ marginTop: 6, color: "#991b1b", fontWeight: 800 }}>{row.error}</div> : null}
                       </td>
                       <td>
-                        <AdvancedDisclosure summary="JSON">
+                        <AdvancedDisclosure summary="Abrir JSON">
                           <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{safeJson(row.lastResult)}</pre>
                         </AdvancedDisclosure>
                       </td>

@@ -9,7 +9,7 @@ import { metaCreateCampaign } from '../meta/campaigns.js'
 import { metaFetchCampaign } from '../meta/campaigns.js'
 import { metaCreateAdSet } from '../meta/adsets.js'
 import { metaFetchAdSet } from '../meta/adsets.js'
-import { metaCreateAdCreative } from '../meta/creatives.js'
+import { metaCreateAdCreative, metaUploadAdImage, metaUploadAdVideo } from '../meta/creatives.js'
 import { metaFetchAdCreative } from '../meta/creatives.js'
 import { metaCreateAd } from '../meta/ads.js'
 import { metaFetchAd } from '../meta/ads.js'
@@ -275,7 +275,9 @@ export function operationalMarketGenerationsRouter() {
           operationalMarketGenerationId: id,
           body: req.body ?? {},
           accessToken,
-          createCreative: metaCreateAdCreative
+          createCreative: metaCreateAdCreative,
+          uploadImage: metaUploadAdImage,
+          uploadVideo: metaUploadAdVideo
         })
 
         return res.status(result.created?.creative ? 201 : 200).json(result)

@@ -1,3 +1,6 @@
+import path from 'node:path'
+import fsp from 'node:fs/promises'
+
 function normalizeNonEmptyString(value, { maxLen } = {}) {
   if (typeof value !== 'string') return null
   const trimmed = value.trim()
@@ -19,6 +22,29 @@ function firstNonEmpty(...values) {
     if (normalized) return normalized
   }
   return null
+}
+
+function getCreativeUploadsDir() {
+  return path.resolve('uploads', 'creative-assets')
+}
+
+function resolveMarketMedia({ marketCode, payload, body } = {}) {
+  const bodyInput = normalizeOptionalObject(body)
+  const directAssetId = firstNonEmpty(bodyInput.creativeAssetId, bodyInput.creative_asset_id)
+  const directThumbId = firstNonEmpty(bodyInput.creativeThumbnailAssetId, bodyInput.creative_thumbnail_asset_id)
+  if (directAssetId) {
+    return { creativeAssetId: directAssetId, creativeThumbnailAssetId: directThumbId, source: 'body' }
+  }
+
+  const mediaByMarket = normalizeOptionalObject(payload?.mediaByMarket)
+  const marketMedia = normalizeOptionalObject(mediaByMarket?.[marketCode])
+  const defaultMedia = normalizeOptionalObject(mediaByMarket?.default)
+  const entry = normalizeOptionalObject(marketMedia?.A || marketMedia?.['1'] || defaultMedia?.A || defaultMedia?.['1'])
+  const thumb = normalizeOptionalObject(entry?.thumbnail)
+  const creativeAssetId = firstNonEmpty(entry?.creativeAssetId, entry?.creative_asset_id)
+  const creativeThumbnailAssetId = firstNonEmpty(thumb?.creativeAssetId, thumb?.creative_asset_id, entry?.creativeThumbnailAssetId, entry?.creative_thumbnail_asset_id)
+  if (!creativeAssetId) return null
+  return { creativeAssetId, creativeThumbnailAssetId, source: `mediaByMarket.${marketCode}.A` }
 }
 
 function resolveMarketCreativeInput({ row, campaignConfig, templatePayload, body } = {}) {
@@ -98,6 +124,7 @@ function resolveMarketCreativeInput({ row, campaignConfig, templatePayload, body
       payloadCreative.destinationUrl,
       payloadCreative.destination_url
     ),
+    media: resolveMarketMedia({ marketCode, payload, body }),
     source: {
       adVariantSource: translatedVariants.length > 0 ? `translationsByMarket.${marketCode}.adVariants` : 'payload/body',
       adVariantIndex: translatedVariants.length > 0 || baseVariants.length > 0 ? 0 : null
@@ -199,7 +226,125 @@ async function findExistingPublishedCreativeDraft(client, generatedCampaignId) {
   return rows?.[0] ?? null
 }
 
-async function insertCreativeDraft(client, generatedCampaignId, creativeInput) {
+async function fetchCreativeAsset(client, id) {
+  const assetId = normalizeNonEmptyString(id)
+  if (!assetId) return null
+  const { rows, rowCount } = await client.query(
+    `
+      SELECT id, stored_name, original_name, mime_type, size_bytes, created_at
+      FROM creative_assets
+      WHERE id = $1::uuid
+      LIMIT 1
+    `,
+    [assetId]
+  )
+  return rowCount > 0 ? rows[0] : null
+}
+
+async function uploadCreativeMedia({ client, media, metaAdAccountId, accessToken, uploadImage, uploadVideo } = {}) {
+  const creativeAssetId = normalizeNonEmptyString(media?.creativeAssetId)
+  if (!creativeAssetId) return { imageHash: null, videoId: null, asset: null, thumbnailAsset: null, source: 'link_fallback' }
+
+  const asset = await fetchCreativeAsset(client, creativeAssetId)
+  if (!asset) {
+    const err = new Error('Creative asset not found')
+    err.status = 400
+    err.details = { creativeAssetId }
+    throw err
+  }
+
+  const storedName = normalizeNonEmptyString(asset.stored_name)
+  if (!storedName) {
+    const err = new Error('Creative asset is missing stored_name')
+    err.status = 400
+    err.details = { creativeAssetId }
+    throw err
+  }
+
+  const filePath = path.join(getCreativeUploadsDir(), storedName)
+  try {
+    await fsp.stat(filePath)
+  } catch {
+    const err = new Error('Creative asset file not found on disk')
+    err.status = 400
+    err.details = { stored_name: storedName }
+    throw err
+  }
+
+  const mimeType = normalizeNonEmptyString(asset.mime_type) ?? null
+  if (mimeType && mimeType.startsWith('video/')) {
+    if (typeof uploadVideo !== 'function') throw new Error('uploadVideo is required for video creatives')
+    if (typeof uploadImage !== 'function') throw new Error('uploadImage is required for video thumbnails')
+
+    const uploadedVideo = await uploadVideo({
+      metaAdAccountId,
+      accessToken,
+      filePath,
+      mimeType,
+      originalName: asset.original_name ?? storedName
+    })
+
+    const thumbId = normalizeNonEmptyString(media?.creativeThumbnailAssetId)
+    if (!thumbId) {
+      const err = new Error('Missing video thumbnail')
+      err.status = 400
+      err.details = { creativeAssetId, hint: 'Select or upload a thumbnail for video creatives.' }
+      throw err
+    }
+
+    const thumbnailAsset = await fetchCreativeAsset(client, thumbId)
+    if (!thumbnailAsset) {
+      const err = new Error('Video thumbnail asset not found')
+      err.status = 400
+      err.details = { creativeThumbnailAssetId: thumbId }
+      throw err
+    }
+    const thumbStored = normalizeNonEmptyString(thumbnailAsset.stored_name)
+    const thumbMime = normalizeNonEmptyString(thumbnailAsset.mime_type)
+    if (!thumbStored || !thumbMime?.startsWith('image/')) {
+      const err = new Error('Invalid video thumbnail')
+      err.status = 400
+      err.details = { creativeThumbnailAssetId: thumbId, mimeType: thumbMime }
+      throw err
+    }
+    const thumbPath = path.join(getCreativeUploadsDir(), thumbStored)
+    try {
+      await fsp.stat(thumbPath)
+    } catch {
+      const err = new Error('Video thumbnail file not found on disk')
+      err.status = 400
+      err.details = { stored_name: thumbStored }
+      throw err
+    }
+
+    const uploadedThumb = await uploadImage({
+      metaAdAccountId,
+      accessToken,
+      filePath: thumbPath,
+      mimeType: thumbMime,
+      originalName: thumbnailAsset.original_name ?? thumbStored
+    })
+    return {
+      imageHash: uploadedThumb.hash,
+      videoId: uploadedVideo.id,
+      asset,
+      thumbnailAsset,
+      source: 'video'
+    }
+  }
+
+  if (typeof uploadImage !== 'function') throw new Error('uploadImage is required for image creatives')
+  const uploaded = await uploadImage({
+    metaAdAccountId,
+    accessToken,
+    filePath,
+    mimeType,
+    originalName: asset.original_name ?? storedName
+  })
+  return { imageHash: uploaded.hash, videoId: null, asset, thumbnailAsset: null, source: 'image' }
+}
+
+async function insertCreativeDraft(client, generatedCampaignId, creativeInput, mediaUpload) {
   const { rows } = await client.query(
     `
       INSERT INTO creative_drafts (
@@ -213,7 +358,7 @@ async function insertCreativeDraft(client, generatedCampaignId, creativeInput) {
         destination_url,
         status
       )
-      VALUES ($1::uuid, NULL, NULL, $2, $3, $4, $5, $6, 'draft')
+      VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7, $8, 'draft')
       RETURNING
         id,
         generated_campaign_id,
@@ -228,6 +373,8 @@ async function insertCreativeDraft(client, generatedCampaignId, creativeInput) {
     `,
     [
       generatedCampaignId,
+      mediaUpload?.asset?.id ?? null,
+      mediaUpload?.thumbnailAsset?.id ?? null,
       creativeInput.primaryText,
       creativeInput.headline,
       creativeInput.description,
@@ -269,7 +416,9 @@ export async function publishOperationalCreative({
   operationalMarketGenerationId,
   body,
   accessToken,
-  createCreative
+  createCreative,
+  uploadImage,
+  uploadVideo
 } = {}) {
   if (!pool && !providedClient) throw new Error('pool is required')
   if (typeof createCreative !== 'function') throw new Error('createCreative is required')
@@ -352,7 +501,16 @@ export async function publishOperationalCreative({
       throw err
     }
 
-    const draft = await insertCreativeDraft(client, generatedCampaign.id, creativeInput)
+    const mediaUpload = await uploadCreativeMedia({
+      client,
+      media: creativeInput.media,
+      metaAdAccountId,
+      accessToken: token,
+      uploadImage,
+      uploadVideo
+    })
+
+    const draft = await insertCreativeDraft(client, generatedCampaign.id, creativeInput, mediaUpload)
     const createdCreative = normalizeCreatedCreative(
       await createCreative({
         metaAdAccountId,
@@ -364,7 +522,9 @@ export async function publishOperationalCreative({
         link: creativeInput.destinationUrl,
         headline: creativeInput.headline,
         description: creativeInput.description,
-        ctaType: creativeInput.ctaType
+        ctaType: creativeInput.ctaType,
+        imageHash: mediaUpload.imageHash,
+        videoId: mediaUpload.videoId
       })
     )
 
@@ -400,6 +560,11 @@ export async function publishOperationalCreative({
         headline: creativeInput.headline,
         description: creativeInput.description,
         ctaType: creativeInput.ctaType,
+        mediaSource: mediaUpload.source,
+        creativeAssetId: mediaUpload.asset?.id ?? null,
+        creativeThumbnailAssetId: mediaUpload.thumbnailAsset?.id ?? null,
+        imageHash: mediaUpload.imageHash,
+        videoId: mediaUpload.videoId,
         source: creativeInput.source
       },
       duplicated: false,
