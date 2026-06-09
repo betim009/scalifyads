@@ -1,11 +1,14 @@
 import PageShell from "../components/PageShell.jsx";
 import StatusPill from "../components/StatusPill.jsx";
 import AdvancedDisclosure from "../components/AdvancedDisclosure.jsx";
+import CompactVideoPreview from "../components/CompactVideoPreview.jsx";
 import { useEffect, useMemo, useState } from "react";
-import { generateCampaignTemplateTranslationsByMarket } from "../services/campaignTemplates.js";
 import { createFlowTemplate, listFlowTemplates, updateFlowTemplate } from "../services/flowTemplates.js";
+import { generateCampaignTemplateTranslationsByMarket } from "../services/campaignTemplates.js";
 import { createOperationalMarketGeneration } from "../services/generatedCampaigns.js";
 import { listMetaAccounts } from "../services/metaAccounts.js";
+import { listCreativeAssets, uploadCreativeAsset } from "../services/creativeAssets.js";
+import { getBackendBaseUrl } from "../services/http.js";
 import {
   publishOperationalAd,
   publishOperationalAdSet,
@@ -14,13 +17,24 @@ import {
   syncOperationalMetaStatus,
 } from "../services/operationalMarketGenerations.js";
 import { OPERATIONAL_MARKETS } from "../utils/operationalMarkets.js";
+import { formatBrlFromCents, formatBrlInputFromCents, parseBrlToCents } from "../utils/brlMoney.js";
 
-const DEFAULT_MARKETS = ["ARM", "AREU", "ENCA"];
-const DEFAULT_TEMPLATE_FORM = {
+const AD_KEYS = ["A", "B", "C", "D", "E"];
+const DEFAULT_MARKETS = ["ARM", "AREU", "ENCA", "ENAU"];
+
+const EMPTY_FORM = {
   name: "",
   nicheParam: "",
   destinationUrl: "",
-  adVariants: [{ primaryText: "", headline: "", description: "" }],
+  ctaType: "LEARN_MORE",
+  objective: "OUTCOME_TRAFFIC",
+  dailyBudgetCents: 1000,
+  dailyBudgetBrl: formatBrlInputFromCents(1000),
+  billingEvent: "IMPRESSIONS",
+  optimizationGoal: "REACH",
+  metaAccountId: "",
+  adVariants: AD_KEYS.map((key) => ({ key, primaryText: "", headline: "", description: "" })),
+  mediaByMarket: {},
 };
 
 function normalizeNonEmptyString(value) {
@@ -31,114 +45,152 @@ function safeJson(value) {
   return JSON.stringify(value ?? null, null, 2);
 }
 
-function getAdVariantsCount(template) {
-  const payload = template?.payload && typeof template.payload === "object" && !Array.isArray(template.payload) ? template.payload : {};
-  return Array.isArray(payload?.adVariants) ? payload.adVariants.length : 0;
+function normalizeObject(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 
-function getTemplatePayload(template) {
-  return template?.payload && typeof template.payload === "object" && !Array.isArray(template.payload) ? template.payload : {};
-}
-
-function getTemplateNiche(template) {
-  const payload = getTemplatePayload(template);
-  const operationalMarket = payload?.operationalMarket && typeof payload.operationalMarket === "object" ? payload.operationalMarket : {};
-  const campaign = payload?.campaign && typeof payload.campaign === "object" ? payload.campaign : {};
-  return (
-    normalizeNonEmptyString(operationalMarket?.nicheParam) ||
-    normalizeNonEmptyString(operationalMarket?.niche) ||
-    normalizeNonEmptyString(payload?.nicheParam) ||
-    normalizeNonEmptyString(payload?.niche) ||
-    normalizeNonEmptyString(payload?.slug) ||
-    normalizeNonEmptyString(campaign?.nicheParam) ||
-    normalizeNonEmptyString(campaign?.niche) ||
-    ""
-  );
-}
-
-function getTemplateDestinationUrl(template) {
-  const payload = getTemplatePayload(template);
-  const creative = payload?.creative && typeof payload.creative === "object" ? payload.creative : {};
-  return normalizeNonEmptyString(payload?.destinationUrl) || normalizeNonEmptyString(creative?.destinationUrl) || "";
-}
-
-function normalizeAdVariants(adVariants) {
-  const list = Array.isArray(adVariants) ? adVariants : [];
-  return list
-    .map((variant) => ({
-      primaryText: normalizeNonEmptyString(variant?.primaryText),
-      headline: normalizeNonEmptyString(variant?.headline),
-      description: normalizeNonEmptyString(variant?.description),
-    }))
-    .filter((variant) => variant.primaryText || variant.headline || variant.description);
-}
-
-function formFromTemplate(template) {
-  const payload = getTemplatePayload(template);
-  const variants = Array.isArray(payload?.adVariants) && payload.adVariants.length
-    ? payload.adVariants.map((variant) => ({
-        primaryText: normalizeNonEmptyString(variant?.primaryText),
-        headline: normalizeNonEmptyString(variant?.headline),
-        description: normalizeNonEmptyString(variant?.description),
-      }))
-    : [{ primaryText: "", headline: "", description: "" }];
-
+function normalizeAsset(asset) {
+  const id = normalizeNonEmptyString(asset?.id);
+  if (!id) return null;
+  const mimeType = normalizeNonEmptyString(asset?.mime_type || asset?.mimeType);
   return {
-    name: template?.name || "",
-    nicheParam: getTemplateNiche(template),
-    destinationUrl: getTemplateDestinationUrl(template),
-    adVariants: variants,
+    creativeAssetId: id,
+    mimeType,
+    originalName: normalizeNonEmptyString(asset?.original_name || asset?.originalName),
+    url: normalizeNonEmptyString(asset?.url),
+    kind: mimeType.startsWith("image/") ? "image" : mimeType.startsWith("video/") ? "video" : "unknown",
+    updatedAt: new Date().toISOString(),
   };
 }
 
-function buildTemplatePayload(form, basePayload = {}) {
-  const nicheParam = normalizeNonEmptyString(form?.nicheParam);
-  const destinationUrl = normalizeNonEmptyString(form?.destinationUrl);
-  const adVariants = normalizeAdVariants(form?.adVariants);
-  const base = basePayload && typeof basePayload === "object" && !Array.isArray(basePayload) ? basePayload : {};
-  const campaign = base?.campaign && typeof base.campaign === "object" && !Array.isArray(base.campaign) ? base.campaign : {};
-  const creative = base?.creative && typeof base.creative === "object" && !Array.isArray(base.creative) ? base.creative : {};
+function getPayload(template) {
+  return normalizeObject(template?.payload);
+}
+
+function getNiche(payload) {
+  const op = normalizeObject(payload?.operationalMarket);
+  const campaign = normalizeObject(payload?.campaign);
+  return (
+    normalizeNonEmptyString(op.nicheParam) ||
+    normalizeNonEmptyString(op.niche) ||
+    normalizeNonEmptyString(payload?.nicheParam) ||
+    normalizeNonEmptyString(payload?.niche) ||
+    normalizeNonEmptyString(payload?.slug) ||
+    normalizeNonEmptyString(campaign.nicheParam) ||
+    normalizeNonEmptyString(campaign.niche)
+  );
+}
+
+function getAdVariants(payload) {
+  const source = Array.isArray(payload?.adVariants) ? payload.adVariants : [];
+  return AD_KEYS.map((key, idx) => {
+    const src = normalizeObject(source[idx]);
+    return {
+      key,
+      primaryText: normalizeNonEmptyString(src.primaryText),
+      headline: normalizeNonEmptyString(src.headline),
+      description: normalizeNonEmptyString(src.description),
+    };
+  });
+}
+
+function adVariantsWithText(adVariants) {
+  return (Array.isArray(adVariants) ? adVariants : []).filter(
+    (variant) =>
+      normalizeNonEmptyString(variant?.primaryText) ||
+      normalizeNonEmptyString(variant?.headline) ||
+      normalizeNonEmptyString(variant?.description),
+  );
+}
+
+function templateToForm(template, { defaultMetaAccountId = "" } = {}) {
+  const payload = getPayload(template);
+  const creative = normalizeObject(payload.creative);
+  return {
+    ...EMPTY_FORM,
+    name: template?.name || "",
+    nicheParam: getNiche(payload),
+    destinationUrl: normalizeNonEmptyString(payload.destinationUrl) || normalizeNonEmptyString(creative.destinationUrl),
+    ctaType: normalizeNonEmptyString(payload.ctaType) || normalizeNonEmptyString(creative.ctaType) || "LEARN_MORE",
+    objective: normalizeNonEmptyString(payload.objective) || "OUTCOME_TRAFFIC",
+    dailyBudgetCents: Number(payload.dailyBudgetCents) || 1000,
+    dailyBudgetBrl: formatBrlInputFromCents(Number(payload.dailyBudgetCents) || 1000),
+    billingEvent: normalizeNonEmptyString(payload.billingEvent) || "IMPRESSIONS",
+    optimizationGoal: normalizeNonEmptyString(payload.optimizationGoal) || "REACH",
+    metaAccountId: normalizeNonEmptyString(payload.metaAccountId) || defaultMetaAccountId || "",
+    adVariants: getAdVariants(payload),
+    mediaByMarket: normalizeObject(payload.mediaByMarket),
+  };
+}
+
+function buildPayload(form, basePayload = {}) {
+  const base = normalizeObject(basePayload);
+  const campaign = normalizeObject(base.campaign);
+  const creative = normalizeObject(base.creative);
+  const nicheParam = normalizeNonEmptyString(form.nicheParam);
+  const destinationUrl = normalizeNonEmptyString(form.destinationUrl);
+  const adVariants = AD_KEYS.map((key, idx) => {
+    const src = normalizeObject(form.adVariants?.[idx]);
+    return {
+      key,
+      primaryText: normalizeNonEmptyString(src.primaryText),
+      headline: normalizeNonEmptyString(src.headline),
+      description: normalizeNonEmptyString(src.description),
+    };
+  });
 
   return {
     ...base,
+    metaAccountId: normalizeNonEmptyString(form.metaAccountId) || null,
+    objective: normalizeNonEmptyString(form.objective) || "OUTCOME_TRAFFIC",
+    dailyBudgetCents: Number(form.dailyBudgetCents) || 1000,
+    billingEvent: normalizeNonEmptyString(form.billingEvent) || "IMPRESSIONS",
+    optimizationGoal: normalizeNonEmptyString(form.optimizationGoal) || "REACH",
     nicheParam,
     niche: nicheParam,
     slug: nicheParam,
     operationalMarket: {
-      ...(base?.operationalMarket && typeof base.operationalMarket === "object" ? base.operationalMarket : {}),
+      ...normalizeObject(base.operationalMarket),
       nicheParam,
       niche: nicheParam,
     },
     campaign: {
       ...campaign,
-      name: normalizeNonEmptyString(form?.name) || campaign?.name || "",
+      name: normalizeNonEmptyString(form.name) || campaign.name || "",
       nicheParam,
       niche: nicheParam,
     },
+    primaryText: adVariants[0]?.primaryText || "",
+    headline: adVariants[0]?.headline || "",
+    description: adVariants[0]?.description || "",
+    adVariants,
     destinationUrl,
-    ctaType: base?.ctaType || "LEARN_MORE",
+    ctaType: normalizeNonEmptyString(form.ctaType) || "LEARN_MORE",
     creative: {
       ...creative,
       destinationUrl,
-      ctaType: creative?.ctaType || base?.ctaType || "LEARN_MORE",
+      ctaType: normalizeNonEmptyString(form.ctaType) || creative.ctaType || "LEARN_MORE",
     },
-    adVariants,
+    mediaByMarket: normalizeObject(form.mediaByMarket),
   };
 }
 
-function formatBackendError(err) {
-  const body = err?.body && typeof err.body === "object" ? err.body : null;
-  if (!body) return err?.message ? String(err.message) : "Falha ao executar etapa.";
+function getTranslations(payload) {
+  return normalizeObject(payload?.translationsByMarket);
+}
 
-  const message =
-    body?.error?.message ||
-    body?.message ||
-    err?.message ||
-    "Falha ao executar etapa.";
+function formatBackendError(err) {
+  const body = normalizeObject(err?.body);
+  const message = body?.error?.message || body?.message || err?.message || "Falha ao executar etapa.";
   const details = body?.error?.details ?? body?.details ?? null;
   const errors = Array.isArray(details?.errors) ? details.errors : [];
   if (errors.length) return `${message}: ${errors.join("; ")}`;
-  return `${message}\n${safeJson(body)}`;
+  return Object.keys(body).length ? `${message}\n${safeJson(body)}` : message;
+}
+
+function marketInfo(code) {
+  const normalized = String(code || "").trim().toUpperCase();
+  return OPERATIONAL_MARKETS.find((market) => market.code === normalized) ?? { code: normalized, name: "Mercado", language: "—" };
 }
 
 function mapGeneration(row) {
@@ -153,7 +205,7 @@ function mapGeneration(row) {
     metaAdId: "",
     configuredStatus: row?.configured_status ?? row?.status ?? "",
     effectiveStatus: row?.effective_status ?? "",
-    step: "operational_generated",
+    step: "operacional gerado",
     ok: true,
     error: "",
     lastResult: row,
@@ -161,39 +213,39 @@ function mapGeneration(row) {
 }
 
 function mergeResult(row, result, step) {
-  const meta = result?.meta && typeof result.meta === "object" ? result.meta : {};
-  const persisted = result?.persisted && typeof result.persisted === "object" ? result.persisted : {};
-  const generatedCampaign = persisted?.generatedCampaign || result?.generatedCampaign || {};
-  const generatedAdSet = persisted?.generatedAdSet || {};
-  const generatedAd = persisted?.generatedAd || {};
-  const adMeta = meta?.ad || {};
-  const adSetMeta = meta?.adSet || {};
-  const campaignMeta = meta?.campaign || {};
+  const meta = normalizeObject(result?.meta);
+  const persisted = normalizeObject(result?.persisted);
+  const generatedCampaign = persisted.generatedCampaign || result?.generatedCampaign || {};
+  const generatedAdSet = persisted.generatedAdSet || {};
+  const generatedAd = persisted.generatedAd || {};
+  const adMeta = meta.ad || {};
+  const adSetMeta = meta.adSet || {};
+  const campaignMeta = meta.campaign || {};
 
   return {
     ...row,
-    metaCampaignId: result?.metaCampaignId || campaignMeta?.id || generatedCampaign?.meta_campaign_id || row.metaCampaignId || "",
-    metaAdSetId: result?.metaAdSetId || adSetMeta?.id || generatedCampaign?.meta_adset_id || generatedAdSet?.meta_adset_id || row.metaAdSetId || "",
+    metaCampaignId: result?.metaCampaignId || campaignMeta.id || generatedCampaign.meta_campaign_id || row.metaCampaignId || "",
+    metaAdSetId: result?.metaAdSetId || adSetMeta.id || generatedCampaign.meta_adset_id || generatedAdSet.meta_adset_id || row.metaAdSetId || "",
     metaCreativeId: result?.metaCreativeId || meta?.creative?.id || row.metaCreativeId || "",
-    metaAdId: result?.metaAdId || adMeta?.id || generatedCampaign?.meta_ad_id || generatedAd?.meta_ad_id || row.metaAdId || "",
+    metaAdId: result?.metaAdId || adMeta.id || generatedCampaign.meta_ad_id || generatedAd.meta_ad_id || row.metaAdId || "",
     configuredStatus:
-      adMeta?.configured_status ||
-      adMeta?.status ||
-      generatedAd?.configured_status ||
-      adSetMeta?.status ||
-      generatedAdSet?.configured_status ||
-      campaignMeta?.status ||
-      generatedCampaign?.meta_status ||
+      adMeta.configured_status ||
+      adMeta.status ||
+      generatedAd.configured_status ||
+      adSetMeta.status ||
+      generatedAdSet.configured_status ||
+      campaignMeta.status ||
+      generatedCampaign.meta_status ||
       result?.status ||
       row.configuredStatus ||
       "",
     effectiveStatus:
-      adMeta?.effective_status ||
-      generatedAd?.effective_status ||
-      adSetMeta?.effective_status ||
-      generatedAdSet?.effective_status ||
-      campaignMeta?.effective_status ||
-      generatedCampaign?.meta_effective_status ||
+      adMeta.effective_status ||
+      generatedAd.effective_status ||
+      adSetMeta.effective_status ||
+      generatedAdSet.effective_status ||
+      campaignMeta.effective_status ||
+      generatedCampaign.meta_effective_status ||
       row.effectiveStatus ||
       "",
     step,
@@ -203,157 +255,210 @@ function mergeResult(row, result, step) {
   };
 }
 
-function Field({ label, children, hint }) {
+function Field({ label, hint, children }) {
   return (
-    <label style={{ display: "grid", gap: 8 }}>
-      <span style={{ fontWeight: 900 }}>{label}</span>
+    <div style={{ display: "grid", gap: 8 }}>
+      <div style={{ display: "grid", gap: 4 }}>
+        <div style={{ fontWeight: 900, color: "#374151", fontSize: 13 }}>{label}</div>
+        {hint ? <div style={{ color: "#6b7280", fontWeight: 750, fontSize: 12 }}>{hint}</div> : null}
+      </div>
       {children}
-      {hint ? <span className="muted" style={{ fontWeight: 750, fontSize: 12 }}>{hint}</span> : null}
-    </label>
+    </div>
+  );
+}
+
+function InputLike(props) {
+  return <input {...props} className="templatesInput" style={{ height: 40, ...(props.style || {}) }} />;
+}
+
+function TextAreaLike(props) {
+  return <textarea {...props} className="templatesTextarea" />;
+}
+
+function SelectLike({ value, onChange, options, disabled }) {
+  return (
+    <select value={value} onChange={onChange} disabled={disabled} className="templatesSelect" style={{ height: 40 }}>
+      {options.map((opt) => (
+        <option key={opt.value} value={opt.value} disabled={opt.disabled}>
+          {opt.label}
+        </option>
+      ))}
+    </select>
   );
 }
 
 export default function TemplatesMercado() {
   const [templates, setTemplates] = useState([]);
+  const [creativeAssets, setCreativeAssets] = useState([]);
   const [metaAccounts, setMetaAccounts] = useState([]);
-  const [templateId, setTemplateId] = useState("");
+  const [defaultMetaAccountId, setDefaultMetaAccountId] = useState("");
+  const [selectedId, setSelectedId] = useState("");
+  const [listQuery, setListQuery] = useState("");
+  const [form, setForm] = useState(EMPTY_FORM);
   const [selectedMarkets, setSelectedMarkets] = useState(DEFAULT_MARKETS);
-  const [metaAccountId, setMetaAccountId] = useState("");
-  const [metaAdAccountId, setMetaAdAccountId] = useState("");
-  const [pageId, setPageId] = useState("");
-  const [instagramActorId, setInstagramActorId] = useState("");
-  const [objective, setObjective] = useState("OUTCOME_TRAFFIC");
-  const [dailyBudgetCents, setDailyBudgetCents] = useState(1000);
-  const [billingEvent, setBillingEvent] = useState("IMPRESSIONS");
-  const [optimizationGoal, setOptimizationGoal] = useState("REACH");
-  const [overwriteTranslations, setOverwriteTranslations] = useState(false);
+  const [translationDrafts, setTranslationDrafts] = useState({});
+  const [previewMarketCode, setPreviewMarketCode] = useState(DEFAULT_MARKETS[0]);
   const [rows, setRows] = useState([]);
   const [campaignId, setCampaignId] = useState("");
-  const [templateForm, setTemplateForm] = useState(DEFAULT_TEMPLATE_FORM);
   const [busyStep, setBusyStep] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [openAdKey, setOpenAdKey] = useState("A");
 
-  useEffect(() => {
-    let alive = true;
-    Promise.allSettled([listFlowTemplates({ limit: 200 }), listMetaAccounts()]).then(([templateRes, accountRes]) => {
-      if (!alive) return;
-      const nextTemplates = templateRes.status === "fulfilled" ? templateRes.value?.flowTemplates ?? [] : [];
-      const nextAccounts = accountRes.status === "fulfilled" ? accountRes.value?.metaAccounts ?? [] : [];
-      setTemplates(nextTemplates);
-      setMetaAccounts(nextAccounts);
-      const defaultAccount = nextAccounts.find((a) => a.isDefault) ?? nextAccounts[0] ?? null;
-      if (defaultAccount) {
-        setMetaAccountId(String(defaultAccount.id || ""));
-        setMetaAdAccountId(defaultAccount.metaAdAccountId || "");
-        setPageId(defaultAccount.metaPageId || "");
-        setInstagramActorId(defaultAccount.metaInstagramActorId || "");
-      }
-    });
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  const selectedTemplate = useMemo(
-    () => templates.find((t) => String(t.id) === String(templateId)) ?? null,
-    [templates, templateId],
-  );
+  const selectedTemplate = useMemo(() => templates.find((template) => String(template.id) === String(selectedId)) ?? null, [templates, selectedId]);
+  const selectedPayload = useMemo(() => getPayload(selectedTemplate), [selectedTemplate]);
   const selectedSet = useMemo(() => new Set(selectedMarkets), [selectedMarkets]);
-  const canUseTemplate = Boolean(templateId);
+  const marketOptions = useMemo(() => selectedMarkets.map(marketInfo), [selectedMarkets]);
+  const filteredTemplates = useMemo(() => {
+    const q = normalizeNonEmptyString(listQuery).toLowerCase();
+    if (!q) return templates;
+    return templates.filter((template) => String(template?.name || "").toLowerCase().includes(q));
+  }, [templates, listQuery]);
+
+  const selectedMetaAccount = useMemo(
+    () => metaAccounts.find((account) => String(account.id) === String(form.metaAccountId)) ?? null,
+    [metaAccounts, form.metaAccountId],
+  );
+  const metaAdAccountId = selectedMetaAccount?.metaAdAccountId || "";
+  const pageId = selectedMetaAccount?.metaPageId || "";
+  const instagramActorId = selectedMetaAccount?.metaInstagramActorId || "";
+  const previewMarket = marketInfo(previewMarketCode || selectedMarkets[0]);
+  const previewTranslation = normalizeObject(translationDrafts?.[previewMarket.code]);
+  const previewVariant = normalizeObject(previewTranslation?.adVariants?.[0]);
+  const baseVariant = normalizeObject(form.adVariants?.[0]);
+  const previewMedia = normalizeObject(form.mediaByMarket?.[previewMarket.code]?.A || form.mediaByMarket?.default?.A);
+  const backendBase = getBackendBaseUrl();
+  const hasBaseText = adVariantsWithText(form.adVariants).length > 0;
   const canUseRows = rows.length > 0;
 
-  async function refreshTemplates({ selectId } = {}) {
-    const res = await listFlowTemplates({ limit: 200 });
-    const nextTemplates = res.flowTemplates ?? [];
+  useEffect(() => {
+    refreshAll();
+  }, []);
+
+  async function refreshAll({ selectId } = {}) {
+    setError("");
+    const [templateRes, assetRes, accountRes] = await Promise.allSettled([
+      listFlowTemplates({ limit: 200 }),
+      listCreativeAssets({ limit: 200 }),
+      listMetaAccounts(),
+    ]);
+
+    const nextTemplates = templateRes.status === "fulfilled" ? templateRes.value.flowTemplates ?? [] : [];
+    const nextAssets = assetRes.status === "fulfilled" ? assetRes.value.creativeAssets ?? [] : [];
+    const nextAccounts = accountRes.status === "fulfilled" ? accountRes.value.metaAccounts ?? [] : [];
+    const defaultAccount = nextAccounts.find((account) => account.isDefault) ?? nextAccounts[0] ?? null;
+    const nextDefaultMetaAccountId = defaultAccount?.id ? String(defaultAccount.id) : "";
+
     setTemplates(nextTemplates);
-    const nextSelected = nextTemplates.find((template) => String(template.id) === String(selectId || templateId)) ?? null;
-    if (nextSelected) {
-      setTemplateId(String(nextSelected.id));
-      setTemplateForm(formFromTemplate(nextSelected));
-    }
-    return nextTemplates;
+    setCreativeAssets(nextAssets);
+    setMetaAccounts(nextAccounts);
+    setDefaultMetaAccountId(nextDefaultMetaAccountId);
+
+    const nextSelected = nextTemplates.find((template) => String(template.id) === String(selectId || selectedId)) ?? null;
+    if (nextSelected) selectTemplate(nextSelected.id, nextTemplates, nextDefaultMetaAccountId);
+    else if (!selectedId) setForm((prev) => ({ ...prev, metaAccountId: prev.metaAccountId || nextDefaultMetaAccountId }));
   }
 
-  function selectTemplate(id) {
-    setTemplateId(id);
-    const template = templates.find((item) => String(item.id) === String(id)) ?? null;
-    setTemplateForm(template ? formFromTemplate(template) : DEFAULT_TEMPLATE_FORM);
+  function selectTemplate(id, sourceTemplates = templates, defaultAccountId = defaultMetaAccountId) {
+    const template = sourceTemplates.find((item) => String(item.id) === String(id)) ?? null;
+    setSelectedId(template ? String(template.id) : "");
+    const nextForm = template ? templateToForm(template, { defaultMetaAccountId: defaultAccountId }) : { ...EMPTY_FORM, metaAccountId: defaultAccountId };
+    setForm(nextForm);
+    const translations = getTranslations(getPayload(template));
+    setTranslationDrafts(translations);
+    const firstMarket = Object.keys(translations)[0] || selectedMarkets[0] || DEFAULT_MARKETS[0];
+    setPreviewMarketCode(firstMarket);
+  }
+
+  function newTemplate() {
+    setSelectedId("");
+    setRows([]);
+    setCampaignId("");
+    setTranslationDrafts({});
+    setForm({ ...EMPTY_FORM, metaAccountId: defaultMetaAccountId });
   }
 
   function updateVariant(index, field, value) {
-    setTemplateForm((prev) => {
-      const list = Array.isArray(prev.adVariants) ? [...prev.adVariants] : [];
-      const current = list[index] && typeof list[index] === "object" ? list[index] : {};
-      list[index] = { ...current, [field]: value };
-      return { ...prev, adVariants: list };
+    setForm((prev) => {
+      const next = Array.isArray(prev.adVariants) ? [...prev.adVariants] : [...EMPTY_FORM.adVariants];
+      while (next.length < AD_KEYS.length) next.push({ key: AD_KEYS[next.length], primaryText: "", headline: "", description: "" });
+      next[index] = { ...normalizeObject(next[index]), key: AD_KEYS[index], [field]: value };
+      return { ...prev, adVariants: next };
     });
   }
 
-  function addVariant() {
-    setTemplateForm((prev) => ({
+  function setMarketMedia(marketCode, adKey, entry) {
+    const code = String(marketCode || "").trim().toUpperCase();
+    if (!code) return;
+    setForm((prev) => ({
       ...prev,
-      adVariants: [...(Array.isArray(prev.adVariants) ? prev.adVariants : []), { primaryText: "", headline: "", description: "" }],
+      mediaByMarket: {
+        ...normalizeObject(prev.mediaByMarket),
+        [code]: {
+          ...normalizeObject(prev.mediaByMarket?.[code]),
+          [adKey]: entry,
+        },
+      },
     }));
   }
 
-  function removeVariant(index) {
-    setTemplateForm((prev) => {
-      const list = (Array.isArray(prev.adVariants) ? prev.adVariants : []).filter((_, idx) => idx !== index);
-      return { ...prev, adVariants: list.length ? list : [{ primaryText: "", headline: "", description: "" }] };
+  async function uploadAssetForMarket(marketCode, adKey, file) {
+    if (!file) return;
+    await runStep("asset", async () => {
+      const res = await uploadCreativeAsset(file);
+      const entry = normalizeAsset(res.creativeAsset);
+      if (!entry) throw new Error("Falha ao obter asset após upload.");
+      setMarketMedia(marketCode, adKey, entry);
+      await refreshAll({ selectId: selectedId });
+      setNotice(`Asset definido para ${marketCode} Ad ${adKey}.`);
     });
   }
 
-  async function saveTemplate() {
-    await runStep("template", async () => {
-      const name = normalizeNonEmptyString(templateForm.name);
-      if (!name) throw new Error("Informe o nome do template.");
-      if (!normalizeNonEmptyString(templateForm.nicheParam)) throw new Error("Informe o nicho / slug operacional.");
-      if (!normalizeNonEmptyString(templateForm.destinationUrl)) throw new Error("Informe a Destination URL.");
-      const adVariants = normalizeAdVariants(templateForm.adVariants);
-      if (!adVariants.length) throw new Error("Este template ainda não possui variações de anúncio. Cadastre pelo menos uma variação para gerar traduções.");
+  function selectExistingAsset(marketCode, adKey, assetId) {
+    const asset = creativeAssets.find((item) => String(item.id) === String(assetId)) ?? null;
+    const entry = normalizeAsset(asset);
+    if (!entry) return;
+    setMarketMedia(marketCode, adKey, entry);
+  }
 
-      const basePayload = selectedTemplate ? getTemplatePayload(selectedTemplate) : {};
-      const payload = buildTemplatePayload({ ...templateForm, adVariants }, basePayload);
-      const res = templateId
-        ? await updateFlowTemplate(templateId, { name, payload })
+  function updateTranslation(marketCode, index, field, value) {
+    const code = String(marketCode || "").trim().toUpperCase();
+    if (!code) return;
+    setTranslationDrafts((prev) => {
+      const current = normalizeObject(prev?.[code]);
+      const variants = Array.isArray(current.adVariants) ? [...current.adVariants] : [];
+      while (variants.length < AD_KEYS.length) variants.push({ primaryText: "", headline: "", description: "" });
+      variants[index] = { ...normalizeObject(variants[index]), [field]: value };
+      return {
+        ...prev,
+        [code]: {
+          ...current,
+          adVariants: variants,
+        },
+      };
+    });
+  }
+
+  async function saveTemplate({ withTranslations = false } = {}) {
+    await runStep("template", async () => {
+      const name = normalizeNonEmptyString(form.name);
+      if (!name) throw new Error("Informe o nome do template.");
+      if (!normalizeNonEmptyString(form.nicheParam)) throw new Error("Informe o nicheParam.");
+      if (!normalizeNonEmptyString(form.destinationUrl)) throw new Error("Informe a URL de destino.");
+      if (!hasBaseText) throw new Error("Falta texto base. Preencha pelo menos uma variação de anúncio.");
+
+      const payload = buildPayload(form, selectedPayload);
+      if (withTranslations) {
+        payload.translationsByMarket = translationDrafts;
+        payload.translationsByMarketReviewedAt = new Date().toISOString();
+      }
+
+      const res = selectedId
+        ? await updateFlowTemplate(selectedId, { name, payload })
         : await createFlowTemplate({ name, payload });
       const saved = res.flowTemplate;
-      await refreshTemplates({ selectId: saved?.id });
-      setNotice(`Template salvo: ${saved?.name || name}.`);
-    });
-  }
-
-  function updateRow(id, updater) {
-    setRows((prev) => prev.map((row) => (String(row.id) === String(id) ? updater(row) : row)));
-  }
-
-  function markRowError(id, err, step) {
-    updateRow(id, (row) => ({
-      ...row,
-      step,
-      ok: false,
-      error: formatBackendError(err),
-      lastResult: err?.body ?? null,
-    }));
-  }
-
-  function applyMetaAccount(id) {
-    const account = metaAccounts.find((a) => String(a.id) === String(id)) ?? null;
-    setMetaAccountId(id);
-    if (account?.metaAdAccountId) setMetaAdAccountId(account.metaAdAccountId);
-    if (account?.metaPageId) setPageId(account.metaPageId);
-    if (account?.metaInstagramActorId) setInstagramActorId(account.metaInstagramActorId);
-  }
-
-  function toggleMarket(code) {
-    const normalized = String(code || "").trim().toUpperCase();
-    if (!normalized) return;
-    setSelectedMarkets((prev) => {
-      const next = new Set(prev || []);
-      if (next.has(normalized)) next.delete(normalized);
-      else next.add(normalized);
-      return Array.from(next).sort();
+      await refreshAll({ selectId: saved?.id });
+      setNotice(withTranslations ? "Traduções revisadas salvas." : `Template salvo: ${saved?.name || name}.`);
     });
   }
 
@@ -370,440 +475,484 @@ export default function TemplatesMercado() {
     }
   }
 
-  async function handleGenerateTranslations() {
+  function toggleMarket(code) {
+    const normalized = String(code || "").trim().toUpperCase();
+    if (!normalized) return;
+    setSelectedMarkets((prev) => {
+      const next = new Set(prev || []);
+      if (next.has(normalized)) next.delete(normalized);
+      else next.add(normalized);
+      return Array.from(next).sort();
+    });
+  }
+
+  async function generateTranslations() {
     await runStep("translations", async () => {
-      if (!canUseTemplate) throw new Error("Selecione um template.");
-      if (getAdVariantsCount(selectedTemplate) === 0) {
-        throw new Error("Este template não possui variações de anúncio para traduzir.");
-      }
-      const markets = Array.from(
-        new Set(
-          (Array.isArray(selectedMarkets) ? selectedMarkets : [])
-            .map((market) => String(market || "").trim().toUpperCase())
-            .filter(Boolean)
-        )
-      );
+      if (!selectedId) throw new Error("Salve ou selecione um template antes de gerar traduções.");
+      if (!hasBaseText) throw new Error("Falta texto base para traduzir.");
+      const markets = Array.from(new Set((selectedMarkets || []).map((code) => String(code || "").trim().toUpperCase()).filter(Boolean)));
       if (!markets.length) throw new Error("Selecione ao menos um mercado.");
-      const res = await generateCampaignTemplateTranslationsByMarket(templateId, {
-        markets,
-        overwrite: Boolean(overwriteTranslations),
-      });
-      await refreshTemplates({ selectId: templateId });
+      const res = await generateCampaignTemplateTranslationsByMarket(selectedId, { markets, overwrite: false });
+      const updatedTemplate = res.campaignTemplate;
+      setTranslationDrafts(getTranslations(getPayload(updatedTemplate)));
+      await refreshAll({ selectId: selectedId });
       setNotice(`Traduções geradas: ${res.generated.length}. Preservadas: ${res.preserved.length}.`);
     });
   }
 
-  async function handleGenerateOperational() {
+  async function generateOperational() {
     await runStep("operational", async () => {
-      if (!canUseTemplate) throw new Error("Selecione um template.");
-      const markets = Array.from(new Set((selectedMarkets || []).map((market) => String(market || "").trim().toUpperCase()).filter(Boolean)));
+      if (!selectedId) throw new Error("Selecione um template.");
+      await saveTranslationsOnly();
+      const markets = Array.from(new Set((selectedMarkets || []).map((code) => String(code || "").trim().toUpperCase()).filter(Boolean)));
       if (!markets.length) throw new Error("Selecione ao menos um mercado.");
-      const res = await createOperationalMarketGeneration({ templateId, markets });
+      const res = await createOperationalMarketGeneration({ templateId: selectedId, markets });
       setCampaignId(res.campaign?.id ?? "");
       setRows((res.operationalMarketGenerations || []).map(mapGeneration));
       setNotice(`Operacional gerado: ${(res.operationalMarketGenerations || []).length} mercado(s).`);
     });
   }
 
+  async function saveTranslationsOnly() {
+    if (!selectedId) return;
+    const payload = buildPayload(form, selectedPayload);
+    payload.translationsByMarket = translationDrafts;
+    payload.translationsByMarketReviewedAt = new Date().toISOString();
+    await updateFlowTemplate(selectedId, { name: normalizeNonEmptyString(form.name), payload });
+    await refreshAll({ selectId: selectedId });
+  }
+
+  function updateRow(id, updater) {
+    setRows((prev) => prev.map((row) => (String(row.id) === String(id) ? updater(row) : row)));
+  }
+
   async function runRows(step, handler) {
     if (!rows.length) throw new Error("Gere o operacional antes de publicar.");
     for (const row of rows) {
-      if (!row.id) continue;
-      updateRow(row.id, (current) => ({ ...current, step: `${step}_running`, error: "" }));
+      updateRow(row.id, (current) => ({ ...current, step: `${step}...`, error: "" }));
       try {
         const result = await handler(row);
         updateRow(row.id, (current) => mergeResult(current, result, step));
       } catch (err) {
-        markRowError(row.id, err, step);
+        updateRow(row.id, (current) => ({ ...current, step, ok: false, error: formatBackendError(err), lastResult: err?.body ?? null }));
       }
     }
   }
 
-  async function handlePublishCampaigns() {
+  async function publishCampaigns() {
     await runStep("campaign", async () => {
-      if (!normalizeNonEmptyString(metaAdAccountId)) throw new Error("Informe a Conta de anúncio Meta.");
-      await runRows("campaign_published", (row) =>
-        publishOperationalCampaign(row.id, { metaAdAccountId, objective }),
-      );
+      if (!metaAdAccountId) throw new Error("Falta conta Meta / metaAdAccountId.");
+      await runRows("Campaign publicada", (row) => publishOperationalCampaign(row.id, { metaAdAccountId, objective: form.objective }));
     });
   }
 
-  async function handlePublishAdSets() {
+  async function publishAdSets() {
     await runStep("adset", async () => {
-      await runRows("adset_published", (row) =>
+      await runRows("AdSet publicado", (row) =>
         publishOperationalAdSet(row.id, {
-          dailyBudgetCents: Number(dailyBudgetCents),
-          billingEvent,
-          optimizationGoal,
+          dailyBudgetCents: Number(form.dailyBudgetCents) || 1000,
+          billingEvent: form.billingEvent,
+          optimizationGoal: form.optimizationGoal,
         }),
       );
     });
   }
 
-  async function handlePublishCreatives() {
+  async function publishCreatives() {
     await runStep("creative", async () => {
-      await runRows("creative_published", (row) =>
-        publishOperationalCreative(row.id, {
-          pageId,
-          instagramActorId,
-          ctaType: "LEARN_MORE",
-        }),
-      );
+      if (!pageId) throw new Error("Falta Page ID para publicar Creative.");
+      await runRows("Creative publicado", (row) => publishOperationalCreative(row.id, { pageId, instagramActorId, ctaType: form.ctaType }));
     });
   }
 
-  async function handlePublishAds() {
+  async function publishAds() {
     await runStep("ad", async () => {
-      await runRows("ad_published", (row) => publishOperationalAd(row.id));
+      await runRows("Ad publicado", (row) => publishOperationalAd(row.id));
     });
   }
 
-  async function handleSyncStatus() {
+  async function syncStatus() {
     await runStep("sync", async () => {
-      await runRows("status_synced", (row) => syncOperationalMetaStatus(row.id));
+      await runRows("Status sincronizado", (row) => syncOperationalMetaStatus(row.id));
     });
   }
 
   return (
-    <PageShell
-      title="Templates por Mercado"
-      subtitle="Fluxo operacional por mercado, sempre em PAUSED."
-      backFallbackTo="/"
-    >
-      <div className="card" style={{ padding: 16, borderColor: "#fde68a", background: "#fffbeb" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-          <div>
-            <div style={{ fontWeight: 950, color: "#92400e" }}>Guardrail operacional</div>
-            <div style={{ marginTop: 5, fontWeight: 800, color: "#92400e", fontSize: 13 }}>
-              Esta tela reutiliza endpoints existentes e publica Campaign, AdSet e Ad como PAUSED.
-            </div>
-          </div>
-          <StatusPill tone="warn">REAL = PAUSED</StatusPill>
+    <PageShell title="Templates por Mercado" subtitle="Templates reais com fluxo operacional por mercado." backFallbackTo="/templates">
+      <div className="templatesHero">
+        <div>
+          <h2 className="templatesHeroTitle">Fluxo por Mercados Operacionais</h2>
+          <p className="templatesHeroText">
+            Crie o template, gere traduções por mercado, revise textos e publique Meta apenas quando clicar em cada etapa.
+          </p>
+        </div>
+        <div className="templatesHeroBadges">
+          <StatusPill tone="warn">PAUSED</StatusPill>
+          <StatusPill tone="info">flow_templates</StatusPill>
         </div>
       </div>
 
       {error ? (
-        <div className="card" style={{ padding: 14, borderColor: "#fecaca", color: "#991b1b" }}>
+        <div className="card" style={{ padding: 14, borderColor: "#fecaca", color: "#991b1b", whiteSpace: "pre-wrap" }}>
           <div style={{ fontWeight: 900 }}>Erro</div>
           <div style={{ marginTop: 6, fontWeight: 750 }}>{error}</div>
         </div>
       ) : null}
-
       {notice ? (
         <div className="card" style={{ padding: 14, borderColor: "#bfdbfe", color: "#1d4ed8" }}>
           <div style={{ fontWeight: 900 }}>{notice}</div>
         </div>
       ) : null}
 
-      <section className="card" style={{ padding: 18 }}>
-        <div style={{ display: "grid", gap: 14 }}>
-          <Field label="1. Selecionar Template">
-            <select value={templateId} onChange={(e) => selectTemplate(e.target.value)} disabled={Boolean(busyStep)}>
-              <option value="">Selecione...</option>
-              {templates.map((template) => (
-                <option key={template.id} value={template.id}>
-                  {template.name || template.id}
-                </option>
-              ))}
-            </select>
-          </Field>
+      <div className="templatesLayout" style={{ marginTop: 16 }}>
+        <div className="templatesListPanel">
+          <div className="templatesListHeader">
+            <h2 className="templatesListTitle">Templates reais</h2>
+            <div className="templatesListHint">Mesma fonte da tela /templates.</div>
+          </div>
+          <InputLike value={listQuery} onChange={(e) => setListQuery(e.target.value)} placeholder="Buscar por nome..." />
+          <button type="button" className="templatesNewBtn" disabled={Boolean(busyStep)} onClick={newTemplate}>
+            + Novo template
+          </button>
+          <div>
+            {(filteredTemplates || []).map((template) => {
+              const payload = getPayload(template);
+              const translations = getTranslations(payload);
+              const active = String(template.id) === String(selectedId);
+              const mediaCount = Object.keys(normalizeObject(payload.mediaByMarket)).length;
+              return (
+                <button
+                  key={template.id}
+                  type="button"
+                  className={`templatesTplItem ${active ? "templatesTplItemActive" : ""}`}
+                  onClick={() => selectTemplate(template.id)}
+                >
+                  <div className="templatesTplName">{template.name}</div>
+                  <div className="templatesTplMetaRow">
+                    <span>{getNiche(payload) || "sem nicheParam"}</span>
+                    <span className="templatesSep">·</span>
+                    <span>{adVariantsWithText(getAdVariants(payload)).length} ads</span>
+                    <span className="templatesSep">·</span>
+                    <span>{Object.keys(translations).length} mercados traduzidos</span>
+                    <span className="templatesSep">·</span>
+                    <span>{mediaCount ? `${mediaCount} assets` : "sem asset"}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
-          <div className="card" style={{ padding: 14, borderColor: "#e5e7eb" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-              <div>
-                <div style={{ fontWeight: 950 }}>Criar / editar template operacional</div>
-                <div className="muted" style={{ marginTop: 4, fontWeight: 800, fontSize: 12 }}>
-                  Fonte real: os mesmos templates de /templates.
+        <div className="templatesDetailPanel">
+          <section className="templatesCard">
+            <div className="templatesCardLabel">1. Template e conteúdo base</div>
+            <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+                <Field label="Nome do template">
+                  <InputLike value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} placeholder="Plantas BTN" />
+                </Field>
+                <Field label="nicheParam / slug operacional">
+                  <InputLike value={form.nicheParam} onChange={(e) => setForm((prev) => ({ ...prev, nicheParam: e.target.value }))} placeholder="PlantasBTN" />
+                </Field>
+                <Field label="Conta Meta">
+                  <SelectLike
+                    value={form.metaAccountId}
+                    onChange={(e) => setForm((prev) => ({ ...prev, metaAccountId: e.target.value }))}
+                    options={[
+                      { value: "", label: metaAccounts.length ? "Selecione..." : "Nenhuma conta cadastrada", disabled: true },
+                      ...metaAccounts.map((account) => ({
+                        value: String(account.id),
+                        label: `${account.name}${account.isDefault ? " • padrão" : ""}${account.isActive ? "" : " • inativa"}`,
+                      })),
+                    ]}
+                  />
+                </Field>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+                <Field label="Destination URL">
+                  <InputLike value={form.destinationUrl} onChange={(e) => setForm((prev) => ({ ...prev, destinationUrl: e.target.value }))} />
+                </Field>
+                <Field label="CTA">
+                  <SelectLike
+                    value={form.ctaType}
+                    onChange={(e) => setForm((prev) => ({ ...prev, ctaType: e.target.value }))}
+                    options={[
+                      { value: "LEARN_MORE", label: "Saiba mais" },
+                      { value: "SHOP_NOW", label: "Comprar agora" },
+                      { value: "SIGN_UP", label: "Inscrever-se" },
+                    ]}
+                  />
+                </Field>
+                <Field label="Orçamento diário (R$)">
+                  <InputLike
+                    value={form.dailyBudgetBrl}
+                    onChange={(e) => {
+                      const cents = parseBrlToCents(e.target.value);
+                      setForm((prev) => ({ ...prev, dailyBudgetBrl: e.target.value, dailyBudgetCents: cents ?? 0 }));
+                    }}
+                  />
+                </Field>
+              </div>
+
+              <Field label="Variações de anúncio (PT-BR)" hint="Ad A é usado pelo publicador operacional atual; mantenha A completo antes de publicar.">
+                <div className="templatesAccordion">
+                  {AD_KEYS.map((adKey, idx) => {
+                    const variant = normalizeObject(form.adVariants?.[idx]);
+                    return (
+                      <details
+                        key={adKey}
+                        className="templatesAccordionItem"
+                        open={openAdKey === adKey}
+                        onToggle={(e) => {
+                          if (e.currentTarget.open) setOpenAdKey(adKey);
+                        }}
+                      >
+                        <summary className="templatesAccordionSummary">
+                          <div className="templatesAccordionSummaryTitle">Ad {adKey}</div>
+                          <div className="templatesAccordionSummaryMeta">{variant.primaryText ? String(variant.primaryText).slice(0, 70) : "—"}</div>
+                        </summary>
+                        <div className="templatesAccordionBody">
+                          <Field label="primaryText">
+                            <TextAreaLike value={variant.primaryText || ""} onChange={(e) => updateVariant(idx, "primaryText", e.target.value)} rows={3} />
+                          </Field>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 10 }}>
+                            <Field label="headline">
+                              <InputLike value={variant.headline || ""} onChange={(e) => updateVariant(idx, "headline", e.target.value)} />
+                            </Field>
+                            <Field label="description">
+                              <InputLike value={variant.description || ""} onChange={(e) => updateVariant(idx, "description", e.target.value)} />
+                            </Field>
+                          </div>
+                        </div>
+                      </details>
+                    );
+                  })}
+                </div>
+              </Field>
+
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button type="button" className="templatesBtnPrimary" disabled={Boolean(busyStep)} onClick={() => saveTemplate()}>
+                  {selectedId ? "Salvar template" : "Criar template"}
+                </button>
+                <button type="button" className="templatesBtnOutline" disabled={Boolean(busyStep)} onClick={newTemplate}>
+                  Limpar
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section className="templatesCard">
+            <div className="templatesCardLabel">2. Mercados e assets</div>
+            <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button type="button" className="templatesBtnOutline" onClick={() => setSelectedMarkets(DEFAULT_MARKETS)}>Padrão</button>
+                <button type="button" className="templatesBtnOutline" onClick={() => setSelectedMarkets(OPERATIONAL_MARKETS.map((m) => m.code))}>Todos</button>
+                <button type="button" className="templatesBtnOutline" onClick={() => setSelectedMarkets([])}>Limpar</button>
+              </div>
+              <div style={{ maxHeight: 220, overflow: "auto", border: "1px solid #e5e7eb", borderRadius: 8, padding: 8 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 8 }}>
+                  {OPERATIONAL_MARKETS.map((market) => (
+                    <label key={market.code} className="templatesHintBox" style={{ background: selectedSet.has(market.code) ? "#eff6ff" : "#fff" }}>
+                      <input type="checkbox" checked={selectedSet.has(market.code)} onChange={() => toggleMarket(market.code)} style={{ marginRight: 8 }} />
+                      <strong>{market.code}</strong>
+                      <div className="muted" style={{ fontWeight: 800 }}>{market.name}</div>
+                      <div className="muted" style={{ fontWeight: 750 }}>{market.language}</div>
+                    </label>
+                  ))}
                 </div>
               </div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button
-                  type="button"
-                  className="pillOutline"
-                  disabled={Boolean(busyStep)}
-                  onClick={() => {
-                    setTemplateId("");
-                    setTemplateForm(DEFAULT_TEMPLATE_FORM);
-                  }}
-                >
-                  Novo
-                </button>
-                <button type="button" className="pillPrimary" disabled={Boolean(busyStep)} onClick={saveTemplate}>
-                  {busyStep === "template" ? "Salvando..." : templateId ? "Salvar alterações" : "Criar template"}
-                </button>
-              </div>
-            </div>
 
-            <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
-              <Field label="Nome do template">
-                <input
-                  value={templateForm.name}
-                  onChange={(e) => setTemplateForm((prev) => ({ ...prev, name: e.target.value }))}
-                  placeholder="Plantas BTN"
-                  disabled={Boolean(busyStep)}
-                />
-              </Field>
-              <Field label="Nicho / slug operacional">
-                <input
-                  value={templateForm.nicheParam}
-                  onChange={(e) => setTemplateForm((prev) => ({ ...prev, nicheParam: e.target.value }))}
-                  placeholder="PlantasBTN"
-                  disabled={Boolean(busyStep)}
-                />
-              </Field>
-              <Field label="Destination URL">
-                <input
-                  value={templateForm.destinationUrl}
-                  onChange={(e) => setTemplateForm((prev) => ({ ...prev, destinationUrl: e.target.value }))}
-                  placeholder="https://example.com/plants"
-                  disabled={Boolean(busyStep)}
-                />
-              </Field>
+              <AdvancedDisclosure summary="Assets por mercado">
+                <div className="templatesHintBox">
+                  O cadastro de assets é persistido no template e aparece no preview. O publicador operacional atual cria Creative de link; envio de vídeo/imagem para Meta ainda não está conectado nesse pipeline.
+                </div>
+                <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+                  {marketOptions.map((market) => {
+                    const entry = normalizeObject(form.mediaByMarket?.[market.code]?.A);
+                    return (
+                      <div key={market.code} className="card" style={{ padding: 12 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                          <div>
+                            <strong>{market.code}</strong>
+                            <div className="muted" style={{ fontWeight: 800 }}>{entry.originalName || "Nenhum asset no Ad A"}</div>
+                          </div>
+                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                            <input type="file" accept="video/*,image/*" onChange={(e) => uploadAssetForMarket(market.code, "A", e.target.files?.[0])} />
+                            <select value="" onChange={(e) => selectExistingAsset(market.code, "A", e.target.value)}>
+                              <option value="">Selecionar asset existente...</option>
+                              {creativeAssets.map((asset) => (
+                                <option key={asset.id} value={asset.id}>{asset.original_name || asset.id}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </AdvancedDisclosure>
             </div>
+          </section>
 
-            <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                <div style={{ fontWeight: 950 }}>adVariants</div>
-                <button type="button" className="pillOutline" disabled={Boolean(busyStep)} onClick={addVariant}>
-                  Adicionar variação
-                </button>
+          <section className="templatesCard">
+            <div className="templatesCardLabel">3. Traduções por mercado</div>
+            <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <button type="button" className="templatesBtnPrimary" disabled={Boolean(busyStep) || !selectedId} onClick={generateTranslations}>
+                Gerar Traduções
+              </button>
+              <button type="button" className="templatesBtnOutline" disabled={Boolean(busyStep) || !selectedId} onClick={() => saveTemplate({ withTranslations: true })}>
+                Salvar revisão
+              </button>
+            </div>
+            {!hasBaseText ? (
+              <div className="templatesHintBox" style={{ marginTop: 12, borderColor: "#fecaca", color: "#991b1b" }}>
+                Falta texto base. Preencha pelo menos uma variação antes de gerar traduções.
               </div>
-              {(templateForm.adVariants || []).map((variant, index) => (
-                <div key={index} className="card" style={{ padding: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                    <div style={{ fontWeight: 950 }}>Variação {index + 1}</div>
-                    <button type="button" className="pillOutline" disabled={Boolean(busyStep)} onClick={() => removeVariant(index)}>
-                      Remover
-                    </button>
-                  </div>
-                  <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
-                    <Field label="primaryText">
-                      <textarea
-                        value={variant.primaryText || ""}
-                        onChange={(e) => updateVariant(index, "primaryText", e.target.value)}
-                        rows={3}
-                        disabled={Boolean(busyStep)}
-                      />
-                    </Field>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>
-                      <Field label="headline">
-                        <input
-                          value={variant.headline || ""}
-                          onChange={(e) => updateVariant(index, "headline", e.target.value)}
-                          disabled={Boolean(busyStep)}
-                        />
+            ) : null}
+            <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
+              {marketOptions.map((market) => {
+                const entry = normalizeObject(translationDrafts?.[market.code]);
+                const variants = Array.isArray(entry.adVariants) ? entry.adVariants : [];
+                const variant = normalizeObject(variants[0]);
+                return (
+                  <div key={market.code} className="card" style={{ padding: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                      <div>
+                        <strong>{market.code} · {market.name}</strong>
+                        <div className="muted" style={{ fontWeight: 800 }}>Idioma: {market.language}</div>
+                      </div>
+                      <button type="button" className="templatesBtnOutline" onClick={() => setPreviewMarketCode(market.code)}>
+                        Pré-visualizar
+                      </button>
+                    </div>
+                    <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+                      <Field label="primaryText traduzido">
+                        <TextAreaLike value={variant.primaryText || ""} onChange={(e) => updateTranslation(market.code, 0, "primaryText", e.target.value)} rows={3} />
                       </Field>
-                      <Field label="description">
-                        <input
-                          value={variant.description || ""}
-                          onChange={(e) => updateVariant(index, "description", e.target.value)}
-                          disabled={Boolean(busyStep)}
-                        />
-                      </Field>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                        <Field label="headline traduzido">
+                          <InputLike value={variant.headline || ""} onChange={(e) => updateTranslation(market.code, 0, "headline", e.target.value)} />
+                        </Field>
+                        <Field label="description traduzida">
+                          <InputLike value={variant.description || ""} onChange={(e) => updateTranslation(market.code, 0, "description", e.target.value)} />
+                        </Field>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
-          </div>
+          </section>
 
-          {selectedTemplate ? (
-            <div className="card" style={{ padding: 12, borderColor: getAdVariantsCount(selectedTemplate) ? "#bfdbfe" : "#fecaca" }}>
-              <div style={{ fontWeight: 900 }}>
-                Template selecionado: {selectedTemplate.name || selectedTemplate.id} • adVariants: {getAdVariantsCount(selectedTemplate)}
-              </div>
-              {getAdVariantsCount(selectedTemplate) === 0 ? (
-                <div style={{ marginTop: 6, color: "#991b1b", fontWeight: 850 }}>
-                  Este template ainda não possui variações de anúncio. Cadastre pelo menos uma variação para gerar traduções.
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
-          <Field label="2. Selecionar Mercados">
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button type="button" className="pillOutline" disabled={Boolean(busyStep)} onClick={() => setSelectedMarkets(DEFAULT_MARKETS)}>
-                Padrão
-              </button>
-              <button type="button" className="pillOutline" disabled={Boolean(busyStep)} onClick={() => setSelectedMarkets(OPERATIONAL_MARKETS.map((m) => m.code))}>
-                Todos
-              </button>
-              <button type="button" className="pillOutline" disabled={Boolean(busyStep)} onClick={() => setSelectedMarkets([])}>
-                Limpar
-              </button>
-            </div>
-            <div style={{ marginTop: 10, maxHeight: 260, overflow: "auto", border: "1px solid #e5e7eb", borderRadius: 8, padding: 8 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 8 }}>
-                {OPERATIONAL_MARKETS.map((market) => (
-                  <label
-                    key={market.code}
-                    style={{
-                      display: "flex",
-                      gap: 8,
-                      alignItems: "flex-start",
-                      padding: 10,
-                      border: "1px solid #e5e7eb",
-                      borderRadius: 8,
-                      background: selectedSet.has(market.code) ? "#eff6ff" : "#fff",
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedSet.has(market.code)}
-                      disabled={Boolean(busyStep)}
-                      onChange={() => toggleMarket(market.code)}
-                      style={{ marginTop: 3 }}
-                    />
-                    <span>
-                      <span style={{ display: "block", fontWeight: 950 }}>{market.code}</span>
-                      <span className="muted" style={{ display: "block", fontWeight: 800 }}>{market.name}</span>
-                      <span className="muted" style={{ display: "block", fontWeight: 750 }}>{market.language}</span>
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          </Field>
-        </div>
-      </section>
-
-      <section className="card" style={{ padding: 18 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
-          <Field label="Conta Meta">
-            <select value={metaAccountId} onChange={(e) => applyMetaAccount(e.target.value)} disabled={Boolean(busyStep)}>
-              <option value="">Manual</option>
-              {metaAccounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.name || account.metaAdAccountId || account.id}{account.isDefault ? " • padrão" : ""}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="metaAdAccountId">
-            <input value={metaAdAccountId} onChange={(e) => setMetaAdAccountId(e.target.value)} placeholder="act_..." disabled={Boolean(busyStep)} />
-          </Field>
-          <Field label="pageId">
-            <input value={pageId} onChange={(e) => setPageId(e.target.value)} placeholder="Página Meta" disabled={Boolean(busyStep)} />
-          </Field>
-          <Field label="instagramActorId">
-            <input value={instagramActorId} onChange={(e) => setInstagramActorId(e.target.value)} placeholder="Opcional" disabled={Boolean(busyStep)} />
-          </Field>
-          <Field label="Objective">
-            <select value={objective} onChange={(e) => setObjective(e.target.value)} disabled={Boolean(busyStep)}>
-              <option value="OUTCOME_TRAFFIC">OUTCOME_TRAFFIC</option>
-              <option value="OUTCOME_LEADS">OUTCOME_LEADS</option>
-              <option value="OUTCOME_SALES">OUTCOME_SALES</option>
-            </select>
-          </Field>
-          <Field label="Daily budget cents">
-            <input type="number" min="100" value={dailyBudgetCents} onChange={(e) => setDailyBudgetCents(e.target.value)} disabled={Boolean(busyStep)} />
-          </Field>
-          <Field label="Billing event">
-            <select value={billingEvent} onChange={(e) => setBillingEvent(e.target.value)} disabled={Boolean(busyStep)}>
-              <option value="IMPRESSIONS">IMPRESSIONS</option>
-              <option value="LINK_CLICKS">LINK_CLICKS</option>
-            </select>
-          </Field>
-          <Field label="Optimization goal">
-            <select value={optimizationGoal} onChange={(e) => setOptimizationGoal(e.target.value)} disabled={Boolean(busyStep)}>
-              <option value="REACH">REACH</option>
-              <option value="LINK_CLICKS">LINK_CLICKS</option>
-              <option value="OFFSITE_CONVERSIONS">OFFSITE_CONVERSIONS</option>
-            </select>
-          </Field>
-        </div>
-      </section>
-
-      <section className="card" style={{ padding: 18 }}>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-          <label style={{ display: "inline-flex", gap: 8, alignItems: "center", fontWeight: 900 }}>
-            <input
-              type="checkbox"
-              checked={overwriteTranslations}
-              onChange={(e) => setOverwriteTranslations(e.target.checked)}
-              disabled={Boolean(busyStep)}
-            />
-            Sobrescrever traduções
-          </label>
-          <button type="button" className="pillOutline" disabled={Boolean(busyStep) || !canUseTemplate} onClick={handleGenerateTranslations}>
-            {busyStep === "translations" ? "Gerando..." : "3. Gerar Traduções"}
-          </button>
-          <button type="button" className="pillOutline" disabled={Boolean(busyStep) || !canUseTemplate} onClick={handleGenerateOperational}>
-            {busyStep === "operational" ? "Gerando..." : "4. Gerar Operacional"}
-          </button>
-          <button type="button" className="pillOutline" disabled={Boolean(busyStep) || !canUseRows} onClick={handlePublishCampaigns}>
-            5. Publicar Campaign
-          </button>
-          <button type="button" className="pillOutline" disabled={Boolean(busyStep) || !canUseRows} onClick={handlePublishAdSets}>
-            6. Publicar AdSet
-          </button>
-          <button type="button" className="pillOutline" disabled={Boolean(busyStep) || !canUseRows} onClick={handlePublishCreatives}>
-            7. Publicar Creative
-          </button>
-          <button type="button" className="pillOutline" disabled={Boolean(busyStep) || !canUseRows} onClick={handlePublishAds}>
-            8. Publicar Ad
-          </button>
-          <button type="button" className="pillPrimary" disabled={Boolean(busyStep) || !canUseRows} onClick={handleSyncStatus}>
-            9. Sincronizar Status
-          </button>
-        </div>
-        {busyStep ? <div className="muted" style={{ marginTop: 10, fontWeight: 850 }}>Executando: {busyStep}</div> : null}
-        {campaignId ? <div className="monoTag" style={{ marginTop: 12 }}>campaign_id: {campaignId}</div> : null}
-      </section>
-
-      <section className="card" style={{ padding: 0, overflowX: "auto" }}>
-        <table className="dataTable" style={{ marginTop: 0 }}>
-          <thead>
-            <tr>
-              <th>Mercado</th>
-              <th>market_param</th>
-              <th>meta_campaign_id</th>
-              <th>meta_adset_id</th>
-              <th>meta_creative_id</th>
-              <th>meta_ad_id</th>
-              <th>configured_status</th>
-              <th>effective_status</th>
-              <th>Etapa</th>
-              <th>Detalhes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.id}>
-                <td>
-                  <div style={{ display: "grid", gap: 4 }}>
-                    <span className="monoTag">{row.marketCode || "—"}</span>
-                    <span className="muted" style={{ fontWeight: 800, fontSize: 12 }}>{row.marketName || "—"}</span>
+          <section className="templatesCard">
+            <div className="templatesCardLabel">4. Preview operacional</div>
+            <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "minmax(180px, 260px) 1fr", gap: 14 }}>
+              <Field label="Mercado">
+                <SelectLike
+                  value={previewMarket.code}
+                  onChange={(e) => setPreviewMarketCode(e.target.value)}
+                  options={marketOptions.map((market) => ({ value: market.code, label: `${market.code} — ${market.name}` }))}
+                />
+              </Field>
+              <div className="card" style={{ padding: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                  <div>
+                    <div style={{ fontWeight: 950 }}>{previewMarket.code} · {previewMarket.name}</div>
+                    <div className="muted" style={{ fontWeight: 800, marginTop: 4 }}>{previewMarket.language}</div>
                   </div>
-                </td>
-                <td><span className="monoTag">{row.marketParam || "—"}</span></td>
-                <td><span className="monoTag">{row.metaCampaignId || "—"}</span></td>
-                <td><span className="monoTag">{row.metaAdSetId || "—"}</span></td>
-                <td><span className="monoTag">{row.metaCreativeId || "—"}</span></td>
-                <td><span className="monoTag">{row.metaAdId || "—"}</span></td>
-                <td>{row.configuredStatus || "—"}</td>
-                <td>{row.effectiveStatus || "—"}</td>
-                <td>
-                  <StatusPill tone={row.ok ? "info" : "bad"}>{row.error ? "erro" : row.step || "—"}</StatusPill>
-                  {row.error ? <div style={{ marginTop: 6, color: "#991b1b", fontWeight: 800 }}>{row.error}</div> : null}
-                </td>
-                <td>
-                  <AdvancedDisclosure summary="JSON" defaultOpen={false}>
-                    <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{safeJson(row.lastResult)}</pre>
-                  </AdvancedDisclosure>
-                </td>
-              </tr>
-            ))}
-            {!rows.length ? (
-              <tr>
-                <td colSpan={10} className="muted" style={{ fontWeight: 800 }}>
-                  Nenhum mercado operacional gerado ainda.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </section>
+                  <span className="monoTag">{previewMarket.code}-{form.nicheParam || "Niche"}-FB</span>
+                </div>
+                <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
+                  <div style={{ whiteSpace: "pre-wrap", fontWeight: 800 }}>{previewVariant.primaryText || baseVariant.primaryText || "Texto principal ausente."}</div>
+                  <div style={{ fontWeight: 950 }}>{previewVariant.headline || baseVariant.headline || "Headline ausente."}</div>
+                  <div className="muted" style={{ fontWeight: 800 }}>{previewVariant.description || baseVariant.description || "Descrição ausente."}</div>
+                  <div className="monoTag">{form.destinationUrl || "URL ausente"}</div>
+                  {previewMedia.url && previewMedia.mimeType?.startsWith("video/") ? (
+                    <CompactVideoPreview src={`${backendBase}${previewMedia.url}`} label={`${previewMarket.code} Ad A`} size="sm" />
+                  ) : previewMedia.url && previewMedia.mimeType?.startsWith("image/") ? (
+                    <img src={`${backendBase}${previewMedia.url}`} alt={`${previewMarket.code} Ad A`} style={{ maxWidth: 220, borderRadius: 8, border: "1px solid #e5e7eb" }} />
+                  ) : (
+                    <div className="templatesHintBox">Sem asset associado para este mercado.</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="templatesCard">
+            <div className="templatesCardLabel">5. Gerar operacional e publicar Meta</div>
+            <div className="templatesHintBox" style={{ marginTop: 12 }}>
+              Nenhuma publicação Meta acontece automaticamente. Cada botão abaixo executa uma etapa explícita e cria objetos em PAUSED.
+            </div>
+            <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <button type="button" className="templatesBtnPrimary" disabled={Boolean(busyStep) || !selectedId} onClick={generateOperational}>
+                Gerar Operacional
+              </button>
+              <button type="button" className="templatesBtnOutline" disabled={Boolean(busyStep) || !canUseRows} onClick={publishCampaigns}>Publicar Campaign</button>
+              <button type="button" className="templatesBtnOutline" disabled={Boolean(busyStep) || !canUseRows} onClick={publishAdSets}>Publicar AdSet</button>
+              <button type="button" className="templatesBtnOutline" disabled={Boolean(busyStep) || !canUseRows} onClick={publishCreatives}>Publicar Creative</button>
+              <button type="button" className="templatesBtnOutline" disabled={Boolean(busyStep) || !canUseRows} onClick={publishAds}>Publicar Ad</button>
+              <button type="button" className="templatesBtnPrimary" disabled={Boolean(busyStep) || !canUseRows} onClick={syncStatus}>Sincronizar Status</button>
+            </div>
+            {busyStep ? <div className="muted" style={{ marginTop: 10, fontWeight: 850 }}>Executando: {busyStep}</div> : null}
+            {campaignId ? <div className="monoTag" style={{ marginTop: 12 }}>campaign_id: {campaignId}</div> : null}
+
+            <div style={{ marginTop: 14, overflowX: "auto" }}>
+              <table className="dataTable" style={{ marginTop: 0 }}>
+                <thead>
+                  <tr>
+                    <th>Mercado</th>
+                    <th>Nome gerado</th>
+                    <th>Campaign</th>
+                    <th>AdSet</th>
+                    <th>Creative</th>
+                    <th>Ad</th>
+                    <th>configured_status</th>
+                    <th>effective_status</th>
+                    <th>Etapa</th>
+                    <th>Técnico</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row) => (
+                    <tr key={row.id}>
+                      <td><span className="monoTag">{row.marketCode || "—"}</span></td>
+                      <td><span className="monoTag">{row.marketParam || "—"}</span></td>
+                      <td><span className="monoTag">{row.metaCampaignId || "—"}</span></td>
+                      <td><span className="monoTag">{row.metaAdSetId || "—"}</span></td>
+                      <td><span className="monoTag">{row.metaCreativeId || "—"}</span></td>
+                      <td><span className="monoTag">{row.metaAdId || "—"}</span></td>
+                      <td>{row.configuredStatus || "—"}</td>
+                      <td>{row.effectiveStatus || "—"}</td>
+                      <td>
+                        <StatusPill tone={row.ok ? "info" : "bad"}>{row.error ? "erro" : row.step || "—"}</StatusPill>
+                        {row.error ? <div style={{ marginTop: 6, color: "#991b1b", fontWeight: 800 }}>{row.error}</div> : null}
+                      </td>
+                      <td>
+                        <AdvancedDisclosure summary="JSON">
+                          <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{safeJson(row.lastResult)}</pre>
+                        </AdvancedDisclosure>
+                      </td>
+                    </tr>
+                  ))}
+                  {!rows.length ? (
+                    <tr>
+                      <td colSpan={10} className="muted" style={{ fontWeight: 800 }}>
+                        Gere o operacional para ver os mercados.
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <AdvancedDisclosure summary="Detalhes técnicos do template">
+            <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{safeJson(buildPayload(form, selectedPayload))}</pre>
+          </AdvancedDisclosure>
+        </div>
+      </div>
     </PageShell>
   );
 }
