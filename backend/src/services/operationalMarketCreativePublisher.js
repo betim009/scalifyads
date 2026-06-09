@@ -31,7 +31,7 @@ function getCreativeUploadsDir() {
 function resolveMarketMedia({ marketCode, payload, body } = {}) {
   const bodyInput = normalizeOptionalObject(body)
   const directAssetId = firstNonEmpty(bodyInput.creativeAssetId, bodyInput.creative_asset_id)
-  const directThumbId = firstNonEmpty(bodyInput.creativeThumbnailAssetId, bodyInput.creative_thumbnail_asset_id)
+  const directThumbId = firstNonEmpty(bodyInput.creativeThumbnailAssetId, bodyInput.creative_thumbnail_asset_id, bodyInput.thumbnailAssetId)
   if (directAssetId) {
     return { creativeAssetId: directAssetId, creativeThumbnailAssetId: directThumbId, source: 'body' }
   }
@@ -39,12 +39,27 @@ function resolveMarketMedia({ marketCode, payload, body } = {}) {
   const mediaByMarket = normalizeOptionalObject(payload?.mediaByMarket)
   const marketMedia = normalizeOptionalObject(mediaByMarket?.[marketCode])
   const defaultMedia = normalizeOptionalObject(mediaByMarket?.default)
-  const entry = normalizeOptionalObject(marketMedia?.A || marketMedia?.['1'] || defaultMedia?.A || defaultMedia?.['1'])
+  const entry = normalizeOptionalObject(
+    marketMedia?.A ||
+      marketMedia?.['1'] ||
+      (firstNonEmpty(marketMedia?.creativeAssetId, marketMedia?.creative_asset_id, marketMedia?.assetId) ? marketMedia : null) ||
+      defaultMedia?.A ||
+      defaultMedia?.['1'] ||
+      (firstNonEmpty(defaultMedia?.creativeAssetId, defaultMedia?.creative_asset_id, defaultMedia?.assetId) ? defaultMedia : null)
+  )
   const thumb = normalizeOptionalObject(entry?.thumbnail)
-  const creativeAssetId = firstNonEmpty(entry?.creativeAssetId, entry?.creative_asset_id)
-  const creativeThumbnailAssetId = firstNonEmpty(thumb?.creativeAssetId, thumb?.creative_asset_id, entry?.creativeThumbnailAssetId, entry?.creative_thumbnail_asset_id)
+  const creativeAssetId = firstNonEmpty(entry?.creativeAssetId, entry?.creative_asset_id, entry?.assetId)
+  const creativeThumbnailAssetId = firstNonEmpty(
+    thumb?.creativeAssetId,
+    thumb?.creative_asset_id,
+    thumb?.assetId,
+    entry?.creativeThumbnailAssetId,
+    entry?.creative_thumbnail_asset_id,
+    entry?.thumbnailAssetId
+  )
   if (!creativeAssetId) return null
-  return { creativeAssetId, creativeThumbnailAssetId, source: `mediaByMarket.${marketCode}.A` }
+  const source = entry === marketMedia ? `mediaByMarket.${marketCode}` : `mediaByMarket.${marketCode}.A`
+  return { creativeAssetId, creativeThumbnailAssetId, source }
 }
 
 function resolveMarketCreativeInput({ row, campaignConfig, templatePayload, body } = {}) {

@@ -69,6 +69,86 @@ function withAutoThumbnail(entry, thumbnailAsset) {
   return { ...entry, thumbnail: thumb };
 }
 
+function mediaRecordFromEntry(entry) {
+  const normalized = normalizeObject(entry);
+  const creativeAssetId = normalizeNonEmptyString(normalized.creativeAssetId || normalized.assetId);
+  if (!creativeAssetId) return null;
+  const mimeType = normalizeNonEmptyString(normalized.mimeType || normalized.mime_type);
+  const thumb = normalizeObject(normalized.thumbnail);
+  const thumbnailAssetId = normalizeNonEmptyString(
+    normalized.creativeThumbnailAssetId ||
+      normalized.creative_thumbnail_asset_id ||
+      normalized.thumbnailAssetId ||
+      thumb.creativeAssetId ||
+      thumb.assetId,
+  );
+  const thumbnailUrl = normalizeNonEmptyString(normalized.thumbnailUrl || thumb.url);
+  const filename = normalizeNonEmptyString(normalized.filename || normalized.originalName || normalized.original_name);
+  const type =
+    normalizeNonEmptyString(normalized.type) ||
+    normalizeNonEmptyString(normalized.kind) ||
+    (mimeType.startsWith("image/") ? "image" : mimeType.startsWith("video/") ? "video" : "asset");
+  const adEntry = {
+    creativeAssetId,
+    mimeType,
+    originalName: filename,
+    url: normalizeNonEmptyString(normalized.url),
+    kind: type,
+    updatedAt: normalizeNonEmptyString(normalized.updatedAt) || new Date().toISOString(),
+    ...(thumbnailAssetId || thumbnailUrl
+      ? {
+          thumbnail: {
+            creativeAssetId: thumbnailAssetId,
+            mimeType: normalizeNonEmptyString(thumb.mimeType || thumb.mime_type) || "image/jpeg",
+            originalName: normalizeNonEmptyString(thumb.originalName || thumb.original_name || normalized.thumbnailFilename),
+            url: thumbnailUrl,
+            kind: "image",
+            updatedAt: normalizeNonEmptyString(thumb.updatedAt) || new Date().toISOString(),
+          },
+        }
+      : null),
+  };
+  return {
+    type,
+    assetId: creativeAssetId,
+    creativeAssetId,
+    mimeType,
+    url: adEntry.url,
+    filename,
+    originalName: filename,
+    thumbnailAssetId: thumbnailAssetId || "",
+    creativeThumbnailAssetId: thumbnailAssetId || "",
+    thumbnailUrl,
+    ...(adEntry.thumbnail ? { thumbnail: adEntry.thumbnail } : null),
+    A: adEntry,
+  };
+}
+
+function getMarketMediaEntry(mediaByMarket, marketCode) {
+  const media = normalizeObject(mediaByMarket);
+  const code = String(marketCode || "").trim().toUpperCase();
+  const marketRecord = normalizeObject(media?.[code]);
+  const defaultRecord = normalizeObject(media?.default);
+  const raw = marketRecord.A || marketRecord["1"] || marketRecord.creativeAssetId || marketRecord.assetId ? marketRecord : null;
+  const fallback =
+    defaultRecord.A || defaultRecord["1"] || defaultRecord.creativeAssetId || defaultRecord.assetId ? defaultRecord : null;
+  const record = raw || fallback;
+  if (!record) return {};
+  return normalizeObject(record.A || record["1"] || mediaRecordFromEntry(record)?.A);
+}
+
+function mediaLabel(entry) {
+  const media = normalizeObject(entry);
+  return media.originalName || media.filename || (media.creativeAssetId ? "Asset selecionado" : "Nenhum asset");
+}
+
+function mediaTypeLabel(entry) {
+  const media = normalizeObject(entry);
+  if (media.mimeType?.startsWith("video/") || media.kind === "video" || media.type === "video") return "vídeo";
+  if (media.mimeType?.startsWith("image/") || media.kind === "image" || media.type === "image") return "imagem";
+  return media.creativeAssetId ? "asset" : "link";
+}
+
 function getPayload(template) {
   return normalizeObject(template?.payload);
 }
@@ -257,6 +337,7 @@ function mergeResult(row, result, step) {
     step,
     ok: true,
     error: "",
+    failedStep: "",
     lastResult: result,
   };
 }
@@ -265,12 +346,18 @@ function rowsWith(rows, predicate) {
   return (rows || []).filter(predicate).length;
 }
 
-function actionState({ rows, busyStep, step, runningStep, canRun, completeCount, errorCount, blockedReason }) {
+function actionState({ rows, busyStep, runningStep, canRun, completeCount, errorCount, blockedReason }) {
   if (busyStep === runningStep) return { label: "Em execução", tone: "info", disabled: true, title: "Etapa em execução." };
-  if (errorCount > 0) return { label: "Erro", tone: "bad", disabled: false, title: "Há erro em pelo menos um mercado. Você pode tentar novamente." };
   if (!canRun) return { label: "Bloqueado", tone: "muted", disabled: true, title: blockedReason };
   if (completeCount > 0 && completeCount === rows.length) return { label: "Concluído", tone: "good", disabled: false, title: "Etapa concluída para todos os mercados." };
-  if (completeCount > 0) return { label: "Parcial", tone: "warn", disabled: false, title: "Etapa concluída em parte dos mercados." };
+  if (errorCount > 0 || completeCount > 0) {
+    return {
+      label: "Parcial",
+      tone: "warn",
+      disabled: false,
+      title: errorCount > 0 ? "Alguns mercados tiveram erro. Verifique a tabela abaixo." : "Etapa concluída em parte dos mercados.",
+    };
+  }
   return { label: "Disponível", tone: "info", disabled: false, title: "Pronto para executar." };
 }
 
@@ -366,14 +453,8 @@ export default function TemplatesMercado() {
   const previewTranslation = normalizeObject(translationDrafts?.[previewMarket.code]);
   const previewVariant = normalizeObject(previewTranslation?.adVariants?.[0]);
   const baseVariant = normalizeObject(form.adVariants?.[0]);
-  const previewMedia = normalizeObject(form.mediaByMarket?.[previewMarket.code]?.A || form.mediaByMarket?.default?.A);
-  const previewAssetType = previewMedia.creativeAssetId
-    ? previewMedia.mimeType?.startsWith("video/")
-      ? "vídeo"
-      : previewMedia.mimeType?.startsWith("image/")
-        ? "imagem"
-        : "asset"
-    : "link";
+  const previewMedia = getMarketMediaEntry(form.mediaByMarket, previewMarket.code);
+  const previewAssetType = mediaTypeLabel(previewMedia);
   const backendBase = getBackendBaseUrl();
   const hasBaseText = adVariantsWithText(form.adVariants).length > 0;
   const canUseRows = rows.length > 0;
@@ -382,7 +463,10 @@ export default function TemplatesMercado() {
   const creativeCount = rowsWith(rows, (row) => row.metaCreativeId);
   const adCount = rowsWith(rows, (row) => row.metaAdId);
   const anyMetaCount = rowsWith(rows, (row) => row.metaCampaignId || row.metaAdSetId || row.metaCreativeId || row.metaAdId);
-  const errorCount = rowsWith(rows, (row) => row.error);
+  const campaignErrorCount = rowsWith(rows, (row) => row.error && row.failedStep === "Campaign publicada");
+  const adSetErrorCount = rowsWith(rows, (row) => row.error && row.failedStep === "AdSet publicado");
+  const creativeErrorCount = rowsWith(rows, (row) => row.error && row.failedStep === "Creative publicado");
+  const adErrorCount = rowsWith(rows, (row) => row.error && row.failedStep === "Ad publicado");
   const actions = {
     campaign: actionState({
       rows,
@@ -390,7 +474,7 @@ export default function TemplatesMercado() {
       runningStep: "campaign",
       canRun: canUseRows,
       completeCount: campaignCount,
-      errorCount,
+      errorCount: campaignErrorCount,
       blockedReason: "Gere o operacional primeiro.",
     }),
     adset: actionState({
@@ -399,7 +483,7 @@ export default function TemplatesMercado() {
       runningStep: "adset",
       canRun: canUseRows && campaignCount > 0,
       completeCount: adSetCount,
-      errorCount,
+      errorCount: adSetErrorCount,
       blockedReason: "Publique a Campaign primeiro.",
     }),
     creative: actionState({
@@ -408,7 +492,7 @@ export default function TemplatesMercado() {
       runningStep: "creative",
       canRun: canUseRows && adSetCount > 0,
       completeCount: creativeCount,
-      errorCount,
+      errorCount: creativeErrorCount,
       blockedReason: "Publique o AdSet primeiro.",
     }),
     ad: actionState({
@@ -417,7 +501,7 @@ export default function TemplatesMercado() {
       runningStep: "ad",
       canRun: canUseRows && creativeCount > 0,
       completeCount: adCount,
-      errorCount,
+      errorCount: adErrorCount,
       blockedReason: "Publique o Creative primeiro.",
     }),
     sync: actionState({
@@ -487,19 +571,55 @@ export default function TemplatesMercado() {
     });
   }
 
-  function setMarketMedia(marketCode, adKey, entry) {
+  async function persistMediaByMarket(nextMediaByMarket, message) {
+    const nextForm = { ...form, mediaByMarket: nextMediaByMarket };
+    setForm(nextForm);
+    if (!selectedId) {
+      setNotice(`${message} Salve o template para persistir a mídia.`);
+      return;
+    }
+    const payload = buildPayload(nextForm, selectedPayload);
+    await updateFlowTemplate(selectedId, { name: normalizeNonEmptyString(nextForm.name), payload });
+    setTemplates((prev) =>
+      prev.map((template) =>
+        String(template.id) === String(selectedId) ? { ...template, payload, name: normalizeNonEmptyString(nextForm.name) || template.name } : template,
+      ),
+    );
+    setNotice(`${message} Mídia salva no template.`);
+  }
+
+  async function setMarketMedia(marketCode, adKey, entry) {
     const code = String(marketCode || "").trim().toUpperCase();
     if (!code) return;
-    setForm((prev) => ({
-      ...prev,
-      mediaByMarket: {
-        ...normalizeObject(prev.mediaByMarket),
-        [code]: {
-          ...normalizeObject(prev.mediaByMarket?.[code]),
-          [adKey]: entry,
-        },
+    const record = mediaRecordFromEntry(entry);
+    if (!record) return;
+    const nextMediaByMarket = {
+      ...normalizeObject(form.mediaByMarket),
+      [code]: {
+        ...record,
+        [adKey]: record.A,
       },
-    }));
+    };
+    await persistMediaByMarket(nextMediaByMarket, `Asset definido para ${code} Ad ${adKey}.`);
+  }
+
+  async function setMediaForAllMarkets(entry) {
+    const record = mediaRecordFromEntry(entry);
+    if (!record) return;
+    const targetMarkets = marketOptions.length ? marketOptions : DEFAULT_MARKETS.map(marketInfo);
+    const nextMediaByMarket = { ...normalizeObject(form.mediaByMarket) };
+    for (const market of targetMarkets) {
+      nextMediaByMarket[market.code] = { ...record, A: record.A };
+    }
+    await persistMediaByMarket(nextMediaByMarket, `Asset aplicado em ${targetMarkets.length} mercado(s).`);
+  }
+
+  async function removeMarketMedia(marketCode) {
+    const code = String(marketCode || "").trim().toUpperCase();
+    if (!code) return;
+    const nextMediaByMarket = { ...normalizeObject(form.mediaByMarket) };
+    delete nextMediaByMarket[code];
+    await persistMediaByMarket(nextMediaByMarket, `Asset removido de ${code}.`);
   }
 
   async function uploadAssetForMarket(marketCode, adKey, file) {
@@ -508,17 +628,38 @@ export default function TemplatesMercado() {
       const res = await uploadCreativeAsset(file);
       const entry = withAutoThumbnail(normalizeAsset(res.creativeAsset), res.autoThumbnailAsset);
       if (!entry) throw new Error("Falha ao obter asset após upload.");
-      setMarketMedia(marketCode, adKey, entry);
       setCreativeAssets((prev) => [res.creativeAsset, ...(res.autoThumbnailAsset ? [res.autoThumbnailAsset] : []), ...prev].filter(Boolean));
-      setNotice(`Asset definido para ${marketCode} Ad ${adKey}.`);
+      await setMarketMedia(marketCode, adKey, entry);
     });
   }
 
-  function selectExistingAsset(marketCode, adKey, assetId) {
+  async function uploadAssetForAllMarkets(file) {
+    if (!file) return;
+    await runStep("asset", async () => {
+      const res = await uploadCreativeAsset(file);
+      const entry = withAutoThumbnail(normalizeAsset(res.creativeAsset), res.autoThumbnailAsset);
+      if (!entry) throw new Error("Falha ao obter asset após upload.");
+      setCreativeAssets((prev) => [res.creativeAsset, ...(res.autoThumbnailAsset ? [res.autoThumbnailAsset] : []), ...prev].filter(Boolean));
+      await setMediaForAllMarkets(entry);
+    });
+  }
+
+  async function selectExistingAsset(marketCode, adKey, assetId) {
     const asset = creativeAssets.find((item) => String(item.id) === String(assetId)) ?? null;
     const entry = normalizeAsset(asset);
     if (!entry) return;
-    setMarketMedia(marketCode, adKey, entry);
+    await runStep("asset", async () => {
+      await setMarketMedia(marketCode, adKey, entry);
+    });
+  }
+
+  async function selectExistingAssetForAllMarkets(assetId) {
+    const asset = creativeAssets.find((item) => String(item.id) === String(assetId)) ?? null;
+    const entry = normalizeAsset(asset);
+    if (!entry) return;
+    await runStep("asset", async () => {
+      await setMediaForAllMarkets(entry);
+    });
   }
 
   function updateTranslation(marketCode, index, field, value) {
@@ -629,24 +770,26 @@ export default function TemplatesMercado() {
   async function runRows(step, handler) {
     if (!rows.length) throw new Error("Gere o operacional antes de publicar.");
     for (const row of rows) {
-      updateRow(row.id, (current) => ({ ...current, step: `${step}...`, error: "" }));
+      updateRow(row.id, (current) => ({ ...current, step: `${step}...`, error: "", failedStep: "" }));
       try {
         const result = await handler(row);
         updateRow(row.id, (current) => mergeResult(current, result, step));
       } catch (err) {
-        updateRow(row.id, (current) => ({ ...current, step, ok: false, error: formatBackendError(err), lastResult: err?.body ?? null }));
+        const formatted = formatBackendError(err);
+        updateRow(row.id, (current) => ({ ...current, step, ok: false, error: formatted, failedStep: step, lastResult: err?.body ?? { error: formatted } }));
       }
     }
   }
 
   async function runOneRow(row, step, handler) {
     if (!row?.id) return;
-    updateRow(row.id, (current) => ({ ...current, step: `${step}...`, error: "" }));
+    updateRow(row.id, (current) => ({ ...current, step: `${step}...`, error: "", failedStep: "" }));
     try {
       const result = await handler(row);
       updateRow(row.id, (current) => mergeResult(current, result, step));
     } catch (err) {
-      updateRow(row.id, (current) => ({ ...current, step, ok: false, error: formatBackendError(err), lastResult: err?.body ?? null }));
+      const formatted = formatBackendError(err);
+      updateRow(row.id, (current) => ({ ...current, step, ok: false, error: formatted, failedStep: step, lastResult: err?.body ?? { error: formatted } }));
     }
   }
 
@@ -859,7 +1002,7 @@ export default function TemplatesMercado() {
           </section>
 
           <section className="templatesCard">
-            <div className="templatesCardLabel">2. Mercados e assets</div>
+            <div className="templatesCardLabel">2. Mercados e mídia do anúncio</div>
             <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <button type="button" className="templatesBtnOutline" onClick={() => setSelectedMarkets(DEFAULT_MARKETS)}>Padrão</button>
@@ -879,35 +1022,136 @@ export default function TemplatesMercado() {
                 </div>
               </div>
 
-              <AdvancedDisclosure summary="Assets por mercado">
-                <div className="templatesHintBox">
-                  O cadastro de assets é persistido no template e aparece no preview. O publicador operacional atual cria Creative de link; envio de vídeo/imagem para Meta ainda não está conectado nesse pipeline.
+              <div className="card" style={{ padding: 14, borderColor: "#bfdbfe", background: "#eff6ff" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+                  <div>
+                    <div style={{ fontWeight: 950, color: "#1d4ed8" }}>Mídia do anúncio</div>
+                    <div style={{ marginTop: 4, fontWeight: 800, color: "#1d4ed8", fontSize: 12 }}>
+                      Upload ou seleção de imagem/vídeo. A mídia é salva em `mediaByMarket` e usada no Creative Meta; sem mídia, o Creative fica como link.
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                    <label className="templatesBtnPrimary" style={{ cursor: busyStep ? "not-allowed" : "pointer", opacity: busyStep ? 0.65 : 1 }}>
+                      Adicionar imagem/vídeo
+                      <input
+                        type="file"
+                        accept="video/*,image/*"
+                        disabled={Boolean(busyStep)}
+                        onChange={(e) => {
+                          uploadAssetForAllMarkets(e.target.files?.[0]);
+                          e.target.value = "";
+                        }}
+                        style={{ display: "none" }}
+                      />
+                    </label>
+                    <select
+                      value=""
+                      disabled={Boolean(busyStep)}
+                      onChange={(e) => {
+                        selectExistingAssetForAllMarkets(e.target.value);
+                        e.target.value = "";
+                      }}
+                      className="templatesSelect"
+                      style={{ height: 40, minWidth: 230 }}
+                    >
+                      <option value="">Usar asset existente em todos...</option>
+                      {creativeAssets.map((asset) => (
+                        <option key={asset.id} value={asset.id}>
+                          {asset.original_name || asset.id}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-                <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
-                  {marketOptions.map((market) => {
-                    const entry = normalizeObject(form.mediaByMarket?.[market.code]?.A);
-                    return (
-                      <div key={market.code} className="card" style={{ padding: 12 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                          <div>
+                {!selectedId ? (
+                  <div className="templatesHintBox" style={{ marginTop: 10, background: "#fff" }}>
+                    Para persistir automaticamente a mídia, crie ou salve o template primeiro. Em template novo, a mídia fica no formulário até clicar em Criar template.
+                  </div>
+                ) : null}
+              </div>
+
+              <div style={{ display: "grid", gap: 10 }}>
+                {marketOptions.map((market) => {
+                  const entry = getMarketMediaEntry(form.mediaByMarket, market.code);
+                  const src = entry.url ? `${backendBase}${entry.url}` : "";
+                  const type = mediaTypeLabel(entry);
+                  return (
+                    <div key={market.code} className="card" style={{ padding: 12 }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "minmax(120px, 190px) 1fr", gap: 12, alignItems: "start" }}>
+                        <div>
+                          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                             <strong>{market.code}</strong>
-                            <div className="muted" style={{ fontWeight: 800 }}>{entry.originalName || "Nenhum asset no Ad A"}</div>
+                            <StatusPill tone={entry.creativeAssetId ? "good" : "muted"}>{entry.creativeAssetId ? type : "sem mídia"}</StatusPill>
                           </div>
-                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                            <input type="file" accept="video/*,image/*" onChange={(e) => uploadAssetForMarket(market.code, "A", e.target.files?.[0])} />
-                            <select value="" onChange={(e) => selectExistingAsset(market.code, "A", e.target.value)}>
-                              <option value="">Selecionar asset existente...</option>
-                              {creativeAssets.map((asset) => (
-                                <option key={asset.id} value={asset.id}>{asset.original_name || asset.id}</option>
-                              ))}
-                            </select>
+                          <div className="muted" style={{ marginTop: 6, fontWeight: 800 }}>{market.name}</div>
+                          <div className="muted" style={{ fontWeight: 750 }}>{market.language}</div>
+                        </div>
+                        <div style={{ display: "grid", gap: 10 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                            <div>
+                              <div style={{ fontWeight: 900 }}>{mediaLabel(entry)}</div>
+                              <div className="muted" style={{ marginTop: 4, fontWeight: 800 }}>
+                                {entry.creativeAssetId ? `assetId: ${entry.creativeAssetId}` : "Nenhum asset selecionado. Creative será criado como link."}
+                              </div>
+                              {entry.thumbnail?.creativeAssetId ? (
+                                <div className="muted" style={{ marginTop: 4, fontWeight: 800 }}>
+                                  thumbnail: {entry.thumbnail.originalName || entry.thumbnail.creativeAssetId}
+                                </div>
+                              ) : type === "vídeo" ? (
+                                <div style={{ marginTop: 4, color: "#92400e", fontWeight: 850, fontSize: 12 }}>
+                                  Vídeo sem thumbnail. Envie um vídeo que gere thumbnail automaticamente ou selecione outro asset.
+                                </div>
+                              ) : null}
+                            </div>
+                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                              <label className="templatesBtnOutline" style={{ cursor: busyStep ? "not-allowed" : "pointer", opacity: busyStep ? 0.65 : 1 }}>
+                                Trocar mídia
+                                <input
+                                  type="file"
+                                  accept="video/*,image/*"
+                                  disabled={Boolean(busyStep)}
+                                  onChange={(e) => {
+                                    uploadAssetForMarket(market.code, "A", e.target.files?.[0]);
+                                    e.target.value = "";
+                                  }}
+                                  style={{ display: "none" }}
+                                />
+                              </label>
+                              <select
+                                value=""
+                                disabled={Boolean(busyStep)}
+                                onChange={(e) => {
+                                  selectExistingAsset(market.code, "A", e.target.value);
+                                  e.target.value = "";
+                                }}
+                                className="templatesSelect"
+                                style={{ height: 40, minWidth: 220 }}
+                              >
+                                <option value="">Selecionar asset existente...</option>
+                                {creativeAssets.map((asset) => (
+                                  <option key={asset.id} value={asset.id}>
+                                    {asset.original_name || asset.id}
+                                  </option>
+                                ))}
+                              </select>
+                              <button type="button" className="templatesBtnOutline" disabled={Boolean(busyStep) || !entry.creativeAssetId} onClick={() => removeMarketMedia(market.code)}>
+                                Remover
+                              </button>
+                            </div>
                           </div>
+                          {src && entry.mimeType?.startsWith("video/") ? (
+                            <CompactVideoPreview src={src} label={`${market.code} Ad A`} size="sm" />
+                          ) : src && entry.mimeType?.startsWith("image/") ? (
+                            <img src={src} alt={`${market.code} Ad A`} style={{ width: 180, maxWidth: "100%", borderRadius: 8, border: "1px solid #e5e7eb" }} />
+                          ) : (
+                            <div className="templatesHintBox">Sem preview de mídia para este mercado.</div>
+                          )}
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              </AdvancedDisclosure>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </section>
 
@@ -1065,6 +1309,11 @@ export default function TemplatesMercado() {
                       <td>
                         <div style={{ display: "grid", gap: 6 }}>
                           <StatusPill tone={row.ok ? "info" : "bad"}>{row.error ? "erro" : row.step || "—"}</StatusPill>
+                          {row.error ? (
+                            <div style={{ color: "#991b1b", fontWeight: 850, fontSize: 12 }}>
+                              Falhou em: {row.failedStep || row.step || "etapa desconhecida"}
+                            </div>
+                          ) : null}
                           <div className="muted" style={{ fontWeight: 800, fontSize: 12 }}>
                             configured: {row.configuredStatus || "—"} · effective: {row.effectiveStatus || "—"}
                           </div>
@@ -1093,7 +1342,6 @@ export default function TemplatesMercado() {
                             Ad
                           </button>
                         </div>
-                        {row.error ? <div style={{ marginTop: 6, color: "#991b1b", fontWeight: 800 }}>{row.error}</div> : null}
                       </td>
                       <td>
                         <AdvancedDisclosure summary="Abrir JSON">
