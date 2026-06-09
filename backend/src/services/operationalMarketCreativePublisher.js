@@ -149,7 +149,18 @@ async function fetchTemplatePayload(client, campaignConfig) {
     `,
     [templateId]
   )
-  return rowCount > 0 ? normalizeOptionalObject(rows[0]?.payload) : {}
+  if (rowCount > 0) return normalizeOptionalObject(rows[0]?.payload)
+
+  const flowResult = await client.query(
+    `
+      SELECT payload
+      FROM flow_templates
+      WHERE id = $1::uuid
+      LIMIT 1
+    `,
+    [templateId]
+  )
+  return flowResult.rowCount > 0 ? normalizeOptionalObject(flowResult.rows[0]?.payload) : {}
 }
 
 async function findGeneratedCampaign(client, row) {

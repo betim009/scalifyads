@@ -9,6 +9,7 @@ import {
   insertOperationalMarketGeneration,
   listOperationalMarketGenerations
 } from '../services/operationalMarketGenerations.js'
+import { resolveAuthUser } from '../lib/internalAuth.js'
 
 const ALLOWED_STATUSES = new Set(['PAUSED', 'ACTIVE', 'ARCHIVED'])
 const ALLOWED_OPS_STATES = new Set(['draft', 'validated', 'published'])
@@ -70,10 +71,38 @@ function resolveTemplateOperationalBase(template) {
   return {
     templateId: template.id,
     templateName: template.name,
+    templateSource: template.source ?? 'campaign_templates',
     campaignName,
     niche,
     payload
   }
+}
+
+async function fetchOperationalTemplate(pool, req, templateId) {
+  const campaignTemplate = await pool.query(
+    `
+      SELECT id, name, payload, 'campaign_templates' AS source, created_at
+      FROM campaign_templates
+      WHERE id = $1::uuid
+      LIMIT 1
+    `,
+    [templateId]
+  )
+  if (campaignTemplate.rowCount > 0) return campaignTemplate.rows[0]
+
+  const auth = await resolveAuthUser(pool, req)
+  if (!auth?.userId) return null
+
+  const flowTemplate = await pool.query(
+    `
+      SELECT id, name, payload, 'flow_templates' AS source, created_at
+      FROM flow_templates
+      WHERE id = $1::uuid AND user_id = $2::uuid
+      LIMIT 1
+    `,
+    [templateId, auth.userId]
+  )
+  return flowTemplate.rows?.[0] ?? null
 }
 
 async function createUniqueSlug(pool, base) {
@@ -248,18 +277,11 @@ export function generatedCampaignsRouter() {
 
       let templateBase = null
       if (templateIdRaw) {
-        const { rows, rowCount } = await pool.query(
-          `
-            SELECT id, name, payload, created_at
-            FROM campaign_templates
-            WHERE id = $1::uuid
-          `,
-          [templateIdRaw]
-        )
-        if (rowCount === 0) {
+        const template = await fetchOperationalTemplate(pool, req, templateIdRaw)
+        if (!template) {
           return jsonError(res, 404, 'Campaign template not found')
         }
-        templateBase = resolveTemplateOperationalBase(rows[0])
+        templateBase = resolveTemplateOperationalBase(template)
         if (!templateBase?.niche) {
           return jsonError(res, 400, 'Invalid template operational niche')
         }
@@ -319,7 +341,7 @@ export function generatedCampaignsRouter() {
                 niche: generatedInput.niche,
                 templateId: templateBase?.templateId ?? null,
                 templateName: templateBase?.templateName ?? null,
-                templateSource: templateBase ? 'campaign_templates' : null,
+                templateSource: templateBase?.templateSource ?? null,
                 metaPublishing: false
               })
             ]
@@ -341,7 +363,8 @@ export function generatedCampaignsRouter() {
             ? {
                 id: templateBase.templateId,
                 name: templateBase.templateName,
-                niche: templateBase.niche
+                niche: templateBase.niche,
+                source: templateBase.templateSource
               }
             : null,
           operational_market_generations: created,

@@ -40,8 +40,15 @@ export async function applyCampaignTemplate(templateId, { name, countryCode, met
 }
 
 export async function generateCampaignTemplateTranslationsByMarket(templateId, { markets, overwrite = false } = {}) {
+  const normalizedMarkets = Array.from(
+    new Set(
+      (Array.isArray(markets) ? markets : [])
+        .map((market) => String(market || "").trim().toUpperCase())
+        .filter(Boolean)
+    )
+  );
   const data = await apiPost(`/api/campaign-templates/${encodeURIComponent(String(templateId))}/translations-by-market/generate`, {
-    markets: Array.isArray(markets) ? markets : [],
+    markets: normalizedMarkets,
     overwrite: Boolean(overwrite),
   });
   return {

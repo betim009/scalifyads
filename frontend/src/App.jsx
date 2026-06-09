@@ -19,6 +19,7 @@ import PoliticaPrivacidade from "./pages/PoliticaPrivacidade.jsx";
 import TermosDeUso from "./pages/TermosDeUso.jsx";
 import ExclusaoDados from "./pages/ExclusaoDados.jsx";
 import Templates from "./pages/Templates.jsx";
+import TemplatesMercado from "./pages/TemplatesMercado.jsx";
 
 export default function App() {
   return (
@@ -139,6 +140,14 @@ export default function App() {
           element={
             <RequireAuth>
               <Templates />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/templates-mercado"
+          element={
+            <RequireAuth>
+              <TemplatesMercado />
             </RequireAuth>
           }
         />

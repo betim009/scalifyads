@@ -44,6 +44,9 @@ export default function Header() {
               <TopPillLink to="/templates" icon={<DescriptionIcon fontSize="small" />}>
                 Templates
               </TopPillLink>
+              <TopPillLink to="/templates-mercado" icon={<PublicIcon fontSize="small" />}>
+                Templates Mercado
+              </TopPillLink>
               <TopPillLink to="/campaign-flow" icon={<RocketLaunchIcon fontSize="small" />}>
                 Fluxo de campanha
               </TopPillLink>

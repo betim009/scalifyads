@@ -128,6 +128,18 @@ export function operationalMarketGenerationsRouter() {
           [templateId]
         )
         template = templateResult.rows?.[0] ?? null
+        if (!template) {
+          const flowResult = await pool.query(
+            `
+              SELECT id, name, payload, created_at
+              FROM flow_templates
+              WHERE id = $1::uuid
+              LIMIT 1
+            `,
+            [templateId]
+          )
+          template = flowResult.rows?.[0] ?? null
+        }
       }
 
       const preview = buildOperationalPublishPreview({

@@ -5,6 +5,7 @@ import { jsonError, parseLimit } from '../lib/http.js'
 import { slugify } from '../lib/slugify.js'
 import { isUuid } from '../lib/validate.js'
 import { normalizeMarketPersistenceInput } from '../lib/marketTargeting.js'
+import { resolveAuthUser } from '../lib/internalAuth.js'
 import {
   generateTranslationsByMarket,
   validateCampaignTemplatePayload
@@ -40,6 +41,39 @@ function normalizeCountryCode(value) {
 
 export function campaignTemplatesRouter() {
   const router = Router()
+
+  async function fetchEditableTemplate(client, req, templateId) {
+    const campaignTemplate = await client.query(
+      `
+        SELECT id, name, payload, created_at, NULL::timestamptz AS updated_at
+        FROM campaign_templates
+        WHERE id = $1::uuid
+        FOR UPDATE
+      `,
+      [templateId]
+    )
+    if (campaignTemplate.rowCount > 0) {
+      return { source: 'campaign_templates', row: campaignTemplate.rows[0] }
+    }
+
+    const auth = await resolveAuthUser(getPool(), req)
+    if (!auth?.userId) return null
+
+    const flowTemplate = await client.query(
+      `
+        SELECT id, name, payload, created_at, updated_at
+        FROM flow_templates
+        WHERE id = $1::uuid AND user_id = $2::uuid
+        FOR UPDATE
+      `,
+      [templateId, auth.userId]
+    )
+    if (flowTemplate.rowCount > 0) {
+      return { source: 'flow_templates', row: flowTemplate.rows[0] }
+    }
+
+    return null
+  }
 
   router.get(
     '/',
@@ -269,21 +303,13 @@ export function campaignTemplatesRouter() {
       try {
         await client.query('BEGIN')
 
-        const { rows, rowCount } = await client.query(
-          `
-            SELECT id, name, payload, created_at
-            FROM campaign_templates
-            WHERE id = $1::uuid
-            FOR UPDATE
-          `,
-          [templateId]
-        )
-        if (rowCount === 0) {
+        const found = await fetchEditableTemplate(client, req, templateId)
+        if (!found) {
           await client.query('ROLLBACK')
           return jsonError(res, 404, 'Campaign template not found')
         }
 
-        const template = rows[0]
+        const template = found.row
         const payload = template?.payload && typeof template.payload === 'object' && !Array.isArray(template.payload)
           ? template.payload
           : {}
@@ -298,20 +324,31 @@ export function campaignTemplatesRouter() {
           return jsonError(res, 400, 'Invalid translationsByMarket generation input', { errors: generated.errors })
         }
 
-        const updated = await client.query(
-          `
-            UPDATE campaign_templates
-            SET payload = $2::jsonb
-            WHERE id = $1::uuid
-            RETURNING id, name, payload, created_at
-          `,
-          [templateId, JSON.stringify(generated.payload)]
-        )
+        const updated = found.source === 'flow_templates'
+          ? await client.query(
+              `
+                UPDATE flow_templates
+                SET payload = $2::jsonb, updated_at = now()
+                WHERE id = $1::uuid
+                RETURNING id, name, payload, created_at, updated_at
+              `,
+              [templateId, JSON.stringify(generated.payload)]
+            )
+          : await client.query(
+              `
+                UPDATE campaign_templates
+                SET payload = $2::jsonb
+                WHERE id = $1::uuid
+                RETURNING id, name, payload, created_at, NULL::timestamptz AS updated_at
+              `,
+              [templateId, JSON.stringify(generated.payload)]
+            )
 
         await client.query('COMMIT')
         return res.json({
           ok: true,
           campaign_template: updated.rows[0],
+          source: found.source,
           generated: generated.generated,
           preserved: generated.preserved,
           overwrite
