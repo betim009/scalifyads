@@ -14,7 +14,7 @@ export const CORE_OPERATIONAL_LANGUAGE_LABELS = [
 ];
 
 const LANGUAGE_META = {
-  Português: { targetLanguage: "pt-BR", icon: "🇧🇷", mediaGroup: "PT", translationSupported: true },
+  Português: { targetLanguage: "pt", icon: "🇧🇷", mediaGroup: "PT", translationSupported: true },
   Inglês: { targetLanguage: "en", icon: "🌐", mediaGroup: "EN", translationSupported: true },
   Árabe: { targetLanguage: "ar", icon: "🌍", mediaGroup: "AR", translationSupported: true },
   Espanhol: { targetLanguage: "es", icon: "🇪🇸", mediaGroup: "ES", translationSupported: true },

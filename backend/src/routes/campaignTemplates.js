@@ -351,6 +351,7 @@ export function campaignTemplatesRouter() {
           source: found.source,
           generated: generated.generated,
           preserved: generated.preserved,
+          base_markets: generated.baseMarkets,
           overwrite
         })
       } catch (err) {

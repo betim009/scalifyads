@@ -2,6 +2,7 @@ import { getOperationalMarketByCode, getOperationalMarketLanguageGroup, validate
 import { getOperationalLanguageByLabel } from './operationalLanguages.js'
 
 const TRANSLATABLE_AD_FIELDS = ['primaryText', 'headline', 'description']
+const BASE_MARKET_CODES = new Set(['BR'])
 
 function isPlainObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -38,7 +39,8 @@ export function resolveMarketTranslationLanguage(marketCode) {
     marketCode: market.code,
     marketName: market.name,
     language: operationalLanguage?.label || language,
-    targetLanguage
+    targetLanguage,
+    usesBaseText: BASE_MARKET_CODES.has(market.code)
   }
 }
 
@@ -98,7 +100,6 @@ export function validateCampaignTemplatePayload(payload) {
 export async function generateTranslationsByMarket({ payload, markets, overwrite = false, translateText } = {}) {
   const errors = []
   if (!isPlainObject(payload)) errors.push('payload must be an object')
-  if (typeof translateText !== 'function') errors.push('translateText must be a function')
 
   const marketCodes = normalizeMarkets(markets)
   if (marketCodes.length === 0) errors.push('markets must include at least one marketCode')
@@ -113,23 +114,45 @@ export async function generateTranslationsByMarket({ payload, markets, overwrite
       errors.push(`Invalid marketCode: ${marketCode}`)
       continue
     }
-    if (!resolved.targetLanguage) {
+    if (!resolved.usesBaseText && !resolved.targetLanguage) {
       errors.push(`Unsupported translation language for ${marketCode}: ${resolved.language ?? 'unknown'}`)
       continue
     }
     marketLanguages.push(resolved)
   }
 
+  if (marketLanguages.some((market) => !market.usesBaseText) && typeof translateText !== 'function') {
+    errors.push('translateText must be a function when a selected market requires external translation')
+  }
+
   if (errors.length > 0) {
-    return { ok: false, errors, payload: payload ?? null, generated: [] }
+    return { ok: false, errors, payload: payload ?? null, generated: [], preserved: [], baseMarkets: [] }
   }
 
   const currentTranslations = isPlainObject(payload.translationsByMarket) ? payload.translationsByMarket : {}
   const nextTranslationsByMarket = { ...currentTranslations }
   const generated = []
   const preserved = []
+  const baseMarkets = []
 
   for (const market of marketLanguages) {
+    if (market.usesBaseText) {
+      nextTranslationsByMarket[market.marketCode] = {
+        source: 'base',
+        language: market.language,
+        targetLanguage: market.targetLanguage,
+        adVariants: adVariants.map((variant) => {
+          const baseVariant = {}
+          for (const field of TRANSLATABLE_AD_FIELDS) {
+            if (variant[field] !== undefined) baseVariant[field] = variant[field]
+          }
+          return baseVariant
+        })
+      }
+      baseMarkets.push(market.marketCode)
+      continue
+    }
+
     if (!overwrite && isPlainObject(currentTranslations[market.marketCode])) {
       preserved.push(market.marketCode)
       continue
@@ -157,8 +180,12 @@ export async function generateTranslationsByMarket({ payload, markets, overwrite
             field
           })
         } catch (err) {
+          const providerMessage = String(err?.message ?? err)
+          const friendlyReason = /not supported|unsupported/i.test(providerMessage)
+            ? `target language "${market.targetLanguage}" is not supported by the translation service`
+            : providerMessage
           errors.push(
-            `Translation failed for ${market.marketCode} (${market.language}/${market.targetLanguage}) adVariants.${translatedVariants.length}.${field}: ${err?.message ?? err}`
+            `Translation failed for ${market.marketCode} (${market.language}/${market.targetLanguage}) adVariants.${translatedVariants.length}.${field}: ${friendlyReason}`
           )
           translatedVariant[field] = ''
         }
@@ -181,7 +208,7 @@ export async function generateTranslationsByMarket({ payload, markets, overwrite
   }
 
   if (errors.length > 0) {
-    return { ok: false, errors, payload, generated, preserved }
+    return { ok: false, errors, payload, generated, preserved, baseMarkets }
   }
 
   const nextPayload = {
@@ -190,7 +217,7 @@ export async function generateTranslationsByMarket({ payload, markets, overwrite
   }
   const validation = validateCampaignTemplatePayload(nextPayload)
   if (!validation.ok) {
-    return { ok: false, errors: validation.errors, payload, generated, preserved }
+    return { ok: false, errors: validation.errors, payload, generated, preserved, baseMarkets }
   }
 
   return {
@@ -198,6 +225,7 @@ export async function generateTranslationsByMarket({ payload, markets, overwrite
     errors: [],
     payload: nextPayload,
     generated,
-    preserved
+    preserved,
+    baseMarkets
   }
 }

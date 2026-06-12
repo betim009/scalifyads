@@ -56,6 +56,7 @@ export async function generateCampaignTemplateTranslationsByMarket(templateId, {
     campaignTemplate: data?.campaign_template ?? null,
     generated: Array.isArray(data?.generated) ? data.generated : [],
     preserved: Array.isArray(data?.preserved) ? data.preserved : [],
+    baseMarkets: Array.isArray(data?.base_markets) ? data.base_markets : [],
     overwrite: Boolean(data?.overwrite),
   };
 }

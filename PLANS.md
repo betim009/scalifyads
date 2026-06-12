@@ -450,7 +450,7 @@ Decisões tomadas:
 - `/templates-mercado` passa a usar `operationalLanguageKeys` do usuário quando disponível; se a informação não existir, mantém fallback com todos os idiomas para compatibilidade.
 - Templates antigos com mercados de idioma adicional continuam abrindo porque o idioma de mercados já selecionados é incluído no modal mesmo se estiver inativo.
 - Países no perfil foram mantidos como seção de compatibilidade para endpoints/fluxos antigos.
-- Tradução por mercado no backend passou a resolver `targetLanguage` pela fonte de idiomas operacionais, preservando `BR` como `Português`/`pt-BR`.
+- Tradução por mercado no backend resolve `targetLanguage` pela fonte de idiomas operacionais; desde a P56, Português usa `pt` e `BR` usa explicitamente o texto base sem tradução externa.
 - Upload por idioma (`videoPT1.mp4`, `videoAR1.mp4`, etc.) foi documentado como pendência P51; compatibilidade atual `videoBR1`, `videoAE1`, `videoEN1` permanece.
 
 Implementação:
@@ -490,7 +490,7 @@ Arquivos alterados:
 
 Idiomas principais:
 
-- Inglês (`en`), Espanhol (`es`), Árabe (`ar`), Português (`pt-BR`), Francês (`fr`), Alemão (`de`), Russo (`ru`), Chinês Tradicional (Taiwan) (`zh-Hant`), Hindi (`hi`), Turco (`tr`).
+- Inglês (`en`), Espanhol (`es`), Árabe (`ar`), Português (`pt`), Francês (`fr`), Alemão (`de`), Russo (`ru`), Chinês Tradicional (Taiwan) (`zh-Hant`), Hindi (`hi`), Turco (`tr`).
 
 Idiomas adicionais detectados:
 
@@ -1120,6 +1120,124 @@ Validações executadas:
 - [2026-06-12 11:48] Auditoria textual confirmou ausência de `Ver detalhes`, `Duplicar`, `Duplicando...` e `campaignActions` na Home.
 - [2026-06-12 11:48] Auditoria estática confirmou nome, status, quantidade de campanhas e data de criação preservados no `CampaignCard`.
 - [2026-06-12 11:48] Auditoria estática confirmou rotas `/campanhas/:id`, `/campanhas/:id/duplicar`, páginas de detalhe/duplicação e serviço `duplicateCampaign` preservados.
+
+## P56 — Corrigir geração de traduções quando BR está selecionado
+
+Última atualização: [2026-06-12 12:29]
+
+Status: Concluída.
+
+Objetivo:
+Corrigir a geração de `translationsByMarket` para tratar `BR` como mercado de origem em Português do Brasil, sem chamada externa de tradução e sem bloquear traduções dos demais mercados selecionados.
+
+Contexto:
+
+- Em produção, `Gerar traduções` em `/templates-mercado` falha quando `BR` está selecionado.
+- O backend retorna `Invalid translationsByMarket generation input`.
+- O detalhe reportado é `Translation failed for BR (Português/pt-BR) ...: pb is not supported` para os campos dos Ads 1-5.
+- `BR` representa o texto base do template e deve continuar disponível no template e na publicação, mas não deve ser enviado ao LibreTranslate.
+
+Causa provável:
+
+- O gerador trata todos os mercados selecionados como destinos de tradução, incluindo `BR`.
+- O catálogo operacional usa `pt-BR` como `targetLanguage` de Português; a integração/provider pode normalizar esse valor incorretamente para `pb`.
+- Falta uma regra explícita no backend para identificar mercados que usam o texto base e ignorar tradução externa.
+
+Riscos:
+
+- Alterar o catálogo de idiomas e quebrar o bootstrap/configuração da P50.
+- Alterar agrupamento ou reconhecimento de mídia por idioma da P51.
+- Remover `BR` do estado selecionado ou do fluxo de publicação ao pular tradução.
+- Sobrescrever traduções existentes de outros mercados ao regerar.
+- Transformar uma falha isolada de idioma em falha de toda a geração sem mensagem operacional clara.
+
+Critérios de aceite:
+
+- Somente `BR`: nenhuma chamada externa; template salvo; resposta amigável informando que BR usa o texto base.
+- `BR` + francês: BR usa o texto base e o mercado francês é traduzido.
+- `BR` + espanhol + francês: somente espanhol e francês chamam tradução; todos os mercados permanecem selecionados.
+- Regerar após editar o texto base atualiza traduções e mantém BR como origem.
+- Nunca enviar `pb` ou `pt-BR` ao LibreTranslate; quando Português for destino real, usar `pt`.
+- Idioma sem suporte retorna erro amigável com mercado e idioma.
+- UI não recarrega, preserva seleção e aplica o resultado imediatamente.
+- Os 10 idiomas principais mantêm alvo válido.
+- Validações P50 e P51 continuam passando.
+- `npm --prefix frontend run build` passa.
+- Arquivos backend alterados passam em `node --check`.
+
+Escopo previsto:
+
+- `backend/src/lib/campaignTemplateTranslations.js`
+- `backend/src/lib/operationalLanguages.js`
+- `frontend/src/utils/operationalLanguages.js`
+- Validação automatizada de geração com BR.
+- Ajustes de UI/serviço apenas se necessários para a mensagem do cenário somente BR.
+- `PLANS.md`
+
+Não alterar:
+
+- Publicação Meta, status `PAUSED`, UTM/tracking, compliance regional P44, upload de mídia P51, diagnóstico Meta, credenciais/tokens, rotas públicas ou banco.
+
+Causa raiz confirmada:
+
+- `resolveMarketTranslationLanguage` resolvia `BR` como `Português` e o gerador tratava o mercado como destino comum.
+- O catálogo operacional fornecia `pt-BR` ao provider.
+- Em produção, o provider normalizava/rejeitava esse destino como `pb`, repetindo a falha para os três campos dos Ads 1-5.
+- Não existia uma regra de domínio que identificasse `BR` como mercado base.
+
+Decisões tomadas:
+
+- Adotada a abordagem B: criar `translationsByMarket.BR` explicitamente.
+- A entrada de BR copia `primaryText`, `headline` e `description` dos Ads base e recebe `source: "base"`, `language: "Português"` e `targetLanguage: "pt"`.
+- BR é sempre reconstruído a partir do texto base, inclusive em regeração, para impedir tradução antiga ou inválida.
+- BR não entra em `generated`; o backend retorna `base_markets` para distinguir mercados base dos traduzidos.
+- O catálogo backend/frontend de Português passou de `pt-BR` para `pt`.
+- Mensagens de provider para idioma não suportado são convertidas em erro com mercado, idioma e alvo, sem propagar aliases confusos do provider.
+- A UI mantém a seleção e o estado local existentes da P54 e mostra mensagem específica quando apenas BR é processado.
+
+Implementação:
+
+- `generateTranslationsByMarket` passou a identificar mercados base antes de exigir `translateText`.
+- Cenário somente BR funciona sem função/provider externo.
+- Mercados que exigem tradução continuam usando o fluxo existente e podem ser combinados com BR.
+- Contrato HTTP passou a retornar `base_markets`; serviço frontend normaliza como `baseMarkets`.
+- `/templates-mercado` informa `BR usa o texto base em Português. Nenhuma tradução externa necessária.` quando aplicável.
+- Criado script isolado sem banco cobrindo BR, BR + francês, BR + espanhol + francês, regeração, 5 Ads, targets dos 10 idiomas principais e erro amigável de idioma não suportado.
+- Auditoria do `PLANS.md` corrigiu referências atuais da P50 que ainda documentavam Português como `pt-BR`.
+
+Arquivos alterados:
+
+- `PLANS.md`
+- `backend/src/lib/campaignTemplateTranslations.js`
+- `backend/src/lib/operationalLanguages.js`
+- `backend/src/routes/campaignTemplates.js`
+- `backend/scripts/validate-br-base-translations.js`
+- `frontend/src/utils/operationalLanguages.js`
+- `frontend/src/services/campaignTemplates.js`
+- `frontend/src/pages/TemplatesMercado.jsx`
+
+Validações executadas:
+
+- [2026-06-12 12:26] `node backend/scripts/validate-br-base-translations.js` (OK; BR sozinho sem provider, BR + FRN, BR + ESM + FRN, regeração dos Ads 1-5, zero chamadas para BR, Português `pt`, 10 idiomas principais válidos e erro amigável).
+- [2026-06-12 12:26] `node --check backend/src/lib/campaignTemplateTranslations.js && node --check backend/src/lib/operationalLanguages.js && node --check backend/src/routes/campaignTemplates.js && node --check backend/scripts/validate-br-base-translations.js` (OK).
+- [2026-06-12 12:27] `npm --prefix frontend run validate:market-groups` (OK; P50 preservada: 100 mercados, 35 idiomas, 10 principais e Português com target `pt`).
+- [2026-06-12 12:27] `npm --prefix frontend run validate:media-groups` (OK; P51 preservada, incluindo aliases `BR/PT`, `AE/AR` e Ads A-E).
+- [2026-06-12 12:27] `npm --prefix frontend run build` (OK; aviso existente de chunk acima de 500 kB).
+- [2026-06-12 12:29] Auditoria textual confirmou ausência de `pb` e `pt-BR` como targets nos catálogos/gerador; usos restantes de `pt-BR` são locale de ordenação/formatação ou texto histórico do erro.
+- [2026-06-12 12:29] Auditoria estática confirmou que `generateTranslations` não recarrega a página e reaplica template, traduções e mercados selecionados imediatamente.
+- [2026-06-12 12:29] `git diff --check` (OK).
+
+Limitações:
+
+- Não houve chamada real ao LibreTranslate de produção; o provider foi validado por spy/falha simulada.
+- Não houve teste HTTP com banco e template persistido porque a validação nova foi desenhada para rodar sem `DATABASE_URL`.
+- Não houve teste manual autenticado no navegador com cliques reais em `/templates-mercado`.
+
+Próximos passos:
+
+- Após deploy, validar uma geração real com `BR`, `BR + FRN` e `BR + ESM + FRN`.
+- Confirmar no ambiente de produção que o LibreTranslate recebe somente `fr`/`es` nesses cenários e nenhuma requisição para BR.
+- Monitorar a primeira regeração de um template existente que já tenha entrada BR inválida; a nova geração deve substituí-la por `source: "base"`.
 
 ## Snapshot (Estado Atual)
 

@@ -1650,7 +1650,12 @@ export default function TemplatesMercado() {
         nextSelectedMarkets: markets,
       });
       setTranslationsDirty(false);
-      setNotice(`Traduções atualizadas: ${res.generated.length}.`);
+      if (res.generated.length === 0 && res.baseMarkets.includes("BR")) {
+        setNotice("BR usa o texto base em Português. Nenhuma tradução externa necessária.");
+      } else {
+        const baseNotice = res.baseMarkets.includes("BR") ? " BR usa o texto base." : "";
+        setNotice(`Traduções atualizadas: ${res.generated.length}.${baseNotice}`);
+      }
     });
   }
 
