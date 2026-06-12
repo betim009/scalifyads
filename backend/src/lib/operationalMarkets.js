@@ -1,3 +1,8 @@
+import {
+  buildMarketTracking,
+  generateMarketParam as buildGeneratedMarketParam
+} from './marketTracking.js';
+
 export const OFFICIAL_OPERATIONAL_MARKETS = [
   { code: "ARM", name: "Árabe Mundo", language: "Árabe", includedLocations: ["Worldwide"], excludedLocations: ["Taiwan"] },
   { code: "AREU", name: "Árabe Europa", language: "Árabe", includedLocations: ["Europa"], excludedLocations: ["Albânia", "Bósnia e Herzegovina", "Montenegro", "Macedônia do Norte", "Kosovo"] },
@@ -108,6 +113,14 @@ export const OPERATIONAL_MARKETS = OFFICIAL_OPERATIONAL_MARKETS.map((market) => 
 
 export const OPERATIONAL_MARKET_CODES = OPERATIONAL_MARKETS.map((market) => market.code);
 
+export function getOperationalMarketLanguageGroup(market) {
+  const language = normalizeText(market?.language)
+  const code = normalizeText(market?.code).toUpperCase()
+  if (/^portugu[eê]s/i.test(language)) return 'Português'
+  if (code === 'BR' && /^todos os idiomas$/i.test(language)) return 'Português'
+  return language || 'Sem idioma'
+}
+
 export const MARKET_TARGETING_TYPES = {
   SIMPLE_LOCATION: "simple_location",
   LOCATION_GROUP: "location_group",
@@ -197,20 +210,24 @@ export function getMarketTargetingClassificationSummary(markets = OPERATIONAL_MA
 }
 
 export function generateMarketParam(marketCode, nicheParam) {
-  const code = normalizeText(marketCode).toUpperCase();
-  const niche = normalizeText(nicheParam);
-  if (!code || !niche) return "";
-  return `${code}-${niche}-FB`;
+  return buildGeneratedMarketParam(marketCode, nicheParam) ?? "";
 }
 
 export function generateTrackingParams(marketCode, nicheParam) {
-  const code = normalizeText(marketCode).toUpperCase();
-  return {
-    utm_source: "facebook",
-    utm_medium: "cpa",
-    utm_campaign: code,
-    src: generateMarketParam(code, nicheParam),
-  };
+  const tracking = buildMarketTracking({ marketCode, nicheParam });
+  return tracking
+    ? {
+        utm_source: tracking.utm_source,
+        utm_medium: tracking.utm_medium,
+        utm_campaign: tracking.utm_campaign,
+        src: tracking.src,
+      }
+    : {
+        utm_source: "facebook",
+        utm_medium: "cpa",
+        utm_campaign: normalizeText(marketCode).toUpperCase(),
+        src: "",
+      };
 }
 
 export function resolveSlug(marketCode, brSlug, internationalSlug) {
@@ -237,6 +254,8 @@ export function buildFinalUrl(baseDomain, slug, trackingParams) {
   });
   return url.toString();
 }
+
+export { buildMarketTracking };
 
 export function buildMarketPreview({ markets, nicheParam, brSlug, internationalSlug, baseDomain }) {
   return (markets || [])

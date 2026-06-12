@@ -5,8 +5,6 @@ import {
   PersonOutlineIcon,
   PercentIcon,
   PublicIcon,
-  RocketLaunchIcon,
-  ScienceIcon,
 } from "../styles/icons.js";
 
 function TopPillLink({ to, icon, children }) {
@@ -30,46 +28,27 @@ export default function Header() {
       <div className="container">
         <div className="appHeaderInner">
           <NavLink to="/" className="brand" style={{ textDecoration: "none", color: "inherit" }} aria-label="Ir para Home">
-            <div className="logoBox" aria-hidden="true">
-              <PublicIcon fontSize="medium" style={{ color: "#ffffff" }} />
-            </div>
-            <div>
-              <h1 className="brandTitle">ScalifyAds</h1>
-              <p className="brandSubtitle">Automação global de campanhas</p>
-            </div>
+            <h1 className="brandTitle">ScalifyAds</h1>
           </NavLink>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", justifyContent: "flex-end" }}>
-            <nav className="topNav" aria-label="Navegação principal">
-              <TopPillLink to="/templates" icon={<DescriptionIcon fontSize="small" />}>
-                Templates
-              </TopPillLink>
-              <TopPillLink to="/templates-mercado" icon={<PublicIcon fontSize="small" />}>
-                Templates Mercado
-              </TopPillLink>
-              <TopPillLink to="/campaign-flow" icon={<RocketLaunchIcon fontSize="small" />}>
-                Fluxo de campanha
-              </TopPillLink>
-              <TopPillLink to="/roi-operacional" icon={<PercentIcon fontSize="small" />}>
-                ROI operacional
-              </TopPillLink>
-              <TopPillLink to="/profile" icon={<PersonOutlineIcon fontSize="small" />}>
-                Perfil
-              </TopPillLink>
-              <TopPillLink to="/logout" icon={<LogoutIcon fontSize="small" />}>
-                Sair
-              </TopPillLink>
-            </nav>
-
-            <NavLink
-              to="/meta-test"
-              className="techLink"
-              title="Área técnica/diagnóstico"
-            >
-              <ScienceIcon fontSize="small" />
-              Diagnóstico técnico
-            </NavLink>
-          </div>
+          <nav className="topNav" aria-label="Navegação principal">
+            <TopPillLink to="/templates" icon={<DescriptionIcon fontSize="small" />}>
+              Templates
+            </TopPillLink>
+            <TopPillLink to="/templates-mercado" icon={<PublicIcon fontSize="small" />}>
+              Templates Mercado
+            </TopPillLink>
+            <span className="pillButton pillButtonDisabled" aria-disabled="true">
+              <span className="pillButtonIcon"><PercentIcon fontSize="small" /></span>
+              ROI operacional
+            </span>
+            <TopPillLink to="/profile" icon={<PersonOutlineIcon fontSize="small" />}>
+              Perfil
+            </TopPillLink>
+            <TopPillLink to="/logout" icon={<LogoutIcon fontSize="small" />}>
+              Sair
+            </TopPillLink>
+          </nav>
         </div>
       </div>
     </header>

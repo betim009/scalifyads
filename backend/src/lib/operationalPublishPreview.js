@@ -1,4 +1,5 @@
 import { buildOperationalMarketTargeting } from './marketTargeting.js'
+import { buildMarketTracking, parseNicheParamFromMarketParam } from './marketTracking.js'
 
 function isPlainObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -55,9 +56,12 @@ function resolveAdVariants(payload, marketCode) {
 function resolveDestinationUrl({ payload, marketCode, operationalGeneration }) {
   const translationsByMarket = isPlainObject(payload?.translationsByMarket) ? payload.translationsByMarket : {}
   const marketTranslation = isPlainObject(translationsByMarket?.[marketCode]) ? translationsByMarket[marketCode] : null
-  const tracking = isPlainObject(operationalGeneration?.targeting_preview?.tracking)
-    ? operationalGeneration.targeting_preview.tracking
-    : {}
+  const marketParam = firstNonEmpty(operationalGeneration?.market_param, operationalGeneration?.src)
+  const nicheParam =
+    parseNicheParamFromMarketParam(marketParam, marketCode) ??
+    normalizeNonEmptyString(payload?.niche) ??
+    normalizeNonEmptyString(payload?.nicheParam) ??
+    normalizeNonEmptyString(payload?.niche_param)
 
   const url = firstNonEmpty(
     marketTranslation?.destinationUrl,
@@ -70,18 +74,7 @@ function resolveDestinationUrl({ payload, marketCode, operationalGeneration }) {
 
   if (!url) return null
 
-  try {
-    const parsed = new URL(url)
-    if (tracking?.utm_campaign && !parsed.searchParams.has('utm_campaign')) {
-      parsed.searchParams.set('utm_campaign', String(tracking.utm_campaign))
-    }
-    if (tracking?.src && !parsed.searchParams.has('src')) {
-      parsed.searchParams.set('src', String(tracking.src))
-    }
-    return parsed.toString()
-  } catch {
-    return url
-  }
+  return buildMarketTracking({ marketCode, nicheParam, destinationUrl: url })?.finalUrl ?? url
 }
 
 function resolveTemplatePayload(template) {

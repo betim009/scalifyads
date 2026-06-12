@@ -2871,7 +2871,7 @@ export default function CampaignFlow() {
                                   {previewUrl ? (
                                     <CompactVideoPreview src={previewUrl} label={`${cc} Ad ${k}`} size="sm" />
                                   ) : (
-                                    <div className="videoThumb videoThumbSm" style={{ display: "grid", placeItems: "center", color: "#94a3b8" }}>
+                                    <div className="videoThumb videoThumbSm" style={{ display: "grid", placeItems: "center", color: "var(--text)" }}>
                                       —
                                     </div>
                                   )}

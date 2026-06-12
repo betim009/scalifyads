@@ -1,5 +1,6 @@
 import path from 'node:path'
 import fsp from 'node:fs/promises'
+import { buildMarketTracking, parseNicheParamFromMarketParam } from '../lib/marketTracking.js'
 
 function normalizeNonEmptyString(value, { maxLen } = {}) {
   if (typeof value !== 'string') return null
@@ -28,24 +29,34 @@ function getCreativeUploadsDir() {
   return path.resolve('uploads', 'creative-assets')
 }
 
+function normalizeVariantKey(value) {
+  const key = normalizeNonEmptyString(value)?.toUpperCase()
+  return ['A', 'B', 'C', 'D', 'E'].includes(key) ? key : 'A'
+}
+
+function variantIndexForKey(key) {
+  return { A: 0, B: 1, C: 2, D: 3, E: 4 }[normalizeVariantKey(key)] ?? 0
+}
+
 function resolveMarketMedia({ marketCode, payload, body } = {}) {
   const bodyInput = normalizeOptionalObject(body)
+  const variantKey = normalizeVariantKey(firstNonEmpty(bodyInput.variantKey, bodyInput.variant_key))
   const directAssetId = firstNonEmpty(bodyInput.creativeAssetId, bodyInput.creative_asset_id)
   const directThumbId = firstNonEmpty(bodyInput.creativeThumbnailAssetId, bodyInput.creative_thumbnail_asset_id, bodyInput.thumbnailAssetId)
   if (directAssetId) {
-    return { creativeAssetId: directAssetId, creativeThumbnailAssetId: directThumbId, source: 'body' }
+    return { creativeAssetId: directAssetId, creativeThumbnailAssetId: directThumbId, source: 'body', variantKey }
   }
 
   const mediaByMarket = normalizeOptionalObject(payload?.mediaByMarket)
   const marketMedia = normalizeOptionalObject(mediaByMarket?.[marketCode])
   const defaultMedia = normalizeOptionalObject(mediaByMarket?.default)
+  const marketEntry = marketMedia?.[variantKey] || (variantKey === 'A' ? marketMedia?.A || marketMedia?.['1'] : null)
+  const defaultEntry = defaultMedia?.[variantKey] || (variantKey === 'A' ? defaultMedia?.A || defaultMedia?.['1'] : null)
   const entry = normalizeOptionalObject(
-    marketMedia?.A ||
-      marketMedia?.['1'] ||
-      (firstNonEmpty(marketMedia?.creativeAssetId, marketMedia?.creative_asset_id, marketMedia?.assetId) ? marketMedia : null) ||
-      defaultMedia?.A ||
-      defaultMedia?.['1'] ||
-      (firstNonEmpty(defaultMedia?.creativeAssetId, defaultMedia?.creative_asset_id, defaultMedia?.assetId) ? defaultMedia : null)
+    marketEntry ||
+      (variantKey === 'A' && firstNonEmpty(marketMedia?.creativeAssetId, marketMedia?.creative_asset_id, marketMedia?.assetId) ? marketMedia : null) ||
+      defaultEntry ||
+      (variantKey === 'A' && firstNonEmpty(defaultMedia?.creativeAssetId, defaultMedia?.creative_asset_id, defaultMedia?.assetId) ? defaultMedia : null)
   )
   const thumb = normalizeOptionalObject(entry?.thumbnail)
   const creativeAssetId = firstNonEmpty(entry?.creativeAssetId, entry?.creative_asset_id, entry?.assetId)
@@ -58,8 +69,14 @@ function resolveMarketMedia({ marketCode, payload, body } = {}) {
     entry?.thumbnailAssetId
   )
   if (!creativeAssetId) return null
-  const source = entry === marketMedia ? `mediaByMarket.${marketCode}` : `mediaByMarket.${marketCode}.A`
-  return { creativeAssetId, creativeThumbnailAssetId, source }
+  const source = marketEntry
+    ? `mediaByMarket.${marketCode}.${variantKey}`
+    : entry === marketMedia
+      ? `mediaByMarket.${marketCode}`
+      : defaultEntry
+        ? `mediaByMarket.default.${variantKey}`
+        : `mediaByMarket.default`
+  return { creativeAssetId, creativeThumbnailAssetId, source, variantKey }
 }
 
 function resolveMarketCreativeInput({ row, campaignConfig, templatePayload, body } = {}) {
@@ -73,9 +90,29 @@ function resolveMarketCreativeInput({ row, campaignConfig, templatePayload, body
   const baseVariants = Array.isArray(payload.adVariants)
     ? payload.adVariants.filter((item) => item && typeof item === 'object' && !Array.isArray(item))
     : []
-  const variant = translatedVariants[0] ?? baseVariants[0] ?? {}
   const payloadCreative = normalizeOptionalObject(payload.creative)
   const bodyInput = normalizeOptionalObject(body)
+  const variantKey = normalizeVariantKey(firstNonEmpty(bodyInput.variantKey, bodyInput.variant_key))
+  const variantIndex = variantIndexForKey(variantKey)
+  const variant = translatedVariants[variantIndex] ?? baseVariants[variantIndex] ?? translatedVariants[0] ?? baseVariants[0] ?? {}
+  const targetingPreview = normalizeOptionalObject(row?.targeting_preview)
+  const nicheParam =
+    parseNicheParamFromMarketParam(firstNonEmpty(row?.market_param, row?.src), marketCode) ??
+    normalizeNonEmptyString(payload?.niche) ??
+    normalizeNonEmptyString(payload?.nicheParam) ??
+    normalizeNonEmptyString(payload?.niche_param)
+  const rawDestinationUrl = firstNonEmpty(
+    bodyInput.destinationUrl,
+    bodyInput.destination_url,
+    marketTranslation.destinationUrl,
+    marketTranslation.destination_url,
+    payload.destinationUrl,
+    payload.destination_url,
+    payloadCreative.destinationUrl,
+    payloadCreative.destination_url
+  )
+  const tracking = buildMarketTracking({ marketCode, nicheParam, destinationUrl: rawDestinationUrl })
+  const destinationUrl = tracking?.finalUrl ?? rawDestinationUrl
 
   return {
     pageId: firstNonEmpty(
@@ -129,20 +166,13 @@ function resolveMarketCreativeInput({ row, campaignConfig, templatePayload, body
       payload.cta_type,
       'LEARN_MORE'
     ),
-    destinationUrl: firstNonEmpty(
-      bodyInput.destinationUrl,
-      bodyInput.destination_url,
-      marketTranslation.destinationUrl,
-      marketTranslation.destination_url,
-      payload.destinationUrl,
-      payload.destination_url,
-      payloadCreative.destinationUrl,
-      payloadCreative.destination_url
-    ),
+    destinationUrl,
     media: resolveMarketMedia({ marketCode, payload, body }),
     source: {
       adVariantSource: translatedVariants.length > 0 ? `translationsByMarket.${marketCode}.adVariants` : 'payload/body',
-      adVariantIndex: translatedVariants.length > 0 || baseVariants.length > 0 ? 0 : null
+      adVariantIndex: translatedVariants.length > 0 || baseVariants.length > 0 ? variantIndex : null,
+      variantKey,
+      tracking
     }
   }
 }
@@ -226,19 +256,38 @@ async function findGeneratedCampaign(client, row) {
   return rows?.[0] ?? null
 }
 
-async function findExistingPublishedCreativeDraft(client, generatedCampaignId) {
+async function findExistingPublishedCreativeDraft(client, generatedCampaignId, row) {
   const { rows } = await client.query(
     `
-      SELECT id, meta_creative_id
+      SELECT id, meta_creative_id, destination_url
       FROM creative_drafts
       WHERE generated_campaign_id = $1::uuid
         AND meta_creative_id IS NOT NULL
       ORDER BY created_at DESC
-      LIMIT 1
+      LIMIT 20
     `,
     [generatedCampaignId]
   )
-  return rows?.[0] ?? null
+  return rows.find((item) => hasCurrentMarketTracking(item.destination_url, row)) ?? null
+}
+
+function hasCurrentMarketTracking(url, row) {
+  const marketCode = normalizeNonEmptyString(row?.market_code)
+  const nicheParam = parseNicheParamFromMarketParam(firstNonEmpty(row?.market_param, row?.src), marketCode)
+  const expected = buildMarketTracking({ marketCode, nicheParam })
+  if (!expected) return false
+
+  try {
+    const parsed = new URL(normalizeNonEmptyString(url) ?? '')
+    return (
+      parsed.searchParams.get('utm_source') === expected.utm_source &&
+      parsed.searchParams.get('utm_medium') === expected.utm_medium &&
+      parsed.searchParams.get('utm_campaign') === expected.utm_campaign &&
+      parsed.searchParams.get('src') === expected.src
+    )
+  } catch {
+    return false
+  }
 }
 
 async function fetchCreativeAsset(client, id) {
@@ -475,7 +524,7 @@ export async function publishOperationalCreative({
       throw err
     }
 
-    const existing = await findExistingPublishedCreativeDraft(client, generatedCampaign.id)
+    const existing = await findExistingPublishedCreativeDraft(client, generatedCampaign.id, row)
     if (existing?.meta_creative_id) {
       if (manageTransaction) await client.query('COMMIT')
       return {

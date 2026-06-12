@@ -1,16 +1,11 @@
 import PageShell from "../components/PageShell.jsx";
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
-  addAllOperationalCountries,
-  addOperationalCountry,
   getAuthMe,
-  listOperationalCountries,
-  logout,
-  removeOperationalCountry,
-  setOperationalCountryLanguage,
+  listOperationalLanguages,
+  toggleOperationalLanguage,
 } from "../services/auth.js";
-import { getCountries } from "../services/reference.js";
 import {
   createMetaAccount,
   deleteMetaAccount,
@@ -19,10 +14,18 @@ import {
   updateMetaAccount,
   validateMetaAccount,
 } from "../services/metaAccounts.js";
+import { mergeLanguageCatalogWithActive } from "../utils/operationalLanguages.js";
 
 function normalizeNonEmptyString(value) {
   if (typeof value !== "string") return "";
   return value.trim();
+}
+
+function displayUserName(user) {
+  const raw = normalizeNonEmptyString(user?.name) || normalizeNonEmptyString(user?.username);
+  if (!raw) return "";
+  const withoutPrefix = raw.replace(/^@+/, "");
+  return withoutPrefix ? withoutPrefix.charAt(0).toUpperCase() + withoutPrefix.slice(1) : "";
 }
 
 export default function Profile() {
@@ -32,10 +35,7 @@ export default function Profile() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
-  const [countries, setCountries] = useState([]);
-  const [operationalCountries, setOperationalCountries] = useState([]);
-  const [countryToAdd, setCountryToAdd] = useState("BR");
-  const [languageByCountry, setLanguageByCountry] = useState({});
+  const [operationalLanguages, setOperationalLanguages] = useState([]);
   const [metaAccounts, setMetaAccounts] = useState([]);
   const [metaAccountsLoading, setMetaAccountsLoading] = useState(false);
   const [metaAccountEditingId, setMetaAccountEditingId] = useState(null);
@@ -46,7 +46,7 @@ export default function Profile() {
     metaAccessToken: "",
     metaInstagramActorId: "",
     businessLabel: "",
-    countryHint: "",
+    countryHint: "BR",
     notes: "",
     isDefault: false,
     isActive: true,
@@ -63,15 +63,10 @@ export default function Profile() {
           return;
         }
         setMe(res.user ?? null);
-        const list = Array.isArray(res?.user?.operationalCountries) ? res.user.operationalCountries : [];
-        setOperationalCountries(list);
-        setLanguageByCountry(
-          Object.fromEntries(
-            list
-              .filter((i) => i?.countryCode)
-              .map((i) => [i.countryCode, i.primaryLanguage ?? ""])
-          )
-        );
+        const languages = Array.isArray(res?.user?.operationalLanguages)
+          ? res.user.operationalLanguages
+          : mergeLanguageCatalogWithActive(res?.user?.operationalLanguageKeys || []);
+        setOperationalLanguages(languages);
       })
       .catch((err) => {
         if (!alive) return;
@@ -85,22 +80,6 @@ export default function Profile() {
       alive = false;
     };
   }, [navigate]);
-
-  useEffect(() => {
-    let alive = true;
-    getCountries()
-      .then((res) => {
-        if (!alive) return;
-        setCountries(Array.isArray(res?.countries) ? res.countries : []);
-      })
-      .catch(() => {
-        if (!alive) return;
-        setCountries([]);
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
 
   async function refreshMetaAccounts() {
     setMetaAccountsLoading(true);
@@ -127,7 +106,7 @@ export default function Profile() {
       metaAccessToken: "",
       metaInstagramActorId: "",
       businessLabel: "",
-      countryHint: "",
+      countryHint: "BR",
       notes: "",
       isDefault: false,
       isActive: true,
@@ -143,7 +122,7 @@ export default function Profile() {
       metaAccessToken: "",
       metaInstagramActorId: String(acc?.metaInstagramActorId ?? ""),
       businessLabel: String(acc?.businessLabel ?? ""),
-      countryHint: String(acc?.countryHint ?? ""),
+      countryHint: String(acc?.countryHint ?? "BR"),
       notes: String(acc?.notes ?? ""),
       isDefault: Boolean(acc?.isDefault),
       isActive: acc?.isActive === false ? false : true,
@@ -185,8 +164,6 @@ export default function Profile() {
       }
       setMetaAccountDraft((p) => ({ ...p, metaAccessToken: "" }));
       await refreshMetaAccounts();
-      const refreshed = await getAuthMe();
-      setMe(refreshed.user ?? null);
     } catch (err) {
       setError(err?.message ? String(err.message) : "Falha ao salvar conta Meta.");
     } finally {
@@ -194,107 +171,47 @@ export default function Profile() {
     }
   }
 
-  async function onLogout() {
-    setError("");
-    setSuccess("");
-    try {
-      await logout();
-      navigate("/login", { replace: true });
-    } catch (err) {
-      setError(err?.message ? String(err.message) : "Falha ao sair.");
-    }
+  async function refreshOperationalLanguages() {
+    const res = await listOperationalLanguages();
+    setOperationalLanguages(Array.isArray(res?.operationalLanguages) ? res.operationalLanguages : []);
   }
 
-  async function refreshOperationalCountries() {
-    const res = await listOperationalCountries({ limit: 500 });
-    const list = Array.isArray(res?.operationalCountries) ? res.operationalCountries : [];
-    setOperationalCountries(list);
-    setLanguageByCountry(
-      Object.fromEntries(
-        list
-          .filter((i) => i?.countryCode)
-          .map((i) => [i.countryCode, i.primaryLanguage ?? ""])
-      )
-    );
-  }
-
-  async function onAddAllCountries() {
-    if (saving) return;
+  async function onAddAllAdditionalLanguages() {
+    const inactiveAdditionalLanguages = operationalLanguages.filter((language) => !language.isCore && !language.active);
+    if (saving || !inactiveAdditionalLanguages.length) return;
     setSaving(true);
     setError("");
     setSuccess("");
     try {
-      const res = await addAllOperationalCountries();
-      await refreshOperationalCountries();
-      setSuccess(`Países adicionados ao perfil. (${res?.count ?? "—"})`);
+      let lastResponse = null;
+      for (const language of inactiveAdditionalLanguages) {
+        lastResponse = await toggleOperationalLanguage({ languageKey: language.key, active: true });
+      }
+      if (Array.isArray(lastResponse?.operationalLanguages)) {
+        setOperationalLanguages(lastResponse.operationalLanguages);
+      } else {
+        await refreshOperationalLanguages();
+      }
+      setSuccess(`${inactiveAdditionalLanguages.length} idioma(s) adicional(is) ativado(s).`);
     } catch (err) {
-      setError(err?.message ? String(err.message) : "Falha ao adicionar países.");
+      setError(err?.message ? String(err.message) : "Falha ao adicionar idiomas.");
+      await refreshOperationalLanguages();
     } finally {
       setSaving(false);
     }
   }
 
-  async function onAddOneCountry() {
-    if (saving) return;
-    setSaving(true);
-    setError("");
-    setSuccess("");
-    try {
-      await addOperationalCountry({ countryCode: countryToAdd });
-      await refreshOperationalCountries();
-      setSuccess("País adicionado.");
-    } catch (err) {
-      setError(err?.message ? String(err.message) : "Falha ao adicionar país.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function onRemoveCountry(code) {
-    if (saving) return;
-    setSaving(true);
-    setError("");
-    setSuccess("");
-    try {
-      await removeOperationalCountry({ countryCode: code });
-      await refreshOperationalCountries();
-      setSuccess("País removido.");
-    } catch (err) {
-      setError(err?.message ? String(err.message) : "Falha ao remover país.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function onSetLanguage(code, lang) {
-    if (saving) return;
-    setSaving(true);
-    setError("");
-    setSuccess("");
-    try {
-      await setOperationalCountryLanguage({ countryCode: code, primaryLanguage: lang || null });
-      await refreshOperationalCountries();
-      setSuccess("Idioma atualizado.");
-    } catch (err) {
-      setError(err?.message ? String(err.message) : "Falha ao atualizar idioma.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  const languageOptions = [
-    { value: "", label: "—", disabled: false },
-    { value: "pt", label: "Português", disabled: false },
-    { value: "en", label: "Inglês", disabled: false },
-    { value: "es", label: "Espanhol", disabled: false },
-    { value: "fr", label: "Francês", disabled: false },
-    { value: "de", label: "Alemão", disabled: false },
-    { value: "it", label: "Italiano", disabled: false },
-    { value: "ar", label: "Árabe", disabled: false },
-  ];
+  const activeLanguages = operationalLanguages.filter((language) => language.active);
+  const coreLanguages = operationalLanguages.filter((language) => language.isCore);
+  const additionalLanguages = operationalLanguages.filter((language) => !language.isCore);
+  const activeAdditionalLanguages = additionalLanguages.filter((language) => language.active);
+  const inactiveAdditionalLanguages = additionalLanguages.filter((language) => !language.active);
+  const allAdditionalLanguagesActive = additionalLanguages.length > 0 && inactiveAdditionalLanguages.length === 0;
+  const availableMarketCount = activeLanguages.reduce((sum, language) => sum + (Array.isArray(language.marketCodes) ? language.marketCodes.length : 0), 0);
+  const welcomeName = displayUserName(me);
 
   return (
-    <PageShell title="Perfil" subtitle="Configuração interna + credenciais Meta por usuário" align="center" backFallbackTo="/">
+    <PageShell title={welcomeName ? `Bem-vindo, ${welcomeName}` : "Bem-vindo"} subtitle="Gerencie seus idiomas e credenciais Meta" align="center" backFallbackTo="/">
       <div style={{ maxWidth: 860, margin: "0 auto" }}>
         {loading ? (
           <section className="card" style={{ padding: 18 }}>
@@ -302,145 +219,96 @@ export default function Profile() {
           </section>
         ) : (
           <>
-            <section className="card" style={{ padding: 20 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                <div>
-                  <div style={{ fontWeight: 950, fontSize: 18 }}>Usuário</div>
-                  <div style={{ marginTop: 6, fontWeight: 800, color: "#374151" }}>
-                    {me?.username ? `@${me.username}` : "—"}
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                  <button type="button" className="pillOutline" onClick={() => navigate("/campaign-flow")}>
-                    Abrir fluxo de campanha
-                  </button>
-                  <button type="button" className="pillOutline" onClick={() => navigate("/roi-operacional")}>
-                    Abrir ROI operacional
-                  </button>
-                  <button type="button" className="pillOutline" onClick={() => navigate("/meta-test")}>
-                    Abrir diagnóstico técnico
-                  </button>
-                  <button type="button" className="pillOutline" onClick={onLogout}>
-                    Logout
-                  </button>
-                </div>
+            {error ? (
+              <div className="card" style={{ padding: 12, borderColor: "#fecaca", color: "#991b1b" }}>
+                <div style={{ fontWeight: 900 }}>{error}</div>
               </div>
-            </section>
+            ) : null}
+            {success ? (
+              <div className="card" style={{ padding: 12, borderColor: "#bbf7d0", color: "#166534" }}>
+                <div style={{ fontWeight: 900 }}>{success}</div>
+              </div>
+            ) : null}
 
             <section className="card" style={{ marginTop: 16, padding: 20 }}>
-              <div style={{ fontWeight: 950, fontSize: 18 }}>Países e idiomas da operação</div>
-              <p style={{ marginTop: 6, marginBottom: 0, color: "#6b7280", fontWeight: 750 }}>
-                O fluxo de campanha prioriza estes países como base para seleção em lote.
-              </p>
+              <div style={{ fontWeight: 950, fontSize: 18 }}>Idiomas</div>
 
-              <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                <button type="button" className="pillOutline" disabled={saving} onClick={onAddAllCountries}>
-                  Criar todos os países possíveis
-                </button>
+              <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+                <div className="card" style={{ padding: 12 }}>
+                  <div className="muted" style={{ fontWeight: 500, fontSize: 12 }}>Idiomas ativos</div>
+                  <div style={{ marginTop: 5, fontWeight: 950, fontSize: 22 }}>{activeLanguages.length}</div>
+                </div>
+                <div className="card" style={{ padding: 12 }}>
+                  <div className="muted" style={{ fontWeight: 500, fontSize: 12 }}>Idiomas extras</div>
+                  <div style={{ marginTop: 5, fontWeight: 950, fontSize: 22 }}>{activeAdditionalLanguages.length}</div>
+                </div>
+                <div className="card" style={{ padding: 12 }}>
+                  <div className="muted" style={{ fontWeight: 500, fontSize: 12 }}>Mercados disponíveis</div>
+                  <div style={{ marginTop: 5, fontWeight: 950, fontSize: 22 }}>{availableMarketCount}</div>
+                </div>
               </div>
 
-              <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                  <select
-                    value={countryToAdd}
-                    onChange={(e) => setCountryToAdd(e.target.value)}
-                    disabled={saving}
-                    style={{
-                      height: 46,
-                      borderRadius: 14,
-                      border: "1px solid #e5e7eb",
-                      padding: "0 14px",
-                      fontSize: 14,
-                      fontWeight: 900,
-                      background: "#ffffff",
-                      minWidth: 220,
-                    }}
+              <div style={{ marginTop: 18 }}>
+                <div style={{ fontWeight: 950, fontSize: 15 }}>Idiomas principais</div>
+                <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 10 }}>
+                  {coreLanguages.map((language) => (
+                    <div key={language.key} className="card" style={{ padding: 14, borderColor: "#bfdbfe", background: "#eff6ff" }}>
+                      <div style={{ display: "flex", gap: 10, alignItems: "center", minWidth: 0 }}>
+                        <span style={{ fontSize: 20 }}>{language.icon || "🌎"}</span>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 950, overflowWrap: "anywhere" }}>{language.label}</div>
+                          <div className="muted" style={{ marginTop: 3, fontWeight: 400, fontSize: 12 }}>
+                            {(language.marketCodes || []).length} mercado(s)
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ marginTop: 18 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+                  <div>
+                    <div style={{ fontWeight: 950, fontSize: 15 }}>Idiomas adicionais</div>
+                    <div className="muted" style={{ marginTop: 4, fontWeight: 400, fontSize: 12 }}>
+                      Libera todos os idiomas adicionais disponíveis no catálogo operacional.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className={allAdditionalLanguagesActive ? "pillPrimary" : "pillOutline"}
+                    disabled={saving || !inactiveAdditionalLanguages.length}
+                    onClick={onAddAllAdditionalLanguages}
                   >
-                    {(countries || []).map((c) => (
-                      <option key={c.code} value={c.code}>
-                        {c.code} — {c.name}
-                      </option>
-                    ))}
-                  </select>
-                  <button type="button" className="pillPrimary" disabled={saving} onClick={onAddOneCountry}>
-                    Adicionar país
+                    {allAdditionalLanguagesActive ? "Todos os idiomas adicionados" : "Adicionar todos os idiomas"}
                   </button>
                 </div>
-
-                <div className="card" style={{ padding: 14 }}>
-                  <div style={{ fontWeight: 900 }}>Lista do usuário</div>
-                  <div className="muted" style={{ marginTop: 6, fontWeight: 800 }}>
-                    {operationalCountries.length ? `${operationalCountries.length} país(es)` : "Nenhum país configurado"}
+                <div className="card" style={{ marginTop: 10, padding: 14, display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+                  <div>
+                    <div style={{ fontWeight: 950 }}>{activeAdditionalLanguages.length}/{additionalLanguages.length} adicionais ativos</div>
+                    <div className="muted" style={{ marginTop: 4, fontWeight: 400, fontSize: 12 }}>
+                      {inactiveAdditionalLanguages.length
+                        ? `${inactiveAdditionalLanguages.length} idioma(s) adicional(is) ainda inativo(s).`
+                        : "Todos os idiomas adicionais do catálogo estão ativos."}
+                    </div>
                   </div>
-                  <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
-                    {operationalCountries.length ? (
-                      operationalCountries.map((item) => {
-                        const code = item?.countryCode;
-                        if (!code) return null;
-                        return (
-                          <div
-                            key={code}
-                            className="card"
-                            style={{ padding: 12, display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", alignItems: "center" }}
-                          >
-                            <span className="monoTag">{code}</span>
-                            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                              <select
-                                value={languageByCountry[code] ?? ""}
-                                disabled={saving}
-                                onChange={(e) => {
-                                  const next = e.target.value;
-                                  setLanguageByCountry((p) => ({ ...p, [code]: next }));
-                                  onSetLanguage(code, next);
-                                }}
-                                style={{
-                                  height: 40,
-                                  borderRadius: 12,
-                                  border: "1px solid #e5e7eb",
-                                  padding: "0 12px",
-                                  fontSize: 13,
-                                  fontWeight: 900,
-                                  background: "#ffffff",
-                                }}
-                              >
-                                {languageOptions.map((opt) => (
-                                  <option key={opt.value} value={opt.value} disabled={opt.disabled}>
-                                    {opt.label}
-                                  </option>
-                                ))}
-                              </select>
-                              <button
-                                type="button"
-                                className="pillOutline"
-                                disabled={saving}
-                                onClick={() => onRemoveCountry(code)}
-                                title="Remover país"
-                              >
-                                Remover
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div className="muted" style={{ fontWeight: 800 }}>
-                        Dica: adicione pelo menos 1 país para operar lote com segurança.
-                      </div>
-                    )}
-                  </div>
+                  <button type="button" className="pillOutline" disabled={saving} onClick={refreshOperationalLanguages}>
+                    Atualizar resumo
+                  </button>
                 </div>
               </div>
             </section>
 
             <section className="card" style={{ marginTop: 16, padding: 20 }}>
               <div style={{ fontWeight: 950, fontSize: 18 }}>Contas Meta</div>
-              <p style={{ marginTop: 6, marginBottom: 0, color: "#6b7280", fontWeight: 750 }}>
+              <p style={{ marginTop: 6, marginBottom: 0, color: "#111827", fontWeight: 400 }}>
                 Cadastre múltiplas contas para usar em templates e no fluxo de campanha. O token nunca é exibido completo.
               </p>
 
               <div style={{ marginTop: 16, display: "grid", gap: 14 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                  <div className="muted" style={{ fontWeight: 800 }}>
+                  <div className="muted" style={{ fontWeight: 400 }}>
                     {metaAccountsLoading ? "Carregando contas…" : `${metaAccounts.length} conta(s) cadastrada(s)`}
                   </div>
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -472,17 +340,15 @@ export default function Profile() {
                                 </span>
                               ) : null}
                             </div>
-                            <div className="muted" style={{ marginTop: 6, fontWeight: 800 }}>
+                            <div className="muted" style={{ marginTop: 6, fontWeight: 400 }}>
                               Ad Account:{" "}
                               <span className="monoTag">{acc.metaAdAccountId || "—"}</span> • Page:{" "}
                               <span className="monoTag">{acc.metaPageId || "—"}</span>
-                              {acc.metaInstagramActorId ? <> • IG Actor: <b>{acc.metaInstagramActorId}</b></> : null}
                             </div>
-                            <div className="muted" style={{ marginTop: 6, fontWeight: 800, fontSize: 12 }}>
+                            <div className="muted" style={{ marginTop: 6, fontWeight: 400, fontSize: 12 }}>
                               Token salvo: {acc?.metaAccessToken?.saved ? "Sim" : "Não"}
                               {acc?.metaAccessToken?.last4 ? ` (final: ...${acc.metaAccessToken.last4})` : ""}
                               {acc.businessLabel ? <> • {acc.businessLabel}</> : null}
-                              {acc.countryHint ? <> • País: {acc.countryHint}</> : null}
                             </div>
                           </div>
 
@@ -502,8 +368,6 @@ export default function Profile() {
                                   await setDefaultMetaAccount(acc.id);
                                   setSuccess("Conta padrão atualizada.");
                                   await refreshMetaAccounts();
-                                  const refreshed = await getAuthMe();
-                                  setMe(refreshed.user ?? null);
                                 } catch (err) {
                                   setError(err?.message ? String(err.message) : "Falha ao definir como padrão.");
                                 } finally {
@@ -562,7 +426,7 @@ export default function Profile() {
                       </div>
                     ))
                   ) : (
-                    <div className="muted" style={{ fontWeight: 800 }}>
+                    <div className="muted" style={{ fontWeight: 400 }}>
                       Nenhuma conta cadastrada. Crie uma conta para operar em REAL.
                     </div>
                   )}
@@ -582,7 +446,7 @@ export default function Profile() {
 
                   <div style={{ marginTop: 14, display: "grid", gap: 14 }}>
                     <div style={{ display: "grid", gap: 8 }}>
-                      <div style={{ fontWeight: 900, fontSize: 14, color: "#374151" }}>Nome interno</div>
+                      <div style={{ fontWeight: 500, fontSize: 14, color: "#111827" }}>Nome interno</div>
                       <input
                         value={metaAccountDraft.name}
                         onChange={(e) => setMetaAccountDraft((p) => ({ ...p, name: e.target.value }))}
@@ -601,7 +465,7 @@ export default function Profile() {
 
                     <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}>
                       <div style={{ display: "grid", gap: 8 }}>
-                        <div style={{ fontWeight: 900, fontSize: 14, color: "#374151" }}>Meta Ad Account ID</div>
+                        <div style={{ fontWeight: 500, fontSize: 14, color: "#111827" }}>Meta Ad Account ID</div>
                         <input
                           value={metaAccountDraft.metaAdAccountId}
                           onChange={(e) => setMetaAccountDraft((p) => ({ ...p, metaAdAccountId: e.target.value }))}
@@ -618,7 +482,7 @@ export default function Profile() {
                         />
                       </div>
                       <div style={{ display: "grid", gap: 8 }}>
-                        <div style={{ fontWeight: 900, fontSize: 14, color: "#374151" }}>Meta Page ID</div>
+                        <div style={{ fontWeight: 500, fontSize: 14, color: "#111827" }}>Meta Page ID</div>
                         <input
                           value={metaAccountDraft.metaPageId}
                           onChange={(e) => setMetaAccountDraft((p) => ({ ...p, metaPageId: e.target.value }))}
@@ -634,27 +498,10 @@ export default function Profile() {
                           }}
                         />
                       </div>
-                      <div style={{ display: "grid", gap: 8 }}>
-                        <div style={{ fontWeight: 900, fontSize: 14, color: "#374151" }}>Instagram Actor ID (opcional)</div>
-                        <input
-                          value={metaAccountDraft.metaInstagramActorId}
-                          onChange={(e) => setMetaAccountDraft((p) => ({ ...p, metaInstagramActorId: e.target.value }))}
-                          placeholder="1784..."
-                          disabled={saving}
-                          style={{
-                            height: 48,
-                            borderRadius: 14,
-                            border: "1px solid #e5e7eb",
-                            padding: "0 16px",
-                            fontSize: 14,
-                            fontWeight: 700,
-                          }}
-                        />
-                      </div>
                     </div>
 
                     <div style={{ display: "grid", gap: 8 }}>
-                      <div style={{ fontWeight: 900, fontSize: 14, color: "#374151" }}>Meta Access Token</div>
+                      <div style={{ fontWeight: 500, fontSize: 14, color: "#111827" }}>Meta Access Token</div>
                       <input
                         type="password"
                         value={metaAccountDraft.metaAccessToken}
@@ -670,63 +517,25 @@ export default function Profile() {
                           fontWeight: 700,
                         }}
                       />
-                      <div style={{ color: "#6b7280", fontWeight: 800, fontSize: 12 }}>
+                      <div style={{ color: "#111827", fontWeight: 400, fontSize: 12 }}>
                         Dica: depois de salvar, o token não é exibido (apenas o final). Não cole token em prints ou logs.
                       </div>
                     </div>
 
-                    <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}>
-                      <div style={{ display: "grid", gap: 8 }}>
-                        <div style={{ fontWeight: 900, fontSize: 14, color: "#374151" }}>BM/Nicho/Operação (opcional)</div>
-                        <input
-                          value={metaAccountDraft.businessLabel}
-                          onChange={(e) => setMetaAccountDraft((p) => ({ ...p, businessLabel: e.target.value }))}
-                          placeholder="Ex: BM Cursos / Jobs / Receitas"
-                          disabled={saving}
-                          style={{
-                            height: 48,
-                            borderRadius: 14,
-                            border: "1px solid #e5e7eb",
-                            padding: "0 16px",
-                            fontSize: 14,
-                            fontWeight: 700,
-                          }}
-                        />
-                      </div>
-                      <div style={{ display: "grid", gap: 8 }}>
-                        <div style={{ fontWeight: 900, fontSize: 14, color: "#374151" }}>País principal (opcional)</div>
-                        <input
-                          value={metaAccountDraft.countryHint}
-                          onChange={(e) => setMetaAccountDraft((p) => ({ ...p, countryHint: e.target.value }))}
-                          placeholder="Ex: BR"
-                          disabled={saving}
-                          style={{
-                            height: 48,
-                            borderRadius: 14,
-                            border: "1px solid #e5e7eb",
-                            padding: "0 16px",
-                            fontSize: 14,
-                            fontWeight: 700,
-                          }}
-                        />
-                      </div>
-                    </div>
-
                     <div style={{ display: "grid", gap: 8 }}>
-                      <div style={{ fontWeight: 900, fontSize: 14, color: "#374151" }}>Observações (opcional)</div>
-                      <textarea
-                        value={metaAccountDraft.notes}
-                        onChange={(e) => setMetaAccountDraft((p) => ({ ...p, notes: e.target.value }))}
-                        placeholder="Notas internas da operação…"
+                      <div style={{ fontWeight: 500, fontSize: 14, color: "#111827" }}>BM/Nicho/Operação (opcional)</div>
+                      <input
+                        value={metaAccountDraft.businessLabel}
+                        onChange={(e) => setMetaAccountDraft((p) => ({ ...p, businessLabel: e.target.value }))}
+                        placeholder="Ex: BM Cursos / Jobs / Receitas"
                         disabled={saving}
-                        rows={3}
                         style={{
+                          height: 48,
                           borderRadius: 14,
                           border: "1px solid #e5e7eb",
-                          padding: "12px 16px",
+                          padding: "0 16px",
                           fontSize: 14,
-                          fontWeight: 650,
-                          resize: "vertical",
+                          fontWeight: 700,
                         }}
                       />
                     </div>
@@ -741,24 +550,10 @@ export default function Profile() {
                       Definir como padrão
                     </label>
 
-                    {error ? (
-                      <div className="card" style={{ padding: 12, borderColor: "#fecaca", color: "#991b1b" }}>
-                        <div style={{ fontWeight: 900 }}>{error}</div>
-                      </div>
-                    ) : null}
-                    {success ? (
-                      <div className="card" style={{ padding: 12, borderColor: "#bbf7d0", color: "#166534" }}>
-                        <div style={{ fontWeight: 900 }}>{success}</div>
-                      </div>
-                    ) : null}
-
                     <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                       <button type="button" className="pillPrimary" disabled={saving} onClick={onSaveMetaAccount}>
                         {saving ? "Salvando..." : "Salvar conta Meta"}
                       </button>
-                      <Link to="/login" style={{ fontWeight: 800, alignSelf: "center" }}>
-                        Voltar ao login
-                      </Link>
                     </div>
                   </div>
                 </div>

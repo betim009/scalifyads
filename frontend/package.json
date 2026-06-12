@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "validate:market-groups": "node scripts/validate-market-language-groups.mjs",
+    "validate:media-groups": "node scripts/validate-operational-media-groups.mjs"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

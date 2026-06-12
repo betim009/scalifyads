@@ -1,7 +1,6 @@
 import Header from "../components/Header.jsx";
 import CampaignCard from "../components/CampaignCard.jsx";
 import MetricCard from "../components/MetricCard.jsx";
-import { useNavigate } from "react-router-dom";
 import useCampaignFilters from "../mocks/useCampaignFilters.js";
 import { useEffect, useMemo, useState } from "react";
 import { getCountries } from "../services/reference.js";
@@ -9,12 +8,10 @@ import { listCampaigns } from "../services/campaigns.js";
 import { listFlowTemplates } from "../services/flowTemplates.js";
 import {
   FilterListIcon,
-  RocketLaunchIcon,
   SortIcon,
 } from "../styles/icons.js";
 
 export default function Dashboard() {
-  const navigate = useNavigate();
   const [countries, setCountries] = useState([]);
   const [campaignsData, setCampaignsData] = useState([]);
   const [templatesCount, setTemplatesCount] = useState(null);
@@ -60,55 +57,6 @@ export default function Dashboard() {
       <Header />
       <main className="page">
         <div className="container">
-          <section className="card" style={{ padding: 22, marginBottom: 36 }}>
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
-              <div>
-                <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Entrada operacional</h2>
-                <p className="muted" style={{ marginTop: 8, marginBottom: 0, fontWeight: 400, color: "var(--text-secondary)" }}>
-                  Próximo passo recomendado: abrir o fluxo de campanha e criar tudo como{" "}
-                  <span style={{ fontWeight: 500 }}>PAUSED</span> no REAL.
-                </p>
-              </div>
-              <button type="button" className="pillPrimary" onClick={() => navigate("/campaign-flow")}>
-                <RocketLaunchIcon fontSize="small" /> Abrir fluxo de campanha
-              </button>
-            </div>
-
-            <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>
-              <div className="card" style={{ padding: 14, background: "var(--surface-2)" }}>
-                <div style={{ fontWeight: 500, color: "var(--text-secondary)", fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                  Fluxo recomendado
-                </div>
-                <ol style={{ margin: "10px 0 0", paddingLeft: 18, color: "var(--text)", fontWeight: 400 }}>
-                  <li>Configurar perfil e contas Meta</li>
-                  <li>Criar/gerenciar templates</li>
-                  <li>Executar no fluxo de campanha</li>
-                  <li>Acompanhar ROI operacional</li>
-                  <li>Usar diagnóstico só se der erro</li>
-                </ol>
-              </div>
-
-              <div className="card" style={{ padding: 14, background: "var(--surface-2)" }}>
-                <div style={{ fontWeight: 500, color: "var(--text-secondary)", fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                  Acessos rápidos
-                </div>
-                <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                  <button type="button" className="pillOutline" onClick={() => navigate("/templates")}>Templates</button>
-                  <button type="button" className="pillOutline" onClick={() => navigate("/roi-operacional")}>ROI operacional</button>
-                  <button type="button" className="pillOutline" onClick={() => navigate("/profile")}>Perfil</button>
-                  <button
-                    type="button"
-                    className="pillGhost"
-                    onClick={() => navigate("/meta-test")}
-                    title="Área técnica/diagnóstico"
-                  >
-                    Diagnóstico técnico
-                  </button>
-                </div>
-              </div>
-            </div>
-          </section>
-
           <section className="gridMetrics" aria-label="Métricas">
             <MetricCard label="Total de campanhas" value={String(totals.campaigns)} />
             <MetricCard
@@ -146,7 +94,6 @@ export default function Dashboard() {
               {campaigns.map((campaign) => (
                 <CampaignCard
                   key={campaign.id}
-                  id={campaign.id}
                   name={campaign.name}
                   status={campaign.status}
                   scopeLabel={campaign.scopeLabel}

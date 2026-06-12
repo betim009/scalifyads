@@ -11,6 +11,11 @@ import {
   insertSession,
   resolveAuthUser
 } from '../lib/internalAuth.js'
+import {
+  ensureCoreOperationalLanguages,
+  getOperationalLanguageByKey,
+  readUserOperationalLanguages
+} from '../lib/operationalLanguages.js'
 function normalizeNonEmptyString(value) {
   if (typeof value !== 'string') return null
   const trimmed = value.trim()
@@ -39,6 +44,10 @@ export function authRouter() {
       if (!auth) {
         return res.json({ ok: true, authenticated: false, user: null })
       }
+
+      const operationalLanguages = await readUserOperationalLanguages(pool, auth.userId)
+      const activeOperationalLanguages = operationalLanguages.filter((language) => language.active)
+      const activeOperationalLanguageKeys = activeOperationalLanguages.map((language) => language.key)
 
       const { rows: opCountriesRows } = await pool.query(
         `
@@ -93,6 +102,8 @@ export function authRouter() {
           username: auth.username,
           metaAdAccountId: auth.metaAdAccountId,
           metaPageId: auth.metaPageId,
+          operationalLanguageKeys: activeOperationalLanguageKeys,
+          operationalLanguages,
           operationalCountryCodes,
           operationalCountries,
           metaAccessToken: {
@@ -145,6 +156,7 @@ export function authRouter() {
       // Auto-login after register
       const token = createSessionToken()
       await insertSession(pool, { userId: rows[0].id, token })
+      await ensureCoreOperationalLanguages(pool, rows[0].id)
 
       res.setHeader(
         'Set-Cookie',
@@ -311,6 +323,73 @@ export function authRouter() {
       }
 
       return res.status(201).json({ ok: true })
+    })
+  )
+
+  router.get(
+    '/operational-languages',
+    asyncHandler(async (req, res) => {
+      if (!req.app.locals.dbEnabled) {
+        return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
+      }
+      const pool = getPool()
+      const auth = await resolveAuthUser(pool, req)
+      if (!auth) return jsonError(res, 401, 'Login required')
+
+      const operationalLanguages = await readUserOperationalLanguages(pool, auth.userId)
+      return res.json({
+        ok: true,
+        operationalLanguages,
+        activeLanguageKeys: operationalLanguages.filter((language) => language.active).map((language) => language.key)
+      })
+    })
+  )
+
+  router.post(
+    '/operational-languages/toggle',
+    asyncHandler(async (req, res) => {
+      if (!req.app.locals.dbEnabled) {
+        return jsonError(res, 503, 'Database is not enabled. Set DATABASE_URL.')
+      }
+      const pool = getPool()
+      const auth = await resolveAuthUser(pool, req)
+      if (!auth) return jsonError(res, 401, 'Login required')
+
+      await ensureCoreOperationalLanguages(pool, auth.userId)
+      const language = getOperationalLanguageByKey(req.body?.languageKey)
+      if (!language) return jsonError(res, 400, 'Invalid languageKey')
+
+      const requestedActive = req.body?.active !== false
+      const nextActive = language.isCore ? true : requestedActive
+
+      await pool.query(
+        `
+          INSERT INTO user_operational_languages (
+            user_id,
+            language_key,
+            label,
+            target_language,
+            is_core,
+            active
+          )
+          VALUES ($1::uuid, $2, $3, $4, $5, $6)
+          ON CONFLICT (user_id, language_key)
+          DO UPDATE SET
+            label = EXCLUDED.label,
+            target_language = EXCLUDED.target_language,
+            is_core = EXCLUDED.is_core,
+            active = CASE WHEN EXCLUDED.is_core THEN true ELSE EXCLUDED.active END,
+            updated_at = now()
+        `,
+        [auth.userId, language.key, language.label, language.targetLanguage || null, Boolean(language.isCore), nextActive]
+      )
+
+      const operationalLanguages = await readUserOperationalLanguages(pool, auth.userId)
+      return res.json({
+        ok: true,
+        operationalLanguages,
+        activeLanguageKeys: operationalLanguages.filter((item) => item.active).map((item) => item.key)
+      })
     })
   )
 

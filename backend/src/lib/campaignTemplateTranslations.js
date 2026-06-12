@@ -1,41 +1,7 @@
-import { getOperationalMarketByCode, validateOperationalMarketCode } from './operationalMarkets.js'
+import { getOperationalMarketByCode, getOperationalMarketLanguageGroup, validateOperationalMarketCode } from './operationalMarkets.js'
+import { getOperationalLanguageByLabel } from './operationalLanguages.js'
 
 const TRANSLATABLE_AD_FIELDS = ['primaryText', 'headline', 'description']
-const LANGUAGE_TO_TRANSLATE_CODE = new Map([
-  ['alemão', 'de'],
-  ['árabe', 'ar'],
-  ['bengali', 'bn'],
-  ['búlgaro', 'bg'],
-  ['chinês tradicional (taiwan)', 'zh-Hant'],
-  ['coreano', 'ko'],
-  ['eslovaco', 'sk'],
-  ['esloveno', 'sl'],
-  ['espanhol', 'es'],
-  ['filipino', 'tl'],
-  ['francês', 'fr'],
-  ['grego', 'el'],
-  ['holandês', 'nl'],
-  ['húngaro', 'hu'],
-  ['hindi', 'hi'],
-  ['indonésio', 'id'],
-  ['inglês', 'en'],
-  ['hebraico', 'he'],
-  ['italiano', 'it'],
-  ['japonês', 'ja'],
-  ['lituano', 'lt'],
-  ['malaio', 'ms'],
-  ['polonês', 'pl'],
-  ['português (brasil)', 'pt-BR'],
-  ['romeno', 'ro'],
-  ['russo', 'ru'],
-  ['sueco', 'sv'],
-  ['tailandês', 'th'],
-  ['tcheco', 'cs'],
-  ['turco', 'tr'],
-  ['ucraniano', 'uk'],
-  ['urdu', 'ur'],
-  ['vietnamita', 'vi']
-])
 
 function isPlainObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -65,12 +31,13 @@ export function resolveMarketTranslationLanguage(marketCode) {
   const code = normalizeMarketCode(marketCode)
   const market = getOperationalMarketByCode(code)
   if (!market) return null
-  const language = normalizeNonEmptyString(market.language)
-  const targetLanguage = LANGUAGE_TO_TRANSLATE_CODE.get(String(language || '').toLowerCase()) ?? null
+  const language = normalizeNonEmptyString(getOperationalMarketLanguageGroup(market))
+  const operationalLanguage = getOperationalLanguageByLabel(language)
+  const targetLanguage = operationalLanguage?.targetLanguage || null
   return {
     marketCode: market.code,
     marketName: market.name,
-    language,
+    language: operationalLanguage?.label || language,
     targetLanguage
   }
 }
@@ -177,20 +144,31 @@ export async function generateTranslationsByMarket({ payload, markets, overwrite
           errors.push(`payload.adVariants.${translatedVariants.length}.${field} must be a string`)
           continue
         }
-        translatedVariant[field] = variant[field].trim()
-          ? await translateText({
-              q: variant[field],
-              source: 'auto',
-              target: market.targetLanguage,
-              marketCode: market.marketCode,
-              field
-            })
-          : ''
+        if (!variant[field].trim()) {
+          translatedVariant[field] = ''
+          continue
+        }
+        try {
+          translatedVariant[field] = await translateText({
+            q: variant[field],
+            source: 'auto',
+            target: market.targetLanguage,
+            marketCode: market.marketCode,
+            field
+          })
+        } catch (err) {
+          errors.push(
+            `Translation failed for ${market.marketCode} (${market.language}/${market.targetLanguage}) adVariants.${translatedVariants.length}.${field}: ${err?.message ?? err}`
+          )
+          translatedVariant[field] = ''
+        }
       }
       translatedVariants.push(translatedVariant)
     }
 
     nextTranslationsByMarket[market.marketCode] = {
+      language: market.language,
+      targetLanguage: market.targetLanguage,
       adVariants: translatedVariants
     }
     generated.push({

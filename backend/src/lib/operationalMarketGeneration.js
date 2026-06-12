@@ -1,6 +1,9 @@
 import { normalizeIsoCountryCode, normalizeIsoCountryCodes, normalizeMarketCode } from './marketTargeting.js'
 import { getOperationalMarketByCode } from './operationalMarkets.js'
 import { resolveMarketMetaLocations } from './metaLocations.js'
+import { buildMarketTracking, generateMarketParam } from './marketTracking.js'
+
+export { generateMarketParam }
 
 function normalizeNonEmptyString(value) {
   if (typeof value !== 'string') return null
@@ -13,22 +16,15 @@ function normalizeOptionalObject(value) {
   return value
 }
 
-export function generateMarketParam(marketCode, niche) {
-  const code = normalizeMarketCode(marketCode)
-  const normalizedNiche = normalizeNonEmptyString(niche)
-  if (!code || !normalizedNiche) return null
-  return `${code}-${normalizedNiche}-FB`
-}
-
 export function generateOperationalTracking(marketCode, niche) {
   const code = normalizeMarketCode(marketCode)
-  const marketParam = generateMarketParam(code, niche)
-  if (!code || !marketParam) return null
+  const tracking = buildMarketTracking({ marketCode: code, nicheParam: niche })
+  if (!tracking) return null
   return {
-    utm_source: 'facebook',
-    utm_medium: 'cpa',
-    utm_campaign: code,
-    src: marketParam
+    utm_source: tracking.utm_source,
+    utm_medium: tracking.utm_medium,
+    utm_campaign: tracking.utm_campaign,
+    src: tracking.src
   }
 }
 

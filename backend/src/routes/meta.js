@@ -49,7 +49,10 @@ async function resolveMetaAccountContext(pool, req, { metaAccountId } = {}) {
   const userId = req.auth?.userId
   if (!userId || !isUuid(userId)) return null
 
-  const requested = normalizeNonEmptyString(metaAccountId) ?? normalizeNonEmptyString(req.body?.metaAccountId)
+  const requested =
+    normalizeNonEmptyString(metaAccountId) ??
+    normalizeNonEmptyString(req.query?.metaAccountId) ??
+    normalizeNonEmptyString(req.body?.metaAccountId)
   if (requested) {
     if (!isUuid(requested)) return null
     const { rows, rowCount } = await pool.query(
@@ -133,6 +136,131 @@ function normalizeCountryCode(value) {
   const code = raw.toUpperCase()
   if (!/^[A-Z]{2}$/.test(code)) return null
   return code
+}
+
+function extractUrlFromMetaObject(type, object) {
+  const data = object && typeof object === 'object' ? object : {}
+  if (type === 'creative') {
+    const spec = data.object_story_spec && typeof data.object_story_spec === 'object' ? data.object_story_spec : {}
+    const linkData = spec.link_data && typeof spec.link_data === 'object' ? spec.link_data : {}
+    const videoData = spec.video_data && typeof spec.video_data === 'object' ? spec.video_data : {}
+    return normalizeNonEmptyString(linkData.link) ?? normalizeNonEmptyString(videoData.call_to_action?.value?.link)
+  }
+  return null
+}
+
+function parseUtmFromUrl(url) {
+  const raw = normalizeNonEmptyString(url)
+  if (!raw) return { url: null, hasUtm: false, utm: {} }
+  try {
+    const parsed = new URL(raw)
+    const utm = {}
+    for (const key of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'src']) {
+      const value = parsed.searchParams.get(key)
+      if (value) utm[key] = value
+    }
+    return {
+      url: parsed.toString(),
+      hasUtm: Boolean(utm.utm_source && utm.utm_medium && utm.utm_campaign),
+      utm
+    }
+  } catch {
+    return { url: raw, hasUtm: false, utm: {} }
+  }
+}
+
+function extractCreativeCta(creative) {
+  const data = creative && typeof creative === 'object' ? creative : {}
+  const spec = data.object_story_spec && typeof data.object_story_spec === 'object' ? data.object_story_spec : {}
+  const linkData = spec.link_data && typeof spec.link_data === 'object' ? spec.link_data : {}
+  const videoData = spec.video_data && typeof spec.video_data === 'object' ? spec.video_data : {}
+  return linkData.call_to_action ?? videoData.call_to_action ?? data.call_to_action ?? null
+}
+
+function extractCreativeMedia(creative) {
+  const data = creative && typeof creative === 'object' ? creative : {}
+  const spec = data.object_story_spec && typeof data.object_story_spec === 'object' ? data.object_story_spec : {}
+  const linkData = spec.link_data && typeof spec.link_data === 'object' ? spec.link_data : {}
+  const videoData = spec.video_data && typeof spec.video_data === 'object' ? spec.video_data : {}
+  const videoId = normalizeNonEmptyString(videoData.video_id) ?? normalizeNonEmptyString(data.video_id)
+  const imageHash = normalizeNonEmptyString(linkData.image_hash) ?? normalizeNonEmptyString(videoData.image_hash) ?? normalizeNonEmptyString(data.image_hash)
+  const thumbnailUrl = normalizeNonEmptyString(data.thumbnail_url)
+  if (videoId) return { type: 'video', detected: true, videoId, imageHash: imageHash ?? null, thumbnailUrl: thumbnailUrl ?? null }
+  if (imageHash) return { type: 'image', detected: true, imageHash, thumbnailUrl: thumbnailUrl ?? null }
+  if (thumbnailUrl) return { type: 'thumbnail', detected: true, thumbnailUrl }
+  return { type: 'link', detected: false }
+}
+
+export function buildMetaObjectDiagnostic({ type, id, object, linkedCreative, metaAccount }) {
+  const data = object && typeof object === 'object' ? object : {}
+  const creativeForSummary = type === 'ad' ? linkedCreative : type === 'creative' ? data : null
+  const alerts = []
+  const configuredStatus = normalizeNonEmptyString(data.status)
+  const effectiveStatus = normalizeNonEmptyString(data.effective_status)
+  if (effectiveStatus && !['ACTIVE', 'PAUSED'].includes(effectiveStatus)) {
+    alerts.push({ tone: 'warn', message: 'Objeto não está apto para entrega.', originalStatus: effectiveStatus })
+  }
+
+  const finalUrl = parseUtmFromUrl(creativeForSummary ? extractUrlFromMetaObject('creative', creativeForSummary) : null)
+  if ((type === 'creative' || (type === 'ad' && linkedCreative)) && !finalUrl.hasUtm) {
+    alerts.push({ tone: 'warn', message: 'URL sem UTM rastreável.' })
+  }
+
+  let media = { type: 'unknown', detected: false }
+  if (creativeForSummary) {
+    media = extractCreativeMedia(creativeForSummary)
+    if (!media.detected) alerts.push({ tone: 'warn', message: 'Creative sem imagem/vídeo detectado.' })
+  }
+
+  if (type === 'ad' && !data.creative) {
+    alerts.push({ tone: 'warn', message: 'Anúncio sem criativo vinculado.' })
+  }
+
+  if (type === 'adset') {
+    const targeting = data.targeting && typeof data.targeting === 'object' ? data.targeting : null
+    const countries = Array.isArray(targeting?.geo_locations?.countries) ? targeting.geo_locations.countries : []
+    if (!targeting || countries.length === 0) {
+      alerts.push({ tone: 'warn', message: 'Segmentação ausente ou incompleta.' })
+    }
+  }
+
+  return {
+    ok: true,
+    type,
+    id,
+    metaAccount: metaAccount
+      ? {
+          id: metaAccount.metaAccountId,
+          name: metaAccount.metaAccountName,
+          metaAdAccountId: metaAccount.metaAdAccountId
+        }
+      : null,
+    object: data,
+    summary: {
+      id: data.id ?? id,
+      name: data.name ?? null,
+      configuredStatus,
+      effectiveStatus,
+      objective: data.objective ?? null,
+      campaignId: data.campaign_id ?? null,
+      adSetId: data.adset_id ?? null,
+      media,
+      finalUrl: finalUrl.url,
+      utm: finalUrl.utm,
+      hasTrackableUtm: finalUrl.hasUtm,
+      previewShareableLink: data.preview_shareable_link ?? null,
+      creativeId: normalizeNonEmptyString(data.creative?.id) ?? normalizeNonEmptyString(data.creative?.creative_id) ?? null,
+      linkedCreative: linkedCreative
+        ? {
+            id: linkedCreative.id ?? null,
+            name: linkedCreative.name ?? null,
+            cta: extractCreativeCta(linkedCreative),
+            objectStorySpec: linkedCreative.object_story_spec ?? null
+          }
+        : null
+    },
+    alerts
+  }
 }
 
 function getCreativeUploadsDir() {
@@ -1812,6 +1940,133 @@ export function metaRouter() {
       } catch (err) {
         const status = typeof err?.status === 'number' ? err.status : 502
         return jsonError(res, status, err?.message ?? 'Meta ad creation failed', err?.details)
+      }
+    })
+  )
+
+  router.get(
+    '/objects/:type/:id/diagnostic',
+    asyncHandler(async (req, res) => {
+      const denied = requireAuth(req, res)
+      if (denied) return denied
+
+      const rawType = normalizeNonEmptyString(req.params.type)?.toLowerCase()
+      const typeMap = {
+        campaign: 'campaign',
+        campaigns: 'campaign',
+        adset: 'adset',
+        adsets: 'adset',
+        creative: 'creative',
+        creatives: 'creative',
+        ad: 'ad',
+        ads: 'ad'
+      }
+      const type = typeMap[rawType]
+      if (!type) {
+        return jsonError(res, 400, 'Invalid Meta object type', { allowedTypes: ['campaign', 'adset', 'creative', 'ad'] })
+      }
+
+      const id = normalizeNonEmptyString(req.params.id)
+      if (!id) return jsonError(res, 400, 'Invalid Meta object id')
+
+      const pool = getPool()
+      const metaAccount = await resolveMetaAccountContext(pool, req, { metaAccountId: req.query?.metaAccountId })
+      const accessToken = metaAccount?.accessToken ?? (await resolveAccessToken(pool, req))
+      if (!accessToken) {
+        return jsonError(res, 400, 'Missing Meta access token for diagnostic')
+      }
+
+      try {
+        const object =
+          type === 'campaign'
+            ? await metaFetchCampaign({
+                metaCampaignId: id,
+                accessToken,
+                fields: ['id', 'name', 'status', 'effective_status', 'objective', 'created_time', 'updated_time']
+              })
+            : type === 'adset'
+              ? await metaFetchAdSet({
+                  metaAdSetId: id,
+                  accessToken,
+                  fields: [
+                    'id',
+                    'name',
+                    'status',
+                    'effective_status',
+                    'campaign_id',
+                    'daily_budget',
+                    'billing_event',
+                    'optimization_goal',
+                    'targeting',
+                    'created_time',
+                    'updated_time'
+                  ]
+                })
+              : type === 'creative'
+                ? await metaFetchAdCreative({
+                    metaCreativeId: id,
+                    accessToken,
+                    fields: [
+                      'id',
+                      'name',
+                      'object_story_spec',
+                      'thumbnail_url',
+                      'video_id',
+                      'image_hash',
+                      'link_url',
+                      'call_to_action'
+                    ]
+                  })
+                : await metaFetchAd({
+                    metaAdId: id,
+                    accessToken,
+                    fields: [
+                      'id',
+                      'name',
+                      'status',
+                      'effective_status',
+                      'campaign_id',
+                      'adset_id',
+                      'creative',
+                      'preview_shareable_link',
+                      'created_time',
+                      'updated_time'
+                    ]
+                  })
+
+        let linkedCreative = null
+        if (type === 'ad') {
+          const creativeId = normalizeNonEmptyString(object?.creative?.id) ?? normalizeNonEmptyString(object?.creative?.creative_id)
+          if (creativeId) {
+            linkedCreative = await metaFetchAdCreative({
+              metaCreativeId: creativeId,
+              accessToken,
+              fields: [
+                'id',
+                'name',
+                'object_story_spec',
+                'thumbnail_url',
+                'video_id',
+                'image_hash',
+                'link_url',
+                'call_to_action'
+              ]
+            })
+          }
+        }
+
+        return res.json(buildMetaObjectDiagnostic({ type, id, object, linkedCreative, metaAccount }))
+      } catch (err) {
+        const status = typeof err?.status === 'number' ? err.status : 502
+        return jsonError(res, status, 'Meta object diagnostic failed', {
+          type,
+          id,
+          message: err?.message ?? 'Meta API error',
+          code: err?.details?.code ?? null,
+          subcode: err?.details?.error_subcode ?? err?.details?.subcode ?? null,
+          details: err?.details ?? null,
+          suggestion: 'Verifique se o ID pertence à conta Meta selecionada e se o token possui permissão para leitura.'
+        })
       }
     })
   )

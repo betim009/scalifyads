@@ -108,6 +108,14 @@ export const OPERATIONAL_MARKETS = OFFICIAL_OPERATIONAL_MARKETS.map((market) => 
 
 export const OPERATIONAL_MARKET_CODES = OPERATIONAL_MARKETS.map((market) => market.code);
 
+export function getOperationalMarketLanguageGroup(market) {
+  const language = normalizeText(market?.language);
+  const code = normalizeText(market?.code).toUpperCase();
+  if (/^portugu[eê]s/i.test(language)) return "Português";
+  if (code === "BR" && /^todos os idiomas$/i.test(language)) return "Português";
+  return language || "Sem idioma";
+}
+
 export const MARKET_TARGETING_TYPES = {
   SIMPLE_LOCATION: "simple_location",
   LOCATION_GROUP: "location_group",

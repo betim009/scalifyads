@@ -1,0 +1,102 @@
+| Sigla   | Mercado                         | Localizações Incluídas                                                  | Excluídas         | Idioma                      |
+| ------- | ------------------------------- | ----------------------------------------------------------------------- | ----------------- | --------------------------- |
+| ARAF    | Árabe África                    | Argélia, Marrocos, Tunísia                                              | Nenhuma           | Árabe                       |
+| ARAS    | Árabe Ásia                      | Arábia Saudita, Emirados Árabes Unidos, Kuwait, Catar                   | Nenhuma           | Árabe                       |
+| ARNE    | Árabe Norte e Europa            | Canadá, Alemanha, França, Itália, Estados Unidos                        | Nenhuma           | Árabe                       |
+| ARCA    | Árabe Canadá                    | Canadá                                                                  | Nenhuma           | Árabe                       |
+| ARUS    | Árabe EUA                       | Estados Unidos                                                          | Nenhuma           | Árabe                       |
+| ARIT    | Árabe Itália                    | Itália                                                                  | Nenhuma           | Árabe                       |
+| BNEUAS  | Bengali Europa Ásia Sul         | Reino Unido, Itália, Portugal                                           | Nenhuma           | Bengali                     |
+| BRAF    | Brasil África                   | Angola, Cabo Verde, Moçambique                                          | Nenhuma           | Português (Brasil)          |
+| BREUOC  | Brasil Europa e Oceania         | Portugal, Irlanda, Luxemburgo, Austrália, Nova Zelândia                 | Nenhuma           | Português (Brasil)          |
+| ZHEUOC  | Chinês Europa e Oceania         | Austrália, Espanha, França, Reino Unido, Nova Zelândia                  | Nenhuma           | Chinês Tradicional (Taiwan) |
+| ZHNA    | Chinês Norte                    | Canadá, Estados Unidos                                                  | Nenhuma           | Chinês Tradicional (Taiwan) |
+| ESAMNA  | Espanhol América Norte e África | Canadá, Estados Unidos, Marrocos                                        | Nenhuma           | Espanhol                    |
+| ESSL    | Espanhol Sul                    | Argentina, Chile, Colômbia                                              | Nenhuma           | Espanhol                    |
+| TLAS    | Filipinas Ásia                  | Filipinas                                                               | Nenhuma           | Filipino                    |
+| TLSON   | Filipinas Sul Oceania e Norte   | Austrália, Brasil, Canadá, Chile, Nova Zelândia, Estados Unidos         | Nenhuma           | Filipino                    |
+| FRAF    | França África                   | Costa do Marfim, Marrocos, Senegal                                      | Nenhuma           | Francês                     |
+| FRAS    | França Ásia                     | Camboja, Líbano                                                         | Singapura, Taiwan | Francês                     |
+| FRN     | França Norte                    | Canadá, Haiti                                                           | Nenhuma           | Francês                     |
+| HIAS    | Hindi Ásia                      | Índia, Nepal                                                            | Nenhuma           | Hindi                       |
+| HISAF   | Hindi Sul Norte África          | Canadá, Guiana, Quênia, Suriname, Estados Unidos, África do Sul         | Nenhuma           | Hindi                       |
+| IDAS    | Indonésia Ásia                  | Indonésia, Timor-Leste                                                  | Nenhuma           | Indonésio                   |
+| IDSEUOC | Indonésia Sul Europa Oceania    | Austrália, Brasil, Alemanha, Países Baixos, Papua-Nova Guiné, Suriname  | Nenhuma           | Indonésio                   |
+| ENEU    | Inglês Europa                   | Reino Unido, Irlanda, Malta                                             | Nenhuma           | Inglês                      |
+| ENNA    | Inglês Norte                    | Belize, Canadá, Estados Unidos                                          | Nenhuma           | Inglês                      |
+| ENOC    | Inglês Oceania                  | Austrália, Ilhas Fiji, Nova Zelândia                                    | Nenhuma           | Inglês                      |
+| MSAS    | Malásia Ásia                    | Brunei, Malásia                                                         | Nenhuma           | Malaio                      |
+| MSAOC   | Malásia Sul África Oceania      | Austrália, Nova Zelândia, Suriname, África do Sul                       | Nenhuma           | Malaio                      |
+| RUAS    | Rússia Ásia                     | Quirguistão, Cazaquistão                                                | Nenhuma           | Russo                       |
+| RUNOC   | Rússia Norte e Oceania          | Austrália, Canadá, Nova Zelândia, Estados Unidos                        | Nenhuma           | Russo                       |
+| THAS    | Tailândia Ásia                  | Chipre, Turquia                                                         | Nenhuma           | Tailandês                   |
+| THNEUOC | Tailândia Norte Europa Oceania  | Austrália, Canadá, Alemanha, Reino Unido, Nova Zelândia, Estados Unidos | Nenhuma           | Tailandês                   |
+| TRAFN   | Turco África e Norte            | Canadá, Egito, Líbia, Estados Unidos, Europa                            | Nenhuma           | Turco                       |
+| TRAS    | Turco Ásia                      | Índia, Nepal                                                            | Singapura, Taiwan | Turco                       |
+| URAS    | Urdu Ásia                       | Paquistão                                                               | Nenhuma           | Urdu                        |
+| UREUAF  | Urdu Europa Sul e África        | Reino Unido, Guiana, Quênia, Noruega, África do Sul                     | Nenhuma           | Urdu                        |
+| VIAS    | Vietnam Ásia                    | Vietnã                                                                  | Nenhuma           | Vietnamita                  |
+| VINA    | Vietnam Norte                   | Canadá, Estados Unidos                                                  | Nenhuma           | Vietnamita                  |
+| VISEU   | Vietnam Sul e Europa            | Brasil, Alemanha, França                                                | Nenhuma           | Vietnamita                  |
+| ARM   | Árabe Mundo              | Worldwide                                           | Taiwan                                                                         | Árabe                       |
+| AREU  | Árabe Europa             | Europa                                              | Albânia, Bósnia e Herzegovina, Montenegro, Macedônia do Norte, Kosovo          | Árabe                       |
+| ARIS  | Árabe Israel             | Israel                                              | Nenhuma                                                                        | Árabe                       |
+| ARKU  | Árabe Kuwait             | Bahrein, Kuwait, Omã                                | Nenhuma                                                                        | Árabe                       |
+| AROM  | Árabe Oriente Médio      | Emirados Árabes Unidos, Catar, Arábia Saudita       | Nenhuma                                                                        | Árabe                       |
+| DE    | Alemanha                 | Áustria, Suíça, Alemanha, Liechtenstein, Luxemburgo | Nenhuma                                                                        | Alemão                      |
+| BN    | Bangladesh               | Worldwide                                           | Taiwan                                                                         | Bengali                     |
+| BNOM  | Bangladesh Oriente Médio | Emirados Árabes Unidos, Catar, Arábia Saudita       | Nenhuma                                                                        | Bengali                     |
+| BR    | Brasil                   | Brasil                                              | Nenhuma                                                                        | Todos os idiomas            |
+| BREUA | Brasil EUA               | Estados Unidos                                      | Nenhuma                                                                        | Português (Brasil)          |
+| BREU  | Brasil Europa            | Europa                                              | Albânia, Bósnia e Herzegovina, Montenegro, Macedônia do Norte, Kosovo          | Português (Brasil)          |
+| BG    | Bulgária                 | Europa                                              | Albânia, Bósnia e Herzegovina, Montenegro, Macedônia do Norte, Kosovo          | Búlgaro                     |
+| KO    | Coreia                   | Coreia do Sul                                       | Nenhuma                                                                        | Coreano                     |
+| HR    | Croácia                  | Europa                                              | Albânia, Bósnia e Herzegovina, Montenegro, Macedônia do Norte, Kosovo          | Croata                      |
+| ZHHK  | Chinês Hong Kong         | Hong Kong                                           | Nenhuma                                                                        | Chinês Tradicional (Taiwan) |
+| ZHML  | Chinês Malásia           | Malásia                                             | Nenhuma                                                                        | Chinês Tradicional (Taiwan) |
+| ZHTW  | Chinês Taiwan            | Taiwan                                              | Nenhuma                                                                        | Chinês Tradicional (Taiwan) |
+| SK    | Eslováquia               | Europa                                              | Albânia, Bósnia e Herzegovina, Montenegro, Macedônia do Norte, Kosovo          | Eslovaco                    |
+| SL    | Eslovênia                | Europa                                              | Albânia, Bósnia e Herzegovina, Montenegro, Macedônia do Norte, Kosovo          | Esloveno                    |
+| ESM   | Espanhol Mundo           | Worldwide                                           | Bolívia, Guatemala, Nicarágua, Paraguai, Taiwan, Venezuela                     | Espanhol                    |
+| ESARG | Espanhol Argentina       | Argentina                                           | Nenhuma                                                                        | Espanhol                    |
+| ESCB  | Espanhol Colômbia        | Colômbia                                            | Nenhuma                                                                        | Espanhol                    |
+| ESCH  | Espanhol Chile           | Chile                                               | Nenhuma                                                                        | Espanhol                    |
+| ESEUA | Espanhol EUA             | Estados Unidos                                      | Nenhuma                                                                        | Espanhol                    |
+| ESEU  | Espanhol Europa          | Europa                                              | Albânia, Bósnia e Herzegovina, Montenegro, Macedônia do Norte, Kosovo          | Espanhol                    |
+| ESMX  | Espanhol México          | México                                              | Nenhuma                                                                        | Espanhol                    |
+| TLOM  | Filipinas Oriente Médio  | Emirados Árabes Unidos, Catar, Arábia Saudita       | Nenhuma                                                                        | Filipino                    |
+| TL    | Filipinas                | Worldwide                                           | Taiwan                                                                         | Filipino                    |
+| FRCN  | França Canadá            | Canadá                                              | Nenhuma                                                                        | Francês                     |
+| FREU  | França Europa            | Europa                                              | Albânia, Bósnia e Herzegovina, Montenegro, Macedônia do Norte, Kosovo          | Francês                     |
+| FRMD  | França Mundo             | Worldwide                                           | Taiwan                                                                         | Francês                     |
+| EL    | Grécia                   | Grécia                                              | Nenhuma                                                                        | Grego                       |
+| NL    | Holanda                  | Holanda                                             | Nenhuma                                                                        | Holandês                    |
+| HU    | Hungria                  | Hungria                                             | Nenhuma                                                                        | Húngaro                     |
+| HIOM  | Hindi Oriente Médio      | Emirados Árabes Unidos, Catar, Arábia Saudita       | Nenhuma                                                                        | Hindi                       |
+| HI    | Hindi                    | Índia                                               | Nenhuma                                                                        | Hindi                       |
+| ID    | Indonésia                | Indonésia                                           | Nenhuma                                                                        | Indonésio                   |
+| ENAU  | Inglês Austrália         | Austrália                                           | Nenhuma                                                                        | Inglês                      |
+| ENCA  | Inglês Canadá            | Canadá                                              | Nenhuma                                                                        | Inglês                      |
+| ENOM  | Inglês Oriente Médio     | Emirados Árabes Unidos, Catar, Arábia Saudita       | Nenhuma                                                                        | Inglês                      |
+| ENRU  | Inglês Reino Unido       | Reino Unido                                         | Nenhuma                                                                        | Inglês                      |
+| ENNZ  | Inglês Nova Zelândia     | Nova Zelândia                                       | Nenhuma                                                                        | Inglês                      |
+| ENAF  | Inglês África do Sul     | África do Sul                                       | Nenhuma                                                                        | Inglês                      |
+| HE    | Israel                   | Israel                                              | Nenhuma                                                                        | Hebraico                    |
+| IT    | Itália                   | Itália                                              | Nenhuma                                                                        | Italiano                    |
+| JP    | Japão                    | Japão                                               | Nenhuma                                                                        | Japonês                     |
+| MS    | Malásia                  | Malásia                                             | Nenhuma                                                                        | Malaio                      |
+| PL    | Polônia                  | Europa                                              | Albânia, Bósnia e Herzegovina, Montenegro, Macedônia do Norte, Kosovo          | Polonês                     |
+| RO    | Romênia                  | Europa                                              | Albânia, Bósnia e Herzegovina, Montenegro, Macedônia do Norte, Kosovo          | Romeno                      |
+| RUEU  | Rússia Europa            | Europa                                              | Albânia, Bósnia e Herzegovina, Montenegro, Macedônia do Norte, Kosovo          | Russo                       |
+| SRO   | S/Romênia                | Europa                                              | Albânia, Bósnia e Herzegovina, Montenegro, Macedônia do Norte, Kosovo, Romênia | Romeno                      |
+| RU    | Rússia Mundo             | Worldwide                                           | Taiwan                                                                         | Russo                       |
+| SR    | Sérvia                   | Europa                                              | Albânia, Bósnia e Herzegovina, Montenegro, Macedônia do Norte, Kosovo          | Sérvio                      |
+| TH    | Tailândia                | Worldwide                                           | Camboja, Laos, Myanmar, Taiwan                                                 | Tailandês                   |
+| CS    | Tcheco                   | Europa                                              | Albânia, Bósnia e Herzegovina, Montenegro, Macedônia do Norte, Kosovo          | Tcheco                      |
+| TREU  | Turco Europa             | Europa                                              | Albânia, Bósnia e Herzegovina, Montenegro, Macedônia do Norte, Kosovo          | Turco                       |
+| TRM   | Turco Mundo              | Worldwide                                           | Taiwan                                                                         | Turco                       |
+| UK    | Ucrânia                  | Europa                                              | Albânia, Bósnia e Herzegovina, Montenegro, Macedônia do Norte, Kosovo          | Ucraniano                   |
+| UROM  | Urdu Oriente Médio       | Emirados Árabes Unidos, Catar, Arábia Saudita       | Nenhuma                                                                        | Urdu                        |
+| VI    | Vietnã                   | Worldwide                                           | Taiwan                                                                         | Vietnamita                  |
+| LT    | Lituânia                 | Europa                                              | Albânia, Bósnia e Herzegovina, Montenegro, Macedônia do Norte, Kosovo          | Lituano                     |
+| SV    | Suécia                   | Europa                                              | Albânia, Bósnia e Herzegovina, Montenegro, Macedônia do Norte, Kosovo          | Sueco                       |

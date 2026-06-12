@@ -1,4 +1,5 @@
 import { buildOperationalMarketTargeting } from '../lib/marketTargeting.js'
+import { applyMetaRegionalCompliance, mapMetaRegionalComplianceError } from '../lib/metaRegionalCompliance.js'
 
 function normalizeNonEmptyString(value) {
   if (typeof value !== 'string') return null
@@ -52,12 +53,6 @@ function validateOffsitePromotedObject(promotedObject) {
   }
 
   return []
-}
-
-function resolveComplianceSection(targeting) {
-  const countries = targeting?.geo_locations?.countries
-  if (Array.isArray(countries) && countries.includes('SG')) return 'SINGAPORE_UNIVERSAL'
-  return null
 }
 
 function normalizeCreatedAdSet(created) {
@@ -319,14 +314,26 @@ export async function publishPausedOperationalAdSet({
       throw err
     }
 
-    const complianceSection = resolveComplianceSection(targetingResult.targeting)
+    const compliance = applyMetaRegionalCompliance(
+      {
+        name,
+        targeting: targetingResult.targeting,
+        status: 'PAUSED'
+      },
+      {
+        marketCode: row.market_code,
+        marketParam: row.market_param,
+        targetingMetadata: targetingResult.targetingMetadata
+      }
+    )
 
-    const createdAdSet = normalizeCreatedAdSet(
-      await createAdSet({
+    let createdAdSetRaw = null
+    try {
+      createdAdSetRaw = await createAdSet({
         metaAdAccountId,
         metaCampaignId: generatedCampaign.meta_campaign_id,
         name,
-        targeting: targetingResult.targeting,
+        targeting: compliance.payload.targeting,
         dailyBudgetCents: budget,
         billingEvent: be,
         optimizationGoal: og,
@@ -334,11 +341,25 @@ export async function publishPausedOperationalAdSet({
         bidAmount,
         bidConstraints,
         promotedObject: normalizedPromotedObject,
-        complianceSection,
+        regionalRegulatedCategories: compliance.regionalRegulatedCategories,
+        regional_regulated_categories: compliance.regionalRegulatedCategories,
         accessToken: token,
         status: 'PAUSED'
       })
-    )
+    } catch (err) {
+      const complianceError = mapMetaRegionalComplianceError(err, { regionalCompliance: compliance.diagnostic })
+      if (complianceError) {
+        err.details = {
+          ...(err.details && typeof err.details === 'object' ? { originalMetaError: err.details } : null),
+          operationalMessage: complianceError.operationalMessage,
+          regionalCompliance: compliance.diagnostic,
+          meta: complianceError
+        }
+      }
+      throw err
+    }
+
+    const createdAdSet = normalizeCreatedAdSet(createdAdSetRaw)
 
     const persisted = await persistAdSet(client, {
       generatedCampaign,
@@ -358,8 +379,10 @@ export async function publishPausedOperationalAdSet({
       operationalMarketGenerationId: row.id,
       targeting: targetingResult.targeting,
       targetingMetadata: targetingResult.targetingMetadata,
+      regionalCompliance: compliance.diagnostic,
       promotedObject: normalizedPromotedObject,
-      complianceSection,
+      regionalRegulatedCategories: compliance.regionalRegulatedCategories,
+      complianceSection: compliance.regionalRegulatedCategories[0] ?? null,
       duplicated: false,
       created: {
         campaign: false,

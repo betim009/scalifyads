@@ -1,3 +1,5 @@
+import { resolveRegionalRegulatedCategories } from '../lib/metaRegionalCompliance.js'
+
 function normalizeNonEmptyString(value) {
   if (typeof value !== 'string') return null
   const trimmed = value.trim()
@@ -239,7 +241,9 @@ export async function metaCreateAdSet({
   promotedObject,
   promoted_object,
   complianceSection,
-  compliance_section
+  compliance_section,
+  regionalRegulatedCategories,
+  regional_regulated_categories
 } = {}) {
   const act = normalizeMetaAdAccountId(metaAdAccountId)
   if (!act) {
@@ -307,6 +311,19 @@ export async function metaCreateAdSet({
   const bc = bcRaw && typeof bcRaw === 'object' ? bcRaw : null
   const po = normalizePromotedObject(promotedObject ?? promoted_object)
   const cs = normalizeNonEmptyString(complianceSection ?? compliance_section)
+  const regionalCategoriesInput = Array.isArray(regionalRegulatedCategories)
+    ? regionalRegulatedCategories
+    : Array.isArray(regional_regulated_categories)
+      ? regional_regulated_categories
+      : []
+  const regionalCategories = [
+    ...new Set([
+      ...regionalCategoriesInput
+        .map((item) => normalizeNonEmptyString(item)?.toUpperCase())
+        .filter(Boolean),
+      ...resolveRegionalRegulatedCategories(targetingPayload)
+    ])
+  ]
 
   const params = new URLSearchParams()
   params.set('access_token', token)
@@ -322,6 +339,7 @@ export async function metaCreateAdSet({
   if (bc) params.set('bid_constraints', JSON.stringify(bc))
   if (po) params.set('promoted_object', JSON.stringify(po))
   if (cs) params.set('compliance_section', cs)
+  if (regionalCategories.length > 0) params.set('regional_regulated_categories', JSON.stringify(regionalCategories))
 
   const json = await fetchJson(buildUrl(`${act}/adsets`), { method: 'POST', body: params, retries: 3 })
   const id = normalizeNonEmptyString(json?.id)

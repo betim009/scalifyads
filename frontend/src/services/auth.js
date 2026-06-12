@@ -33,6 +33,24 @@ export async function saveMetaCredentials({ metaAdAccountId, metaPageId, metaAcc
   return { ok: true, ...data };
 }
 
+export async function listOperationalLanguages() {
+  const data = await apiGet("/api/auth/operational-languages");
+  return {
+    ok: true,
+    operationalLanguages: Array.isArray(data?.operationalLanguages) ? data.operationalLanguages : [],
+    activeLanguageKeys: Array.isArray(data?.activeLanguageKeys) ? data.activeLanguageKeys : [],
+  };
+}
+
+export async function toggleOperationalLanguage({ languageKey, active } = {}) {
+  const data = await apiPost("/api/auth/operational-languages/toggle", { languageKey, active });
+  return {
+    ok: true,
+    operationalLanguages: Array.isArray(data?.operationalLanguages) ? data.operationalLanguages : [],
+    activeLanguageKeys: Array.isArray(data?.activeLanguageKeys) ? data.activeLanguageKeys : [],
+  };
+}
+
 export async function listOperationalCountries({ limit = 200 } = {}) {
   const query = new URLSearchParams();
   if (limit) query.set("limit", String(limit));

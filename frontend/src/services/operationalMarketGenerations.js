@@ -36,7 +36,7 @@ export async function publishOperationalAdSet(
 
 export async function publishOperationalCreative(
   id,
-  { pageId, instagramActorId, primaryText, headline, description, destinationUrl, ctaType } = {},
+  { pageId, instagramActorId, primaryText, headline, description, destinationUrl, ctaType, variantKey } = {},
 ) {
   return apiPost(`/api/operational-market-generations/${normalizeId(id)}/publish-creative`, {
     ...(pageId ? { pageId } : null),
@@ -46,6 +46,7 @@ export async function publishOperationalCreative(
     ...(description ? { description } : null),
     ...(destinationUrl ? { destinationUrl } : null),
     ...(ctaType ? { ctaType } : null),
+    ...(variantKey ? { variantKey } : null),
     confirmPublishCreative: true,
   });
 }

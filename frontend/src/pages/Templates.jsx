@@ -1434,7 +1434,7 @@ export default function Templates() {
                                   {r.isVideo && r.previewUrl ? (
                                     <CompactVideoPreview src={r.previewUrl} label={`${cc} Ad ${r.adKey}`} size="sm" />
                                   ) : (
-                                    <div className="videoThumb videoThumbSm" style={{ display: "grid", placeItems: "center", color: "#94a3b8" }}>
+                                    <div className="videoThumb videoThumbSm" style={{ display: "grid", placeItems: "center", color: "var(--text)" }}>
                                       —
                                     </div>
                                   )}
@@ -1923,7 +1923,7 @@ export default function Templates() {
                                             ) : (
                                               <div
                                                 className="videoThumb videoThumbSm"
-                                                style={{ display: "grid", placeItems: "center", color: "#94a3b8" }}
+                                                style={{ display: "grid", placeItems: "center", color: "var(--text)" }}
                                               >
                                                 —
                                               </div>

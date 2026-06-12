@@ -51,6 +51,1076 @@ Se uma seção não tiver data, ela deve ser considerada desatualizada.
 
 Construir o **Campaign Builder**, uma aplicação web que substitui a planilha operacional (XLSX) usada pelo cliente para criar, organizar e acompanhar campanhas de anúncios, evoluindo para integração real com Meta Ads (sincronização de métricas, ROI e automações).
 
+## P46 — Redesign final de UX/UI do /templates-mercado
+
+Última atualização: [2026-06-10 17:45]
+
+Status: Concluída.
+
+Objetivo:
+Melhorar profundamente o design e a UX da página `/templates-mercado`, reduzindo poluição visual, corrigindo textos cortados, melhorando seleção de mercados e adicionando um resumo final copiável das publicações Meta.
+
+Regras:
+
+- Não publicar nada `ACTIVE`.
+- Manter toda publicação Meta como `PAUSED`.
+- Não alterar tokens/credenciais.
+- Não commitar credenciais.
+- Não remover fluxos reais existentes.
+- Preservar P44/P45: compliance regional de Singapura, UTM por mercado e diagnóstico do Ad via Creative vinculado.
+
+Escopo planejado:
+
+- Redesenhar seleção de mercados por país/região/grupo operacional/idioma.
+- Usar modal ou painel lateral para seleção detalhada por grupo.
+- Reduzir cards aninhados, accordions e ruído técnico na tela principal.
+- Melhorar área de mídia com resumo executivo por grupo.
+- Separar ações principais de modo avançado técnico.
+- Criar estado final claro de `Publicação concluída`.
+- Criar botão `Copiar resultado geral` com JSON consolidado.
+- Corrigir overflow, textos cortados, badges/chips e responsividade em 1440px, 1280px e 1024px.
+
+Implementação:
+
+- Redesenhada a seleção de mercados em `/templates-mercado` com cards por país, região, grupo operacional e idioma.
+- Adicionado modal de seleção por grupo com busca, selecionar todos do grupo, limpar grupo, código, nome, idioma, região e grupo de mídia.
+- Resumo principal de mercados agora mostra quantidade selecionada, idiomas, grupos de mídia e status completo/incompleto.
+- Área de mídia mantida executiva por grupos `AE`, `BR`, `EN`, com faltantes explícitos como `videoEN3.mp4`.
+- Publicação continua separada entre ação principal e modo avançado técnico.
+- Adicionado bloco final `Publicação concluída` com totais de mercados, Campaigns, AdSets, Creatives, Ads, status PAUSED, UTM válida, mídia detectada e erros locais.
+- Adicionado botão `Copiar resultado geral` com JSON consolidado e botão `Copiar relatório simples`.
+- Ajustados CSS de botões, badges, chips, tabelas, cards e modal para reduzir cortes e overflow.
+- Corrigido preview frontend de URL final para sobrescrever UTM por mercado, preservando P45.
+
+Arquivos alterados:
+
+- `frontend/src/pages/TemplatesMercado.jsx`
+- `frontend/src/styles/global.css`
+- `PLANS.md`
+
+Validações executadas:
+
+- [2026-06-10 17:35] `npm --prefix frontend run build` (OK; aviso existente de chunk acima de 500 kB).
+- [2026-06-10 17:35] `node backend/scripts/validate-market-tracking-and-ad-diagnostic.js` (OK; confirma P45: UTM por mercado e diagnóstico do Ad via Creative vinculado).
+- [2026-06-10 17:37] Screenshots locais via Chrome headless em `1440px`, `1280px`, `1024px` (OK na primeira dobra autenticada).
+- [2026-06-10 17:38] Screenshot local da seção de mercados e modal em `1280px` (OK; sem corte essencial nos textos principais).
+
+Limitações restantes:
+
+- `validate-operational-publish-preview.js`, `validate-operational-publish-creative.js` e `validate-operational-publish-adset.js` não rodaram neste ambiente porque `DATABASE_URL` não está configurado.
+- O bloco `Publicação concluída` aparece quando todos os Ads das linhas operacionais foram publicados; diagnósticos remotos detalhados continuam disponíveis via botão, mas o contador final usa erro local/IDs disponíveis, não uma varredura automática completa da Meta.
+
+## P47 — UX Refactor completo do /templates-mercado
+
+Última atualização: [2026-06-10 18:25]
+
+Status: Concluída.
+
+Objetivo:
+Transformar `/templates-mercado` de ferramenta técnica/debug para ferramenta operacional para usuário final, preservando integralmente regras de negócio e fluxos Meta existentes.
+
+Regras:
+
+- Não publicar nada `ACTIVE`.
+- Manter toda publicação Meta como `PAUSED`.
+- Não alterar tokens/credenciais.
+- Não commitar credenciais.
+- Não quebrar P44/P45: compliance regional de Singapura, tracking/UTM por mercado e diagnóstico do Ad via Creative vinculado.
+- Não remover diagnóstico Meta, JSON técnico, geração operacional, preview, traduções, upload de mídia, grupos `AE`, `BR`, `EN` ou fluxo Campaign → AdSet → Creative → Ad.
+
+Escopo planejado:
+
+- Auditar e corrigir overflow global de textos, chips, botões, tabelas, URLs e IDs.
+- Redesenhar seleção de mercados para tela principal limpa com botão `Selecionar mercados` e modal/drawer por categorias.
+- Reorganizar preview operacional com URL final copiável, status de UTM e mídia Ads A-E sem aparência de dump técnico.
+- Mover JSON técnico bruto para modal reutilizável com copiar/fechar.
+- Adicionar exclusão de template com confirmação.
+- Mostrar resumo executivo da publicação sempre que houver resultados por mercado.
+- Melhorar tabela/resultados para leitura operacional com progresso por objeto, status, diagnóstico e JSON técnico.
+- Validar responsividade em 1440px, 1280px e 1024px.
+
+Implementação:
+
+- Tela principal de mercados deixou de exibir a lista/catálogo gigante; agora mostra resumo limpo, chips dos selecionados e botão `Selecionar mercados`.
+- Modal de mercados ampliado com busca, categorias horizontais, seleção por grupo, limpar grupo, código, nome, idioma, região e grupo de mídia.
+- Preview operacional reorganizado: headline, texto, descrição, CTA, mídia Ads A-E, URL final em painel próprio, status de UTM e botão `Copiar URL`.
+- JSON técnico bruto removido da tela principal e movido para modal reutilizável com `Copiar JSON`, `Baixar JSON` e fechar.
+- Adicionado modal de confirmação para `Excluir template`, usando endpoint/serviço existente de `flow_templates`; exclusão não apaga objetos Meta.
+- Resultados por mercado passaram de tabela técnica para cards operacionais com progresso Campaign/AdSet/Creative/Ad, status, diagnóstico e JSON técnico em modal.
+- Resumo da publicação aparece sempre que houver linhas operacionais, com botões `Copiar resultado geral`, `Copiar relatório simples` e `Ver JSON consolidado`.
+- Corrigidas regras visuais para overflow, quebra de URLs/IDs, chips, badges, botões, modais e cards em larguras 1440px, 1280px e 1024px.
+- Mídia manteve visão executiva por grupos `AE`, `BR`, `EN`, com faltantes explícitos e botões mais curtos (`Adicionar mídia`, `Upload em lote`).
+
+Arquivos alterados:
+
+- `frontend/src/pages/TemplatesMercado.jsx`
+- `frontend/src/styles/global.css`
+- `PLANS.md`
+
+Validações executadas:
+
+- [2026-06-10 18:14] `npm --prefix frontend run build` (OK; aviso existente de chunk acima de 500 kB).
+- [2026-06-10 18:14] `node backend/scripts/validate-market-tracking-and-ad-diagnostic.js` (OK; P45 preservada).
+- [2026-06-10 18:15] `validate-operational-publish-preview`, `validate-operational-publish-creative`, `validate-operational-publish-adset`, `validate-all-operational-markets` tentados, mas bloqueados por ausência de `DATABASE_URL`.
+- [2026-06-10 18:18] Screenshots Chrome headless autenticadas em 1440px, 1280px e 1024px (OK na primeira dobra).
+- [2026-06-10 18:20] Screenshot Chrome headless da seção de mercados e modal de seleção em 1280px (OK; sem texto essencial cortado).
+
+Limitações restantes:
+
+- Os scripts com Postgres não puderam validar persistência/publicação por falta de `DATABASE_URL` neste ambiente.
+- O contador de diagnóstico no resumo final continua baseado em erro local/IDs disponíveis; diagnósticos Meta remotos seguem acessíveis por ação do usuário.
+- Não houve alteração backend na P47.
+
+## P48 — Simplificação de UX e Correções Visuais Obrigatórias em /templates-mercado
+
+Última atualização: [2026-06-11 11:19]
+
+Status: Concluída.
+
+Objetivo:
+Simplificar a interface de `/templates-mercado`, corrigindo problemas de hierarquia visual, espaçamento, alinhamento, redundância de ações e overflow sem adicionar funcionalidades nem alterar regras de negócio.
+
+Alterações planejadas:
+
+- Remover os botões `Salvar template` e `Novo template` do card superior do fluxo operacional.
+- Renomear os modos principais para `Criar um novo template` e `Meus templates`.
+- Separar modo criação de modo consulta: no modo criação, não exibir sidebar/listagem de templates existentes; no modo `Meus templates`, exibir lista e template selecionado.
+- Reformular cada item da listagem de templates para layout vertical com métricas empilhadas, evitando texto espremido horizontalmente.
+- Padronizar alinhamento vertical/horizontal dos textos em botões primários, secundários, modais, resultados e mídia.
+- Aumentar espaçamento/padding no modal de mercados e transformar itens em cards clicáveis mais legíveis.
+- Melhorar hierarquia no modal, destacando código e nome do mercado e reduzindo destaque de informações secundárias.
+- Auditar overflow em textos, badges, chips, labels, URLs, IDs e contadores.
+- Simplificar visualmente o stepper do fluxo para ficar mais próximo de wizard e ocupar menos altura.
+
+Regras:
+
+- Não adicionar novas funcionalidades.
+- Não alterar regras de negócio.
+- Não alterar integração Meta.
+- Não publicar nada `ACTIVE`; tudo Meta permanece `PAUSED`.
+- Preservar P44/P45 e todos os fluxos existentes.
+
+Implementação:
+
+- Removidos os atalhos redundantes `Salvar template`/`Novo template` do card superior do fluxo operacional; o topo agora mantém só o status `Meta PAUSED`.
+- Removido também o atalho `+ Novo template` da sidebar de consulta, deixando `Criar um novo template` e `Meus templates` como navegação principal.
+- Modos renomeados para `Criar um novo template` e `Meus templates`.
+- Modo criação passou a usar layout em uma coluna, sem sidebar/listagem de templates existentes.
+- Modo `Meus templates` mantém lista e template selecionado, com itens em layout vertical e métricas empilhadas: anúncios, mercados, traduções e assets.
+- Botões principais, secundários, perigo, ação, modal, mídia e resultado receberam alinhamento flexível consistente, com quebra de texto segura.
+- Modal de mercados recebeu mais padding, espaçamento entre grupos e mercados, cards clicáveis maiores e hierarquia visual reforçada para código/nome do mercado.
+- Textos longos, URLs, filenames, IDs, chips, badges e contadores receberam `overflow-wrap`/quebra segura para evitar texto desaparecendo.
+- Stepper do fluxo foi compactado em formato mais próximo de wizard, com menor altura e leitura mais direta.
+- Não houve alteração backend, Meta, tracking, diagnóstico ou regra de publicação.
+
+Arquivos alterados:
+
+- `frontend/src/pages/TemplatesMercado.jsx`
+- `frontend/src/styles/global.css`
+- `PLANS.md`
+
+Validações executadas:
+
+- [2026-06-10 18:51] `npm --prefix frontend run build` (OK; aviso existente de chunk acima de 500 kB).
+- [2026-06-10 18:42] `node backend/scripts/validate-market-tracking-and-ad-diagnostic.js` (OK; P45 preservada, ENAU não herda ARM).
+- [2026-06-10 18:42] `node backend/scripts/validate-operational-publish-preview.js` tentado, mas bloqueado por ausência de `DATABASE_URL`.
+- [2026-06-10 18:42] `node backend/scripts/validate-operational-publish-creative.js` tentado, mas bloqueado por ausência de `DATABASE_URL`.
+- [2026-06-10 18:42] `node backend/scripts/validate-operational-publish-adset.js` tentado, mas bloqueado por ausência de `DATABASE_URL`.
+- [2026-06-10 18:42] `node backend/scripts/validate-all-operational-markets.js` tentado, mas bloqueado por ausência de `DATABASE_URL`.
+- [2026-06-10 18:45] Screenshots Chrome headless autenticadas em 1440px, 1280px e 1024px para modo criação (OK; sem sidebar e sem ações redundantes no topo).
+- [2026-06-10 18:46] Screenshot Chrome headless do modal de mercados em 1280px (OK; cards mais espaçados e textos essenciais visíveis).
+- [2026-06-10 18:49] Screenshot Chrome headless da aba `Meus templates` em 1280px (OK; lista separada do modo criação e métricas empilhadas).
+
+Limitações restantes:
+
+- As validações operacionais com Postgres não puderam confirmar persistência/publicação neste ambiente porque `DATABASE_URL` não está configurado.
+- A revisão visual foi feita por screenshots desktop/headless; não houve teste manual interativo prolongado em navegador real.
+
+### P48.11 — Remover textos técnicos e reduzir ruído visual
+
+Última atualização: [2026-06-10 18:59]
+
+Status: Concluída.
+
+Objetivo:
+Reduzir textos explicativos que faziam a tela parecer documentação técnica/debug, mantendo foco em ação, clareza e resultado.
+
+Implementação:
+
+- Removidos os textos técnicos solicitados das seções de template base, criativos, mercados, mídia, publicação e resultados.
+- Removidos subtítulos redundantes como `Variações de anúncio`, hints sobre Ad A e textos sobre fonte interna `/templates`.
+- Removida a explicação de grupos explícitos `AE/BR/EN` da tela principal; o status por grupo permanece visível nos cards de mídia.
+- Renomeado o disclosure `Lista técnica de mercados selecionados` para `Mercados selecionados`.
+- Removidas observações auxiliares que explicavam persistência/revisão interna sem orientar uma ação imediata.
+- Cards de mídia sem mercado selecionado deixaram de exibir linhas redundantes/contraditórias.
+- Mantidos avisos operacionais necessários, estados vazios e próximo passo do fluxo.
+
+Arquivos alterados:
+
+- `frontend/src/pages/TemplatesMercado.jsx`
+- `PLANS.md`
+
+Validações executadas:
+
+- [2026-06-10 18:59] `npm --prefix frontend run build` (OK; aviso existente de chunk acima de 500 kB).
+- [2026-06-10 18:58] Busca textual confirmou ausência dos textos removidos no componente `/templates-mercado`.
+- [2026-06-10 18:59] Screenshots Chrome headless em 1280px para primeira dobra e seção de mercados/mídia; confirmam redução de ruído e cards de mídia sem mensagens redundantes.
+
+Limitações restantes:
+
+- Não houve alteração backend, Meta, tracking, diagnóstico ou regra de publicação.
+- A revisão visual foi feita em screenshots desktop/headless; não houve teste manual interativo prolongado em navegador real.
+
+### P48.12 — Melhorar modal de seleção de mercados
+
+Última atualização: [2026-06-11 11:19]
+
+Status: Concluída.
+
+Objetivo:
+Melhorar a UX do modal de seleção de mercados, reduzindo redundância entre país, região, idioma e grupo de mídia, e dando mais peso visual aos grupos e cards selecionáveis.
+
+Implementação:
+
+- Cabeçalhos dos grupos principais foram limpos: `Brasil / Português` virou `Brasil`; grupos operacionais `AE/BR/EN` mantêm suas regras, mas aparecem como `Árabe`, `Brasil` e `Inglês`.
+- Resumo do grupo passou a concentrar idioma, quantidade e mídia em uma linha, como `Português · 3 mercados · mídia BR`.
+- Chips horizontais de grupo ficaram maiores, com padding, altura, espaçamento e fonte mais legíveis, comportando resumo em duas linhas quando necessário.
+- Cards de mercado passaram a mostrar código, nome e uma descrição reduzida: idioma, região relevante quando não for redundante, e mídia.
+- Cards receberam mais padding, gap, altura mínima, checkbox maior e coluna de código mais confortável.
+- Descrições usam quebra segura para evitar corte de texto essencial em nomes longos.
+
+Arquivos alterados:
+
+- `frontend/src/pages/TemplatesMercado.jsx`
+- `frontend/src/styles/global.css`
+- `PLANS.md`
+
+Validações executadas:
+
+- [2026-06-11 11:19] `npm --prefix frontend run build` (OK; aviso existente de chunk acima de 500 kB).
+- [2026-06-11 11:19] Validação visual headless em 1280px e 1024px no modal de mercados para grupos Brasil, Árabe, Inglês, Europa e EUA (OK; sem overflow horizontal detectado em chips/cards; screenshots salvos temporariamente em `/tmp/campaign-builder-p4812`).
+
+Limitações restantes:
+
+- Não houve alteração backend, Meta, tracking, seleção salva, grupos `AE/BR/EN`, P44 ou P45.
+- A validação visual foi feita por Chrome headless com respostas locais vazias para autenticação/templates/contas/assets; não houve teste manual prolongado em navegador real.
+
+## P49 — Reorganizar modal de mercados por idioma
+
+Última atualização: [2026-06-11 11:35]
+
+Status: Concluída.
+
+Objetivo:
+Reorganizar o modal de seleção de mercados em `/templates-mercado` para agrupar dinamicamente o catálogo real por idioma principal, eliminando grupos visuais duplicados e reduzindo mistura entre país, região, idioma e grupo de mídia.
+
+Escopo planejado:
+
+- Ler `OPERATIONAL_MARKETS` como fonte única do catálogo no frontend.
+- Criar grupos visuais dinâmicos por idioma principal.
+- Garantir que cada mercado apareça uma única vez em um único grupo visual.
+- Remover grupos destacados redundantes por país/região/grupo operacional do modal.
+- Transformar chips horizontais em cards de idioma maiores, com ícone/emoji, contadores e variações visuais suaves por idioma.
+- Manter busca por código, nome e idioma.
+- Manter seleção salva, seleção por grupo, limpar grupo, contadores e confirmação da seleção.
+- Preservar grupos de mídia `AE`, `BR`, `EN` apenas como metadado de mercado/mídia, sem virar grupo visual duplicado.
+
+Regras:
+
+- Não alterar publicação Meta, status `PAUSED`, P44, P45, diagnóstico Meta, upload de mídias ou fluxo Campaign -> AdSet -> Creative -> Ad.
+- Não criar mercado novo e não duplicar mercado existente.
+- Não hardcodar somente `BR`, `EN` e `AE`; o agrupamento deve cobrir todos os idiomas existentes no catálogo.
+- Botões `Selecionar todos do grupo` e `Limpar grupo` devem atuar somente no idioma selecionado.
+
+Critérios de validação:
+
+- Todos os mercados do catálogo aparecem em exatamente um grupo de idioma.
+- Nenhum mercado aparece duplicado.
+- Nenhum grupo visual de idioma aparece duplicado.
+- Contadores selecionados/total batem com os mercados de cada idioma.
+- Busca continua filtrando por código, nome, idioma, região e grupo de mídia.
+- Selecionar grupo, limpar grupo e confirmar seleção continuam funcionando.
+- `npm --prefix frontend run build` deve passar.
+- Se viável, adicionar ou atualizar validação automatizada para auditar grupos, duplicidades e cobertura do catálogo.
+
+Arquivos previstos:
+
+- `frontend/src/pages/TemplatesMercado.jsx`
+- `frontend/src/styles/global.css`
+- `PLANS.md`
+- Script de validação, se viável.
+
+Implementação:
+
+- Modal passou a renderizar grupos visuais exclusivamente por idioma principal, derivados de `OPERATIONAL_MARKETS`.
+- Removidos grupos visuais redundantes por país, região e grupo operacional no modal.
+- `BR` e mercados `Português (Brasil)` são normalizados visualmente para `Português`.
+- Cada idioma aparece como card maior, com ícone/emoji, contador selecionados/total e variação visual suave.
+- Ordem inicial prioriza `Português`, `Inglês`, `Árabe`, `Espanhol`, `Alemão` e `Francês`; demais idiomas seguem ordenação alfabética.
+- Lista do idioma selecionado mostra código, nome, região curta quando útil e grupo de mídia discreto.
+- Busca continua filtrando mercados do idioma selecionado por código, nome, idioma, região e grupo de mídia.
+- `Selecionar todos do grupo`, `Limpar grupo` e `Confirmar seleção` continuam operando sobre o idioma selecionado.
+- Criada validação automatizada para garantir cobertura do catálogo, ausência de mercados duplicados e ausência de grupos visuais duplicados.
+
+Arquivos alterados:
+
+- `frontend/src/pages/TemplatesMercado.jsx`
+- `frontend/src/styles/global.css`
+- `frontend/src/utils/operationalMarkets.js`
+- `frontend/scripts/validate-market-language-groups.mjs`
+- `frontend/package.json`
+- `PLANS.md`
+
+Validações executadas:
+
+- [2026-06-11 11:35] `npm --prefix frontend run validate:market-groups` (OK; 100 mercados, 35 grupos de idioma, nenhum mercado sem grupo, nenhum mercado duplicado, nenhum grupo visual duplicado).
+- [2026-06-11 11:35] `npm --prefix frontend run build` (OK; aviso existente de chunk acima de 500 kB).
+- [2026-06-11 11:35] Validação visual headless em 1280px e 1024px para Português, Inglês, Árabe, Espanhol, Alemão e Francês (OK; 35 cards visuais, sem duplicidade de títulos, sem duplicidade de mercados na lista e sem overflow horizontal detectado).
+- [2026-06-11 11:35] Validação headless de interação no grupo Português (OK; busca por `BREUA`, selecionar todos = 5/5, limpar = 0, confirmar seleção atualiza tela principal com 5 mercados).
+
+Grupos gerados:
+
+- Alemão (1), Árabe (11), Bengali (3), Búlgaro (1), Chinês Tradicional (Taiwan) (5), Coreano (1), Croata (1), Eslovaco (1), Esloveno (1), Espanhol (9), Filipino (4), Francês (6), Grego (1), Hebraico (1), Hindi (4), Holandês (1), Húngaro (1), Indonésio (3), Inglês (9), Italiano (1), Japonês (1), Lituano (1), Malaio (3), Polonês (1), Português (5), Romeno (2), Russo (4), Sérvio (1), Sueco (1), Tailandês (3), Tcheco (1), Turco (4), Ucraniano (1), Urdu (3), Vietnamita (4).
+
+Limitações restantes:
+
+- Validação visual foi feita por Chrome headless com respostas locais vazias para autenticação/templates/contas/assets; não houve teste manual prolongado em navegador real.
+- Não houve alteração backend, Meta, tracking, upload de mídia, P44, P45, diagnóstico Meta ou regras de publicação.
+
+Pendências:
+
+- Nenhuma pendência identificada para P49.
+
+## P50 — Remodelagem operacional por idiomas no Perfil
+
+Última atualização: [2026-06-11 12:09]
+
+Status: Concluída.
+
+Objetivo:
+Remodelar `/profile` e o modelo operacional para que cada usuário tenha idiomas operacionais ativos, com os 10 idiomas principais habilitados por padrão e idiomas adicionais ativáveis conforme o catálogo real de mercados.
+
+Escopo planejado:
+
+- Criar/consolidar fonte única frontend de idiomas operacionais a partir de `OPERATIONAL_MARKETS`.
+- Definir os 10 idiomas principais: Inglês, Espanhol, Árabe, Português, Francês, Alemão, Russo, Chinês Tradicional (Taiwan), Hindi e Turco.
+- Mapear `targetLanguage`, chave normalizada, ícone, `isCore`, mercados associados, grupo de mídia sugerido e suporte de tradução conhecido/configurado.
+- Adicionar bootstrap seguro no frontend para usuários sem configuração ou com configuração parcial receberem os idiomas principais sem perder idiomas existentes.
+- Remodelar `/profile` para destacar Credenciais Meta, Idiomas operacionais e Mercados disponíveis.
+- Permitir ativar/desativar idiomas adicionais no perfil, mantendo idiomas principais sempre ativos.
+- Preparar `/templates-mercado` para respeitar idiomas ativos do usuário quando disponíveis, preservando templates existentes com mercados de idiomas adicionais.
+- Adicionar validação automatizada para idiomas principais, targetLanguage, bootstrap, agrupamento por idioma, duplicidade e cobertura do catálogo.
+- Documentar pendência P51 para mídia por idioma (`videoPT1`, `videoEN1`, etc.) mantendo compatibilidade `videoBR1`, `videoAE1`, `videoEN1`.
+
+Riscos:
+
+- Quebrar usuários antigos que ainda dependem de países operacionais no perfil.
+- Filtrar mercados de forma agressiva e esconder mercados usados por templates antigos.
+- Divergir mapeamento de idioma/tradução entre frontend e backend.
+- Introduzir incompatibilidade com traduções atuais ou com grupos de mídia `AE/BR/EN`.
+- Alterar acidentalmente publicação Meta, P44, P45 ou diagnóstico Meta.
+
+Critérios de validação:
+
+- Existem exatamente 10 idiomas principais.
+- Todos os 10 idiomas principais possuem `targetLanguage`.
+- Usuário sem configuração recebe os 10 idiomas principais.
+- Usuário com configuração parcial recebe idiomas principais faltantes sem perder existentes.
+- Mercados continuam agrupáveis por idioma.
+- Nenhum mercado fica duplicado.
+- Nenhum mercado do catálogo fica sem idioma.
+- `/templates-mercado` continua buildando.
+- `npm --prefix frontend run build` passa.
+- Se houver alteração backend, executar `node --check` nos arquivos backend alterados.
+
+Regras de segurança:
+
+- Não alterar publicação Meta.
+- Não publicar nada `ACTIVE`; tudo Meta permanece `PAUSED`.
+- Não alterar tokens ou commitar credenciais.
+- Não quebrar P44, P45, diagnóstico Meta, upload de mídias, templates existentes ou mercados existentes.
+- Não remover compatibilidade com países se ainda for usada por endpoints antigos.
+
+Decisões tomadas:
+
+- Criado modelo paralelo de idiomas operacionais por usuário (`user_operational_languages`), sem remover `user_operational_countries`.
+- Idiomas principais são sempre ativos; se o usuário tentar desativar um idioma principal, o backend preserva `active = true`.
+- Usuários novos recebem bootstrap dos 10 idiomas principais no registro; usuários antigos recebem bootstrap ao carregar `/api/auth/me` ou listar idiomas.
+- Idiomas adicionais só entram como ativos quando o usuário ativa no perfil.
+- `/templates-mercado` passa a usar `operationalLanguageKeys` do usuário quando disponível; se a informação não existir, mantém fallback com todos os idiomas para compatibilidade.
+- Templates antigos com mercados de idioma adicional continuam abrindo porque o idioma de mercados já selecionados é incluído no modal mesmo se estiver inativo.
+- Países no perfil foram mantidos como seção de compatibilidade para endpoints/fluxos antigos.
+- Tradução por mercado no backend passou a resolver `targetLanguage` pela fonte de idiomas operacionais, preservando `BR` como `Português`/`pt-BR`.
+- Upload por idioma (`videoPT1.mp4`, `videoAR1.mp4`, etc.) foi documentado como pendência P51; compatibilidade atual `videoBR1`, `videoAE1`, `videoEN1` permanece.
+
+Implementação:
+
+- Fonte frontend de idiomas operacionais criada em `frontend/src/utils/operationalLanguages.js`.
+- Fonte backend de idiomas operacionais criada em `backend/src/lib/operationalLanguages.js`.
+- Migration `0026_user_operational_languages.sql` adicionada.
+- `/api/auth/me` agora retorna `operationalLanguages` e `operationalLanguageKeys` após garantir bootstrap dos principais.
+- Novos endpoints:
+  - `GET /api/auth/operational-languages`
+  - `POST /api/auth/operational-languages/toggle`
+- `/profile` agora destaca:
+  - Credenciais/contas Meta.
+  - Idiomas operacionais.
+  - Resumo de idiomas ativos, principais, adicionais ativos e mercados disponíveis.
+  - Idiomas principais como essenciais.
+  - Idiomas adicionais ativáveis/desativáveis.
+  - Países da operação como compatibilidade.
+- `/templates-mercado` agora filtra grupos por idiomas ativos quando o backend retorna a configuração do usuário.
+- Validação automatizada de mercado/idioma ampliada para cobrir os critérios P50.
+
+Arquivos alterados:
+
+- `PLANS.md`
+- `backend/migrations/0026_user_operational_languages.sql`
+- `backend/src/lib/operationalLanguages.js`
+- `backend/src/lib/operationalMarkets.js`
+- `backend/src/lib/campaignTemplateTranslations.js`
+- `backend/src/routes/auth.js`
+- `frontend/package.json`
+- `frontend/scripts/validate-market-language-groups.mjs`
+- `frontend/src/pages/Profile.jsx`
+- `frontend/src/pages/TemplatesMercado.jsx`
+- `frontend/src/services/auth.js`
+- `frontend/src/utils/operationalLanguages.js`
+- `frontend/src/utils/operationalMarkets.js`
+
+Idiomas principais:
+
+- Inglês (`en`), Espanhol (`es`), Árabe (`ar`), Português (`pt-BR`), Francês (`fr`), Alemão (`de`), Russo (`ru`), Chinês Tradicional (Taiwan) (`zh-Hant`), Hindi (`hi`), Turco (`tr`).
+
+Idiomas adicionais detectados:
+
+- Bengali, Búlgaro, Coreano, Croata, Eslovaco, Esloveno, Filipino, Grego, Hebraico, Holandês, Húngaro, Indonésio, Italiano, Japonês, Lituano, Malaio, Polonês, Romeno, Sérvio, Sueco, Tailandês, Tcheco, Ucraniano, Urdu, Vietnamita.
+
+Suporte de tradução auditado:
+
+- Os 10 idiomas principais possuem `targetLanguage`.
+- O catálogo atual possui `targetLanguage` configurado para todos os 35 idiomas detectados pela validação.
+- A integração LibreTranslate não foi alterada; falhas reais de provider continuam tratadas no fluxo existente.
+
+Validações executadas:
+
+- [2026-06-11 12:09] `node --check backend/src/lib/operationalLanguages.js && node --check backend/src/lib/operationalMarkets.js && node --check backend/src/lib/campaignTemplateTranslations.js && node --check backend/src/routes/auth.js` (OK).
+- [2026-06-11 12:09] `npm --prefix frontend run validate:market-groups` (OK; 100 mercados, 35 grupos, 10 idiomas principais, todos os principais com `targetLanguage`, bootstrap vazio/parcial validado, sem mercado duplicado, sem mercado sem idioma).
+- [2026-06-11 12:09] `npm --prefix frontend run build` (OK; aviso existente de chunk acima de 500 kB).
+
+Limitações restantes:
+
+- Migration não foi executada neste ambiente porque não foi usado `DATABASE_URL`; validação foi estática/build.
+- Backend e frontend ainda mantêm catálogos operacionais espelhados em arquivos separados; P50 reduziu duplicidade de tradução, mas não moveu o catálogo para pacote compartilhado.
+- `/templates-mercado` oculta idiomas inativos por padrão quando há configuração do usuário, mas não exibe estado bloqueado visual para cada idioma inativo.
+- Não houve teste manual prolongado em navegador real.
+
+Resultado P51:
+
+- Upload/mapeamento de mídia por idioma concluído na seção `P51 — Upload de mídia orientado por idioma`.
+- Compatibilidade retroativa mantida para `videoBR1.mp4`, `videoAE1.mp4` e `videoEN1.mp4`.
+- Avaliar UI de idiomas bloqueados/inativos no modal em vez de apenas ocultar.
+
+## P51 — Upload de mídia orientado por idioma
+
+Última atualização: [2026-06-11 12:40]
+
+Status: Concluída.
+
+Objetivo:
+Migrar o reconhecimento automático de mídia em `/templates-mercado` para operar por idioma, mantendo compatibilidade retroativa com nomes históricos usados pelos clientes.
+
+Escopo planejado:
+
+- Reconhecer arquivos `videoXXN.ext` por código de idioma/grupo de mídia, com comparação case-insensitive.
+- Suportar aliases obrigatórios: `BR` e `PT` -> `BR`; `AE` e `AR` -> `AE`; `EN`, `ES`, `FR`, `DE`, `RU`, `HI`, `TR`, `ZH` -> respectivos grupos.
+- Preservar variações A-E por índice `1` a `5`, mapeando para Ads A-E.
+- Remover alertas indevidos para grupos de mídia válidos dos idiomas principais.
+- Exibir na revisão do upload: idioma, grupo de mídia e mercados afetados.
+- Criar validação automatizada cobrindo `BR`, `PT`, `EN`, `AE`, `AR`, `ES`, `FR`, `DE`, `RU`, `HI`, `TR`, `ZH`.
+
+Riscos:
+
+- Quebrar o upload em lote já usado para `BR`, `EN` e `AE`.
+- Divergir grupos exibidos no resumo de mídia dos grupos usados no parser.
+- Atribuir mídia de alias (`PT`, `AR`) para grupo errado e afetar mercados incorretos.
+- Alterar acidentalmente geração, preview operacional ou publicação Meta.
+
+Impacto esperado:
+
+- `videoDE1.mp4` e demais idiomas principais passam a ser reconhecidos automaticamente.
+- Nomes antigos `videoBR1.mp4`, `videoEN1.mp4` e `videoAE1.mp4` continuam válidos.
+- Aliases `videoPT1.mp4` e `videoAR1.mp4` passam a funcionar para compatibilidade operacional por idioma.
+- A UX de upload em massa deixa claro idioma, grupo de mídia e mercados afetados antes da aplicação.
+
+Critérios de aceite:
+
+- `videoDE1.mp4`, `videoFR1.mp4`, `videoES1.mp4`, `videoRU1.mp4`, `videoHI1.mp4`, `videoTR1.mp4` e `videoZH1.mp4` reconhecidos automaticamente.
+- `videoBR1.mp4`, `videoEN1.mp4` e `videoAE1.mp4` continuam funcionando.
+- `videoPT1.mp4` funciona como alias de `BR`.
+- `videoAR1.mp4` funciona como alias de `AE`.
+- Reconhecimento case-insensitive validado.
+- Variações `1` a `5` continuam mapeadas para Ads A-E.
+- Build frontend OK.
+- Validações documentadas no resultado final.
+
+Implementação:
+
+- Criado utilitário frontend `operationalMediaGroups` para centralizar grupos de mídia operacionais por idioma.
+- O mapeamento agora é derivado de `OPERATIONAL_MARKETS` e `getOperationalMarketLanguageGroup`, evitando listas parciais de mercados no parser.
+- Aliases obrigatórios implementados: `BR/PT -> BR`, `AE/AR -> AE`, `EN -> EN`, `ES -> ES`, `FR -> FR`, `DE -> DE`, `RU -> RU`, `HI -> HI`, `TR -> TR`, `ZH -> ZH`.
+- `parseBulkVideoFilename` passou a reconhecer nomes case-insensitive e a normalizar aliases para o grupo canônico.
+- A revisão de upload em massa em `/templates-mercado` passou a exibir `Idioma`, `Grupo de mídia` e `Mercados afetados`.
+- Cards de resumo de mídia passaram a mostrar `Idioma · Grupo XX`.
+- Mensagem antiga `Grupo XX não está cadastrado na tabela explícita` removida do fluxo novo.
+- Criada validação automatizada `validate:media-groups` cobrindo aliases, case-insensitive, mercados afetados e variações A-E.
+
+Arquivos alterados:
+
+- `PLANS.md`
+- `frontend/package.json`
+- `frontend/scripts/validate-operational-media-groups.mjs`
+- `frontend/src/pages/TemplatesMercado.jsx`
+- `frontend/src/utils/operationalMediaGroups.js`
+
+Validações executadas:
+
+- [2026-06-11 12:39] `npm --prefix frontend run validate:media-groups` (OK; validou `BR`, `PT`, `EN`, `AE`, `AR`, `ES`, `FR`, `DE`, `RU`, `HI`, `TR`, `ZH`; case-insensitive `videoDE1.mp4`, `videode1.mp4`, `VideoDe1.mp4`; variações `videoDE1.mp4` a `videoDE5.mp4` -> Ads A-E).
+- [2026-06-11 12:39] `npm --prefix frontend run build` (OK; aviso existente de chunk acima de 500 kB).
+- [2026-06-11 12:40] `npm --prefix frontend run validate:market-groups` (OK; 100 mercados, 35 grupos, 10 idiomas principais, sem mercado duplicado ou sem grupo).
+
+Limitações:
+
+- Não houve teste manual prolongado no navegador; validação foi automatizada e build.
+- Nenhuma validação de upload real com backend/arquivo físico foi executada, porque o objetivo da P51 era reconhecimento/mapeamento frontend antes da aplicação.
+- Publicação Meta, preview operacional e backend não foram alterados.
+
+Próximos passos:
+
+- Fazer teste manual curto em `/templates-mercado` com seleção de mercados DE/FR/ES e arquivos reais pequenos para confirmar a revisão visual e persistência do asset.
+- Avaliar em melhoria separada a UI para idiomas bloqueados/inativos no modal, pendência herdada da P50.
+
+## P52 — Simplificação e limpeza UX do /perfil
+
+Última atualização: [2026-06-11 19:53]
+
+Status: Concluída.
+
+Objetivo:
+Simplificar `/profile`/`/perfil` para entrega operacional, deixando a tela focada apenas em informações básicas do usuário, idiomas operacionais e contas/credenciais Meta.
+
+Escopo planejado:
+
+- Remover do card de usuário os botões redundantes: `Abrir fluxo de campanha`, `Abrir ROI operacional`, `Abrir diagnóstico técnico` e `Logout`.
+- Remover a listagem individual de idiomas adicionais e substituir por um botão único `Adicionar todos os idiomas`.
+- Ao clicar em `Adicionar todos os idiomas`, ativar todos os idiomas adicionais disponíveis no catálogo operacional e atualizar o resumo.
+- Remover completamente da UI o bloco `Países da operação (compatibilidade)`, sem apagar dados nem remover endpoints antigos.
+- Limpar o formulário de nova conta Meta, removendo `Instagram Actor ID`, `País principal` e `Observações`.
+- Remover o link `Voltar ao login`.
+- Reorganizar espaçamentos para a página ficar mais curta e objetiva.
+
+Riscos:
+
+- Quebrar o bootstrap/estado de idiomas principais introduzido na P50.
+- Fazer múltiplas chamadas de ativação de idiomas adicionais e deixar a UI em estado parcial em caso de erro.
+- Remover campos da UI de Meta sem preservar valores existentes em edições.
+- Apagar ou alterar acidentalmente dados legados de países no backend.
+- Alterar fluxos não relacionados como publicação Meta, templates, tracking/UTM ou upload de mídia.
+
+Critérios de aceite:
+
+- Card de usuário fica sem os quatro botões redundantes.
+- Idiomas adicionais não aparecem como lista longa individual.
+- Botão `Adicionar todos os idiomas` ativa todos os adicionais inativos e atualiza os contadores.
+- Quando todos os idiomas adicionais estão ativos, o botão fica desabilitado ou mostra `Todos os idiomas adicionados`.
+- Bloco `Países da operação (compatibilidade)` não aparece no `/profile`.
+- Formulário Meta não exibe `Instagram Actor ID`, `País principal` nem `Observações`.
+- Link `Voltar ao login` não aparece.
+- `npm --prefix frontend run build` passa.
+- Nenhum backend, dado antigo, publicação Meta, templates, tracking/UTM ou upload de mídia é alterado.
+
+Implementação:
+
+- Card de usuário reduzido para exibir apenas identificação do usuário.
+- Removidos do card de usuário os botões `Abrir fluxo de campanha`, `Abrir ROI operacional`, `Abrir diagnóstico técnico` e `Logout`.
+- Alertas de erro/sucesso movidos para o topo do conteúdo autenticado, para cobrir ações de idiomas e Meta.
+- Idiomas adicionais deixaram de renderizar lista individual com botão `Ativar`.
+- Adicionado botão único `Adicionar todos os idiomas`, que ativa sequencialmente todos os idiomas adicionais inativos usando o endpoint existente de toggle por idioma.
+- Quando não há adicionais inativos, o botão fica desabilitado e mostra `Todos os idiomas adicionados`.
+- Mantido card de resumo com adicionais ativos/total e botão `Atualizar resumo`.
+- Removido completamente da UI o bloco `Países da operação (compatibilidade)` e seus controles.
+- Formulário Meta mantido com campos essenciais: nome interno, Meta Ad Account ID, Meta Page ID, Meta Access Token, BM/Nicho/Operação, definir como padrão e salvar.
+- Removidos do formulário os campos `Instagram Actor ID`, `País principal` e `Observações`.
+- Removido o link `Voltar ao login`.
+
+Decisões tomadas:
+
+- Backend legado de países não foi alterado; somente a UI do `/profile` deixou de consumir/exibir esses controles.
+- Valores existentes de `metaInstagramActorId`, `countryHint` e `notes` são preservados em edição porque continuam no estado/payload interno, apesar de não aparecerem no formulário.
+- Para novas contas Meta, `countryHint` permanece com default interno `BR`, sem campo visível.
+- `Adicionar todos os idiomas` usa chamadas sequenciais para reaproveitar a regra P50 existente que preserva idiomas principais e retorna o catálogo atualizado.
+
+Arquivos alterados:
+
+- `PLANS.md`
+- `frontend/src/pages/Profile.jsx`
+
+Validações executadas:
+
+- [2026-06-11 19:16] `npm --prefix frontend run build` (OK; aviso existente de chunk acima de 500 kB).
+- [2026-06-11 19:16] `npm --prefix frontend run validate:market-groups` (OK; 100 mercados, 35 grupos, 10 idiomas principais).
+- [2026-06-11 19:18] Auditoria textual em `frontend/src/pages/Profile.jsx` confirmou ausência dos textos/handlers removidos: botões redundantes, bloco de países, campos removidos do formulário Meta, `Voltar ao login` e botões individuais `Ativar`.
+
+Limitações:
+
+- Não houve teste manual autenticado no navegador nem clique real com backend rodando; a validação foi por build, validação de catálogo e auditoria textual.
+- Não houve alteração backend, então nenhum `node --check` backend foi executado.
+
+Pendências:
+
+- Validar manualmente em ambiente autenticado o clique em `Adicionar todos os idiomas`, confirmando atualização visual dos contadores após resposta real da API.
+
+Complemento — Limpeza da navbar/header:
+
+- Atualizar a logo do header para exibir apenas `ScalifyAds`, sem ícone/imagem e sem o subtítulo `Automação global de campanhas`.
+- Remover da navbar apenas a exibição dos botões `Fluxo de campanha` e `Diagnóstico técnico`, preservando páginas, rotas e arquivos.
+- Deixar `ROI operacional` visível como desabilitado/sutil e sem navegação.
+- Manter na navbar apenas os links ativos `Templates`, `Templates Mercado`, `Perfil` e `Sair`, além do item desabilitado `ROI operacional`.
+- Ajustar alinhamento vertical, espaçamento, centralização e quebra de linha da navbar/header.
+- Validar com `npm --prefix frontend run build` e conferência visual em `/profile`, `/templates` e `/templates-mercado`.
+
+Resultado do complemento:
+
+- Header passou a exibir somente o texto `ScalifyAds` como marca.
+- Removidos da UI do header o ícone da marca, o subtítulo `Automação global de campanhas`, `Fluxo de campanha` e `Diagnóstico técnico`.
+- `ROI operacional` permanece visível como pill desabilitada, sem link e sem ação de clique.
+- Links ativos mantidos na navbar: `Templates`, `Templates Mercado`, `Perfil` e `Sair`.
+- Rotas `/campaign-flow`, `/meta-test` e `/roi-operacional` foram preservadas em `App.jsx`; nenhuma página/rota/arquivo foi apagado.
+- CSS do header foi ajustado para alinhar logo e navegação verticalmente, evitar quebra de botões e equilibrar espaçamentos.
+
+Arquivos alterados no complemento:
+
+- `PLANS.md`
+- `frontend/src/components/Header.jsx`
+- `frontend/src/styles/global.css`
+
+Validações do complemento:
+
+- [2026-06-11 19:27] `npm --prefix frontend run build` (OK; aviso existente de chunk acima de 500 kB).
+- [2026-06-11 19:27] Auditoria textual em `Header.jsx`/`global.css` confirmou ausência de `Automação global de campanhas`, `logoBox`, `techLink`, `Fluxo de campanha`, `Diagnóstico técnico`, links para `/campaign-flow`, `/meta-test` e link ativo para `/roi-operacional`.
+- [2026-06-11 19:27] Conferência estática de `App.jsx` confirmou rotas preservadas para `/campaign-flow`, `/meta-test`, `/roi-operacional`, `/profile`, `/templates` e `/templates-mercado`.
+
+Limitações do complemento:
+
+- Não houve inspeção visual autenticada em navegador nas três páginas solicitadas; validação foi por build e auditoria estática.
+
+Complemento final — Limpeza visual do /profile e navbar:
+
+- Remover o card isolado de usuário (`Usuário` / `@...`) do topo do `/profile`.
+- Manter título `Perfil` e simplificar subtítulo para `Idiomas operacionais e credenciais Meta`.
+- Trocar o título da seção `Idiomas operacionais` para `Idiomas`.
+- Remover o texto explicativo sobre operação por mercado, mídia, traduções e publicação.
+- Remover o indicador `Principais 10/10`.
+- Manter somente os indicadores `Idiomas ativos`, `Idiomas extras` e `Mercados disponíveis`.
+- Remover dos cards de idiomas principais o badge `essencial` e códigos técnicos como `en`, `pt-BR` e `zh-Hant`.
+- Cards de idiomas principais devem mostrar apenas ícone, nome do idioma e quantidade de mercados.
+- Confirmar novamente que bloco de países, campos Meta removidos, `Voltar ao login`, botões redundantes da navbar e navegação ativa do ROI não aparecem na UI.
+- Validar com `npm --prefix frontend run build`.
+
+Resultado do complemento final:
+
+- Card isolado de usuário removido do topo do `/profile`.
+- Título da página permanece `Perfil`; subtítulo permanece operacional e curto: `Idiomas operacionais e credenciais Meta`.
+- Seção `Idiomas operacionais` renomeada para `Idiomas`.
+- Texto explicativo sobre operação por mercado/mídia/traduções/publicação removido.
+- Indicador `Principais 10/10` removido; resumo mantém `Idiomas ativos`, `Idiomas extras` e `Mercados disponíveis`.
+- Cards dos idiomas principais não mostram mais badge `essencial` nem códigos técnicos de tradução; exibem somente ícone, nome e quantidade de mercados.
+- Navbar permanece limpa com marca `ScalifyAds`, links ativos `Templates`, `Templates Mercado`, `Perfil`, `Sair` e ROI desabilitado sem navegação.
+- Rotas e páginas de ROI, fluxo de campanha e diagnóstico técnico seguem preservadas em `App.jsx`.
+
+Arquivos alterados no complemento final:
+
+- `PLANS.md`
+- `frontend/src/pages/Profile.jsx`
+
+Decisões do complemento final:
+
+- O username foi removido da UI em vez de reinserido no subtítulo, para manter o topo mais limpo.
+- O item `ROI operacional` foi mantido visível como desabilitado, seguindo a preferência anterior de deixar claro que existe, mas sem navegação.
+- Não houve mudança em backend, autenticação, rotas, templates, tracking/UTM, publicação Meta ou upload de mídia.
+
+Validações do complemento final:
+
+- [2026-06-11 19:31] `npm --prefix frontend run build` (OK; aviso existente de chunk acima de 500 kB).
+- [2026-06-11 19:31] Auditoria textual em `Profile.jsx`, `Header.jsx` e `global.css` confirmou remoção de card de usuário, texto explicativo, indicador `Principais`, badge `essencial`, códigos técnicos nos cards, campos Meta removidos, bloco de países, `Voltar ao login`, botões redundantes da navbar e links ativos para ROI/fluxo/diagnóstico no header.
+- [2026-06-11 19:31] Conferência estática em `App.jsx` confirmou rotas preservadas para `/roi-operacional`, `/campaign-flow`, `/meta-test`, `/profile`, `/templates` e `/templates-mercado`.
+
+Limitações finais:
+
+- Não houve validação visual autenticada em navegador nas rotas `/profile`, `/templates` e `/templates-mercado`; validação foi por build e auditoria estática.
+
+Complemento — Remover Entrada operacional da Home:
+
+- Remover da UI da Home (`/`) o bloco completo `Entrada operacional`.
+- Remover junto do bloco o texto de próximo passo recomendado, guia `Fluxo recomendado`, botões de acessos rápidos, botão `Abrir fluxo de campanha`, links para ROI operacional, diagnóstico técnico e perfil.
+- Não apagar páginas, rotas, funções ou componentes que ainda sejam usados em outros lugares.
+- Manter cards/resumos principais, lista de campanhas e ações úteis para operação.
+- Validar com `npm --prefix frontend run build` e confirmar que `Entrada operacional` não aparece mais na Home.
+
+Resultado do complemento da Home:
+
+- Bloco `Entrada operacional` removido da renderização da Home (`/`).
+- Removidos junto do bloco: texto de próximo passo recomendado, guia `Fluxo recomendado`, acessos rápidos, `Abrir fluxo de campanha`, ROI operacional, diagnóstico técnico e perfil.
+- Cards/resumos principais e lista de campanhas foram preservados.
+- Rotas e páginas de fluxo de campanha, ROI operacional, diagnóstico técnico, perfil e templates seguem preservadas em `App.jsx`.
+
+Arquivos alterados no complemento da Home:
+
+- `PLANS.md`
+- `frontend/src/pages/Dashboard.jsx`
+
+Decisões do complemento da Home:
+
+- A remoção foi feita somente no JSX da Home, sem apagar componentes, páginas, rotas ou serviços.
+- Imports e uso de `navigate`/`RocketLaunchIcon` foram removidos de `Dashboard.jsx` porque só alimentavam o bloco removido.
+
+Validações do complemento da Home:
+
+- [2026-06-11 19:34] `npm --prefix frontend run build` (OK; aviso existente de chunk acima de 500 kB).
+- [2026-06-11 19:34] Auditoria textual em `Dashboard.jsx` confirmou ausência de `Entrada operacional`, `Fluxo recomendado`, `Acessos rápidos`, `Abrir fluxo de campanha`, links para ROI, perfil, diagnóstico técnico, `/campaign-flow`, `/meta-test` e `/roi-operacional`.
+- [2026-06-11 19:34] Conferência estática em `App.jsx` confirmou rotas preservadas para `/roi-operacional`, `/campaign-flow`, `/meta-test`, `/profile`, `/templates` e `/templates-mercado`.
+
+Limitações do complemento da Home:
+
+- Não houve validação visual autenticada em navegador para `/`, `/profile`, `/templates` e `/templates-mercado`; validação foi por build e auditoria estática.
+
+Complemento — Revisão global de tipografia operacional:
+
+- Auditar `global.css`, Header, Dashboard, Profile, Templates, TemplatesMercado, CampaignFlow e componentes compartilhados para textos secundários em cinzas/azuis claros como `#94A3B8`, `#8B9BB4`, `#7C8CA5`, `#64748B` ou variáveis equivalentes.
+- Ajustar textos secundários para maior contraste, aproximando de `#111827` e reduzindo excesso de negrito para pesos 400/500 quando possível.
+- Preservar cores semânticas de badges de status, sucesso, erro, alertas, Meta PAUSED, botões primários e demais estados do sistema.
+- Ajustar `/profile` para cabeçalho `Bem-vindo, {nome}` / `Gerencie seus idiomas e credenciais Meta`, sem card isolado de usuário.
+- Confirmar seção `Idiomas`, sem texto explicativo técnico, sem badge `essencial` e sem códigos técnicos nos cards.
+- Validar com `npm --prefix frontend run build` e auditoria visual/estática em `/`, `/profile`, `/templates` e `/templates-mercado`.
+
+Resultado da revisão tipográfica:
+
+- Tokens globais `--text-secondary` e `--muted` foram elevados para `#111827`, removendo o cinza azulado claro como padrão de texto secundário.
+- `.pageSubtitle` e `.muted` passaram a usar peso 400 por padrão, reduzindo excesso de negrito em textos secundários.
+- `/profile` passou a usar cabeçalho `Bem-vindo, {nome}` / `Gerencie seus idiomas e credenciais Meta`; sem nome disponível, mostra `Bem-vindo`.
+- Card isolado de usuário continua removido; username é usado apenas para montar o cabeçalho quando disponível.
+- Labels e textos secundários visíveis do `/profile` tiveram pesos reduzidos para 400/500 e cor próxima de `#111827`.
+- Placeholders visuais de vídeo em `Templates` e `CampaignFlow` deixaram de usar `#94a3b8`.
+- Não foram alteradas cores semânticas de status, sucesso, erro, alertas, botões primários ou estados Meta.
+
+Arquivos alterados na revisão tipográfica:
+
+- `PLANS.md`
+- `frontend/src/styles/global.css`
+- `frontend/src/pages/Profile.jsx`
+- `frontend/src/pages/Templates.jsx`
+- `frontend/src/pages/CampaignFlow.jsx`
+
+Decisões da revisão tipográfica:
+
+- A correção global foi feita nos tokens/classes compartilhados para cobrir Header, Dashboard, Templates, TemplatesMercado, CampaignFlow e componentes que usam `var(--muted)`/`var(--text-secondary)`.
+- Ajustes inline foram limitados aos pontos mais visíveis e diretamente relacionados ao pedido, evitando mexer em status, alertas e cores semânticas.
+- O nome exibido no cabeçalho vem de `user.name` quando existir ou de `username` com primeira letra maiúscula e sem `@`.
+
+Validações da revisão tipográfica:
+
+- [2026-06-11 19:44] `npm --prefix frontend run build` (OK; aviso existente de chunk acima de 500 kB).
+- [2026-06-11 19:44] Auditoria textual nos arquivos auditados confirmou ausência de `#94A3B8`, `#8B9BB4`, `#7C8CA5` e `#64748B`; `--muted` e `--text-secondary` agora apontam para `#111827`.
+- [2026-06-11 19:44] Auditoria textual em `Profile.jsx` confirmou cabeçalho `Bem-vindo`, subtítulo novo, ausência de card `Usuário`, ausência do texto técnico de idiomas, ausência de `Principais`, badge `essencial` e códigos técnicos nos cards.
+
+Limitações da revisão tipográfica:
+
+- Não houve validação visual autenticada em navegador para `/`, `/profile`, `/templates` e `/templates-mercado`; validação foi por build e auditoria estática.
+- Ainda existem cores cinzas mais escuras como `#6b7280` em pontos específicos do CSS; elas não fazem parte dos tons-alvo claros e foram preservadas quando pareciam status/estrutura ou fora do escopo seguro.
+
+Complemento — Auditoria de textos e botões desnecessários em `/templates-mercado`:
+
+- Auditar visualmente e no código textos, subtítulos, botões e ações de `/templates-mercado` que sejam redundantes, duplicados, técnicos, explicativos demais ou sem ação clara para o cliente.
+- Para cada candidato, aplicar o critério: se o usuário ainda consegue concluir a tarefa sem esse elemento, remover da UI principal ou mover para modo avançado/modal.
+- Priorizar remoção de textos sobre funcionamento interno, publicador, dados compartilhados, guias internos, ações técnicas, JSON bruto, explicações óbvias e avisos que não afetam decisão.
+- Manter visíveis apenas as etapas necessárias: criar/escolher template, preencher dados base, selecionar mercados, enviar mídias, gerar traduções, publicar em PAUSED e ver resultado/diagnóstico.
+- Preservar rotas, backend, publicação Meta, status PAUSED, templates, tracking/UTM, upload de mídia e diagnósticos.
+- Validar com `npm --prefix frontend run build` e auditoria estática/visual do fluxo de criação, edição, modal de mercados, preview, publicação e resultados.
+
+Critérios de aceite do complemento de `/templates-mercado`:
+
+- Textos técnicos ou com cara de documentação de desenvolvimento não aparecem na tela principal.
+- Botões duplicados ou ações técnicas fora do modo avançado/modal são removidos ou realocados.
+- O fluxo principal continua permitindo criar/editar template, selecionar mercados, enviar mídia, gerar traduções, publicar em PAUSED e consultar resultado/diagnóstico.
+- `npm --prefix frontend run build` passa.
+
+Resultado do complemento de `/templates-mercado`:
+
+- Subtítulo da página encurtado para `Crie e publique por mercado`.
+- Removido o rótulo `Fluxo operacional` do topo.
+- Removido o resumo duplicado das abas com quantidade de mercados e Ads com texto.
+- Removido o botão superior `Salvar revisão`, mantendo `Salvar revisão` apenas na seção de traduções.
+- Renomeados labels técnicos visíveis: `nicheParam / slug operacional` virou `Operação`, `Destination URL` virou `URL de destino`, `primaryText` virou `Texto principal`, `headline` virou `Título` e `description` virou `Descrição`.
+- Mensagens visíveis com `nicheParam`, `asset`, `Headline` e `Gerar operacional` foram trocadas por linguagem operacional: `operação`, `mídia`, `Título` e `Preparar publicação`.
+- Seção `Seleção operacional` virou `Mercados`; a linha de status duplicada de mercados/mídia/traduções foi removida do card de mercados.
+- Seção `Mídia por grupo e por mercado` virou `Mídias`.
+- Modal de mercados ficou mais direto: removida frase instrucional e removida a descrição longa dos cards de idioma, mantendo apenas contadores selecionados/total.
+- Preview perdeu a linha técnica `CTA`/`Creative`, mantendo mercado, texto, URL final, UTM e mídia.
+- `campaign_id` solto foi movido para `Publicação avançada`.
+- Cards da publicação avançada deixaram de repetir descrições internas de bloqueio/status.
+- Resultado parcial mantém só `Copiar resultado` visível; `Copiar relatório simples` e `Ver JSON consolidado` foram movidos para `Detalhes técnicos`.
+- Quando a publicação está concluída, o resumo parcial não é mais duplicado acima do painel final.
+- No painel final, `Copiar resultado geral` virou `Copiar resultado`; relatório simples e JSON consolidado ficam em `Detalhes técnicos`.
+- Status técnicos `configured/effective` e `Ver JSON técnico` por mercado foram movidos para `Detalhes técnicos` dentro de cada card.
+- Texto `Consulta por ID, sem publicar nada` foi removido do diagnóstico.
+- Rodapé `Ver JSON técnico do template`/`Copiar JSON do template` foi recolhido em `Detalhes técnicos do template`.
+- CSS morto de `opsTabsSummary` e `opsPreviewMetaLine` foi removido.
+
+Arquivos alterados no complemento de `/templates-mercado`:
+
+- `PLANS.md`
+- `frontend/src/pages/TemplatesMercado.jsx`
+- `frontend/src/styles/global.css`
+
+Decisões do complemento de `/templates-mercado`:
+
+- Diagnóstico Meta permaneceu visível porque faz parte do resultado operacional solicitado.
+- JSON, relatório simples, IDs e status técnicos foram preservados, mas recolhidos em detalhes técnicos/modais.
+- Não houve alteração de backend, rotas, publicação Meta, tracking/UTM, upload de mídia, templates salvos ou status `PAUSED`.
+
+Validações do complemento de `/templates-mercado`:
+
+- [2026-06-11 19:53] `npm --prefix frontend run build` (OK; aviso existente de chunk acima de 500 kB).
+- [2026-06-11 19:53] Auditoria textual confirmou ausência dos exemplos/candidatos principais na UI de `/templates-mercado`: `Fluxo operacional`, `Destination URL`, `Consulta por ID`, `Copiar resultado geral`, `Ver JSON técnico do template`, `Copiar JSON do template`, `Gerar operacional`, `Asset definido`, `Nenhum asset`, `Selecionar asset`, `configured:`, `effective:` e `campaign_id`.
+
+Limitações do complemento de `/templates-mercado`:
+
+- Não houve validação visual autenticada em navegador criando/editando template, abrindo modal, preview, publicação e resultados; a validação foi por build e auditoria estática.
+
+## P53 — Fechamento UX de `/templates-mercado`: ordem do fluxo, traduções, preview e mídias
+
+Última atualização: [2026-06-11 20:38]
+
+Status: Concluída.
+
+Objetivo:
+Fechar a UX principal de `/templates-mercado`, ajustando a ordem do fluxo, simplificando rótulos visuais de Ads, tornando traduções revisáveis para Ads 1-5, corrigindo preview por Ad selecionado e unificando a experiência de mídia.
+
+Escopo planejado:
+
+- Alterar ordem visual do fluxo para: Template base, Criativos, Mercados, Traduções, Mídias, Preview, Publicação e Resultados.
+- Atualizar stepper, títulos e ordem das seções para refletir traduções antes de mídias.
+- Trocar visualmente `Ad A-E` por `Ad 1-5`, preservando internamente as chaves `A-E` quando necessário para compatibilidade.
+- Melhorar a seção de traduções para permitir revisar e editar texto principal, título e descrição de todos os Ads 1-5 por mercado.
+- Corrigir preview para selecionar Ad 1-5, destacar o Ad selecionado e exibir texto, descrição, mídia, URL e UTM do Ad/mercado selecionados.
+- Remover o dropdown `Usar mídia existente...` do fluxo principal.
+- Filtrar grupos de mídia para mostrar somente grupos/idiomas com mercados selecionados.
+- Unificar revisão de upload em massa e edição manual de mídia em uma experiência por grupo/idioma selecionado.
+- Reduzir textos/botões redundantes remanescentes e manter detalhes técnicos recolhidos.
+
+Riscos:
+
+- Quebrar compatibilidade com dados salvos que usam chaves internas `A-E`.
+- Perder traduções existentes ao reorganizar edição manual por mercado e Ad.
+- Desalinhar upload por idioma da P51 ao filtrar/agrupá-lo por mercados selecionados.
+- Fazer o preview apontar para texto ou mídia de Ad diferente do selecionado.
+- Afetar publicação Meta, tracking/UTM ou status `PAUSED` ao mexer em payloads usados pela UI.
+
+Critérios de aceite:
+
+- Ordem visual do fluxo aparece como Base, Criativos, Mercados, Traduções, Mídias, Preview, Publicação e Resultados.
+- UI mostra Ads como `Ad 1` a `Ad 5`, sem expor `Ad A-E` no fluxo principal.
+- Traduções permitem revisar/editar texto principal, título e descrição para Ads 1-5 por mercado.
+- Preview alterna entre Ads 1-5, mantém destaque visual do selecionado e mostra textos/mídia corretos.
+- Mídias exibem somente grupos com mercados selecionados.
+- Dropdown `Usar mídia existente...` não aparece no fluxo principal.
+- Revisão de upload e edição manual ficam integradas em um componente por grupo/idioma/Ad.
+- Publicação Meta, status `PAUSED`, tracking/UTM, P44, P45, P50 e P51 permanecem preservados.
+- `npm --prefix frontend run build` passa.
+
+Implementação:
+
+- Ordem visual do fluxo em `/templates-mercado` alterada para: `Template base`, `Criativos`, `Mercados`, `Traduções`, `Mídias`, `Preview`, `Publicação` e `Resultados`.
+- Stepper e métricas passaram a colocar `Traduções` antes de `Mídia`.
+- A ação principal agora bloqueia avanço para publicação quando traduções ou mídias ainda não estão prontas.
+- Criados helpers visuais `adLabel`, `adNumber` e `adIndexFromKey` para exibir `Ad 1-5` sem alterar as chaves internas `A-E`.
+- Criativos, traduções, preview, mídia e mensagens visíveis passaram a usar `Ad 1`, `Ad 2`, `Ad 3`, `Ad 4` e `Ad 5`.
+- Seção de traduções passou a renderizar cada mercado como painel expansível, com edição manual de texto principal, título e descrição para todos os Ads 1-5.
+- Adicionado botão `Cancelar edição` na seção de traduções, restaurando as traduções salvas no template selecionado.
+- Botões `Ver no preview` nas traduções definem mercado e Ad selecionado no preview.
+- Preview passou a ter estado próprio de Ad selecionado (`previewAdKey`), usando o índice correspondente para texto traduzido/base e a mídia correspondente ao mesmo Ad.
+- Cards de mídia do preview agora são selecionáveis por teclado/clique e destacam o Ad ativo com fundo azul claro.
+- Dropdown `Usar mídia existente...` foi removido do fluxo principal.
+- Grupos de mídia agora são filtrados para mostrar somente grupos com mercados selecionados.
+- Experiência de mídia foi unificada por grupo/idioma: cada grupo mostra mercados afetados, status 5/5 e cards `Ad 1-5` com filename, status e botão `Trocar`.
+- Revisão de upload em lote foi integrada aos mesmos cards de mídia por grupo, mostrando arquivos reconhecidos como pendentes/reconhecidos no Ad correto.
+- Arquivos não reconhecidos ficam recolhidos em `Arquivos não reconhecidos`, com correção manual de grupo e Ad.
+- Mantidos detalhes técnicos e publicação avançada recolhidos, sem alteração de backend/publicação.
+
+Arquivos alterados:
+
+- `PLANS.md`
+- `frontend/src/pages/TemplatesMercado.jsx`
+- `frontend/src/styles/global.css`
+
+Decisões:
+
+- As chaves internas `A-E` foram preservadas para compatibilidade com mídia, traduções, payloads salvos e publicação Meta.
+- A publicação de Creative continua usando o `variantKey: "A"` internamente, preservando o comportamento operacional existente.
+- A troca manual de mídia foi feita por grupo/idioma selecionado, aplicando a mesma mídia aos mercados afetados do grupo para o Ad escolhido.
+- O seletor de mídia existente foi removido da UI principal, mas os serviços/funções legados não foram apagados.
+- Não houve alteração em backend, rotas, tracking/UTM, compliance regional, publicação Meta ou status `PAUSED`.
+
+Validações:
+
+- [2026-06-11 20:38] `npm --prefix frontend run build` (OK; aviso existente de chunk acima de 500 kB).
+- [2026-06-11 20:38] Auditoria textual confirmou a ordem das seções `1-8` conforme P53.
+- [2026-06-11 20:38] Auditoria textual confirmou ausência de rótulos visuais antigos `Ad A`, `Ad B`, `Ad C`, `Ad D`, `Ad E`, `Ads A-E`, `Usar mídia existente`, `sem mercado`, `Editar mídia por mercado` e `Título Ad A` na UI principal.
+- [2026-06-11 20:38] Auditoria estática confirmou presença de `previewAdKey`, `setPreviewAdKey`, `opsPreviewMediaPrimary`, `opsTranslationAdCard`, `opsMediaAdCard` e filtro de `mediaGroupSummary` por mercados selecionados.
+
+Limitações:
+
+- Não houve validação visual autenticada em navegador criando template, selecionando mercados DE/FR/ES, gerando traduções, editando manualmente, fazendo upload real e publicando.
+- A validação de DE/FR/ES ficou limitada à auditoria estática do fluxo e à preservação do catálogo/grupos existentes; não houve execução real com arquivos desses idiomas.
+- Funções legadas de seleção de mídia existente permanecem no componente para compatibilidade, mas não aparecem mais no fluxo principal.
+
+## P54 — Corrigir bug de traduções e simplificar fluxo de `/templates-mercado`
+
+Última atualização: [2026-06-11 21:15]
+
+Status: Concluída.
+
+Objetivo:
+Corrigir o bug em que `Gerar traduções` recarrega/resetava a experiência visual, fazia mercados sumirem e só mostrava traduções após selecionar mercados novamente, além de simplificar o fluxo removendo o preview e reduzindo botões da seção de traduções.
+
+Escopo planejado:
+
+- Auditar o fluxo de `Gerar traduções`, persistência do template, reload da lista e reidratação de `selectedMarkets`.
+- Garantir que a geração de traduções não recarregue a página, preserve mercados selecionados e mostre o resultado imediatamente.
+- Manter o estado local do template atualizado após gerar traduções, sem exigir selecionar mercados novamente.
+- Remover completamente da UI principal o passo `Preview`.
+- Atualizar ordem visual do fluxo para: `Template base`, `Criativos`, `Mercados`, `Traduções`, `Mídias`, `Publicação`, `Resultados`.
+- Reduzir botões de traduções para apenas `Gerar traduções` e `Salvar mudança`.
+- Fazer `Salvar mudança` iniciar desabilitado, habilitar somente após edição manual e desabilitar novamente após salvar.
+- Remover `Cancelar edição`, `Pré-visualizar` e `Ver no preview` da seção de traduções.
+- Remover subtítulos duplicados dos passos, deixando somente o rótulo numerado principal quando título repetir a mesma ideia.
+
+Riscos:
+
+- Perder traduções ou mercados selecionados ao atualizar o payload local após geração.
+- Quebrar dados salvos com chaves internas `A-E`.
+- Alterar fluxo de publicação Meta ou tracking/UTM acidentalmente ao remover o preview da UI.
+- Deixar `Salvar mudança` habilitado/desabilitado em momento incorreto.
+- Manter funções de preview não utilizadas causando ruído ou warnings.
+
+Critérios de aceite:
+
+- `Gerar traduções` não recarrega a página.
+- Mercados selecionados permanecem visíveis após gerar traduções.
+- Traduções aparecem imediatamente após a resposta da geração.
+- Template local/lista ficam atualizados com traduções e mercados preservados.
+- Botões visíveis em traduções ficam limitados a `Gerar traduções` e `Salvar mudança`.
+- `Salvar mudança` habilita somente após edição manual e desabilita após salvar.
+- `Preview` não aparece mais na UI principal.
+- Ordem visual final passa a ter 7 passos: Template base, Criativos, Mercados, Traduções, Mídias, Publicação e Resultados.
+- Publicação Meta, status `PAUSED`, tracking/UTM, P44, P45, P50, P51 e dados já salvos permanecem preservados.
+- `npm --prefix frontend run build` passa.
+
+Causa identificada:
+
+- O problema não vinha de submit de formulário; os botões já eram `type="button"` e não havia `<form>` envolvendo a ação.
+- A causa prática era a chamada de `refreshAll({ selectId: selectedId })` logo após `Gerar traduções` e também em `saveTranslationsOnly`.
+- Esse reload reconsultava a lista e reidratava o template a partir do payload salvo/listado, podendo sobrescrever o estado local recém-gerado e limpar visualmente `selectedMarkets` até o usuário selecionar mercados de novo.
+- Também havia risco de `selectedMarkets` não estar persistido no payload antes de gerar traduções quando o usuário selecionava mercados após criar/salvar o template.
+
+Implementação:
+
+- `generateTranslations` agora persiste primeiro o payload atual com os mercados selecionados e traduções atuais via `updateFlowTemplate`.
+- Após a resposta do endpoint de tradução, o componente aplica o template retornado diretamente no estado local com `applySavedTemplate`, preservando `selectedMarkets`.
+- `translationDrafts` é atualizado imediatamente com `getTranslations(updatedPayload)`, sem aguardar novo reload da lista.
+- `refreshAll()` foi removido do caminho de `generateTranslations` e de `saveTranslationsOnly`.
+- `saveTemplate({ withTranslations: true })` agora atualiza a lista local e o template selecionado sem recarregar a página.
+- Adicionado estado `translationsDirty` para controlar edição manual de traduções.
+- `updateTranslation` marca `translationsDirty = true`.
+- `Gerar traduções` e `Salvar mudança` zeram `translationsDirty` após persistir.
+- Removido da UI o botão `Cancelar edição`.
+- Removidos da UI os botões `Pré-visualizar` e `Ver no preview`.
+- Botão `Salvar revisão` foi renomeado para `Salvar mudança` e fica desabilitado até haver edição manual.
+- Passo `Preview` foi removido completamente da UI principal.
+- Import/estado/JSX/CSS específicos do preview operacional foram removidos.
+- Ordem final da UI passou para 7 passos: `Template base`, `Criativos`, `Mercados`, `Traduções`, `Mídias`, `Publicação`, `Resultados`.
+- `SectionBlock` passou a aceitar seção sem subtítulo, permitindo exibir apenas o nome do passo e remover títulos duplicados como `Mercados / Mercados`.
+
+Arquivos alterados:
+
+- `PLANS.md`
+- `frontend/src/pages/TemplatesMercado.jsx`
+- `frontend/src/styles/global.css`
+
+Validações:
+
+- [2026-06-11 21:15] `npm --prefix frontend run build` (OK; aviso existente de chunk acima de 500 kB).
+- [2026-06-11 21:15] Auditoria textual confirmou ausência de `Preview`, `Pré-visualização`, `Pré-visualizar`, `Ver no preview`, `Salvar revisão` e `Cancelar edição` na UI principal.
+- [2026-06-11 21:15] Auditoria textual confirmou ordem final dos passos: `1. Template base`, `2. Criativos`, `3. Mercados`, `4. Traduções`, `5. Mídias`, `6. Publicação`, `7. Resultados`.
+- [2026-06-11 21:15] Auditoria estática confirmou que `generateTranslations` e `saveTranslationsOnly` não chamam mais `refreshAll({ selectId: selectedId })`.
+- [2026-06-11 21:15] Auditoria estática confirmou presença de `translationsDirty`, `setTranslationsDirty`, `applySavedTemplate` e botão `Salvar mudança`.
+
+Limitações:
+
+- Não houve validação visual autenticada em navegador criando template e clicando de fato em `Gerar traduções`; a validação foi por build e auditoria estática.
+- Não houve teste real com backend/banco para confirmar a resposta do endpoint em DE/FR/ES neste ambiente.
+- Termos internos como `targetingPreview` permanecem no código porque fazem parte de payload/diagnóstico/publicação e não são o passo Preview removido da UI.
+
+## P55 — Limpeza final da Home (`/`)
+
+Última atualização: [2026-06-12 11:48]
+
+Status: Concluída.
+
+Objetivo:
+Simplificar a Home removendo ações redundantes da lista de campanhas, sem excluir funcionalidades internas ou informações operacionais essenciais.
+
+Escopo planejado:
+
+- Remover da UI os botões `Ver detalhes` e `Duplicar`.
+- Preservar rotas, páginas, serviços e lógica interna de detalhes e duplicação.
+- Manter nome do template/campanha, status, quantidade de campanhas e data de criação.
+- Auditar a Home inteira em busca de ações redundantes, textos duplicados e componentes sem utilidade operacional.
+- Remover somente elementos claramente redundantes.
+- Validar com `npm --prefix frontend run build`.
+
+Arquivos previstos:
+
+- `frontend/src/components/CampaignCard.jsx`
+- `frontend/src/pages/Dashboard.jsx`
+- `frontend/src/styles/global.css`
+- `PLANS.md`
+
+Implementação:
+
+- Removidos da UI da Home os botões `Ver detalhes` e `Duplicar`.
+- Removidos do `CampaignCard` apenas os estados, imports e handlers que sustentavam essas ações visuais.
+- Removido o CSS `campaignActions`, que ficou sem uso após a limpeza.
+- Mantidos nome, status, quantidade de campanhas geradas, data de criação, escopo e países.
+- Mantidos filtros, ordenação e métricas da Home por terem utilidade operacional.
+- Preservadas as rotas de detalhes e duplicação, as páginas correspondentes e o serviço `duplicateCampaign`.
+- A auditoria da Home não identificou outros textos duplicados, ações redundantes ou componentes claramente sem utilidade operacional.
+
+Arquivos alterados:
+
+- `frontend/src/components/CampaignCard.jsx`
+- `frontend/src/pages/Dashboard.jsx`
+- `frontend/src/styles/global.css`
+- `PLANS.md`
+
+Validações executadas:
+
+- [2026-06-12 11:48] `npm --prefix frontend run build` (OK; aviso existente de chunk acima de 500 kB).
+- [2026-06-12 11:48] `git diff --check` (OK).
+- [2026-06-12 11:48] Auditoria textual confirmou ausência de `Ver detalhes`, `Duplicar`, `Duplicando...` e `campaignActions` na Home.
+- [2026-06-12 11:48] Auditoria estática confirmou nome, status, quantidade de campanhas e data de criação preservados no `CampaignCard`.
+- [2026-06-12 11:48] Auditoria estática confirmou rotas `/campanhas/:id`, `/campanhas/:id/duplicar`, páginas de detalhe/duplicação e serviço `duplicateCampaign` preservados.
+
 ## Snapshot (Estado Atual)
 
 Última atualização: [2026-05-14 20:16]

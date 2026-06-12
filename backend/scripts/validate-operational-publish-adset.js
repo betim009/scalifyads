@@ -3,6 +3,11 @@ import { generateOperationalMarkets } from '../src/lib/operationalMarketGenerati
 import { insertOperationalMarketGeneration } from '../src/services/operationalMarketGenerations.js'
 import { publishPausedOperationalAdSet } from '../src/services/operationalMarketAdSetPublisher.js'
 import { metaCreateAdSet } from '../src/meta/adsets.js'
+import {
+  applyMetaRegionalCompliance,
+  mapMetaRegionalComplianceError,
+  resolveRegionalRegulatedCategories
+} from '../src/lib/metaRegionalCompliance.js'
 
 function assert(condition, message) {
   if (!condition) throw new Error(message)
@@ -50,7 +55,7 @@ async function validateMetaCreateAdSetPromotedObjectSerialization() {
       metaAdAccountId: 'act_123456789',
       metaCampaignId: 'stub-meta-campaign-p55d',
       name: 'ARM-PlantasBTN-FB',
-      targeting: { geo_locations: { countries: ['AE', 'BR'] } },
+      targeting: { geo_locations: { countries: ['AE', 'SG'] } },
       dailyBudgetCents: 1000,
       billingEvent: 'IMPRESSIONS',
       optimizationGoal: 'OFFSITE_CONVERSIONS',
@@ -70,6 +75,10 @@ async function validateMetaCreateAdSetPromotedObjectSerialization() {
     assert(body.get('status') === 'PAUSED', 'metaCreateAdSet must force PAUSED')
     assert(body.get('optimization_goal') === 'OFFSITE_CONVERSIONS', 'Expected OFFSITE_CONVERSIONS')
     assert(body.get('compliance_section') === 'SINGAPORE_UNIVERSAL', 'Expected SINGAPORE_UNIVERSAL compliance_section')
+    assert(
+      JSON.parse(body.get('regional_regulated_categories')).includes('SINGAPORE_UNIVERSAL'),
+      'Expected SINGAPORE_UNIVERSAL regional_regulated_categories when targeting includes SG'
+    )
     const targeting = JSON.parse(body.get('targeting'))
     assert(!Object.prototype.hasOwnProperty.call(targeting.geo_locations, 'excluded_countries'), 'targeting should not contain excluded_countries')
     const promotedObject = JSON.parse(body.get('promoted_object'))
@@ -78,6 +87,106 @@ async function validateMetaCreateAdSetPromotedObjectSerialization() {
   } finally {
     globalThis.fetch = originalFetch
   }
+}
+
+async function validateMetaCreateAdSetWithoutSingaporeCategory() {
+  const originalFetch = globalThis.fetch
+  const captured = []
+
+  globalThis.fetch = async (url, options = {}) => {
+    captured.push({ url: String(url), options })
+    if (options.method === 'POST') {
+      return new Response(JSON.stringify({ id: 'stub-meta-adset-no-sg' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+    return new Response(
+      JSON.stringify({
+        id: 'stub-meta-adset-no-sg',
+        name: 'BR-PlantasBTN-FB',
+        campaign_id: 'stub-meta-campaign-no-sg',
+        status: 'PAUSED',
+        effective_status: 'PAUSED'
+      }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    )
+  }
+
+  try {
+    await metaCreateAdSet({
+      metaAdAccountId: 'act_123456789',
+      metaCampaignId: 'stub-meta-campaign-no-sg',
+      name: 'BR-PlantasBTN-FB',
+      targeting: { geo_locations: { countries: ['BR'] } },
+      dailyBudgetCents: 1000,
+      billingEvent: 'IMPRESSIONS',
+      optimizationGoal: 'REACH',
+      accessToken: 'fake-token-no-meta-call'
+    })
+
+    const post = captured.find((call) => call.options?.method === 'POST')
+    assert(post, 'Expected one POST call for non-SG mocked metaCreateAdSet')
+    assert(
+      !post.options.body.has('regional_regulated_categories'),
+      'Non-SG AdSet must not include regional_regulated_categories'
+    )
+    assert(post.options.body.get('status') === 'PAUSED', 'Non-SG metaCreateAdSet must force PAUSED')
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+}
+
+function validateRegionalComplianceResolver() {
+  const withSg = applyMetaRegionalCompliance(
+    {
+      name: 'ARM-PlantasBTN-FB',
+      status: 'PAUSED',
+      targeting: { geo_locations: { countries: ['AE', 'SG', 'US'] } }
+    },
+    {
+      marketCode: 'ARM',
+      marketParam: 'ARM-PlantasBTN-FB',
+      removedCountries: ['TW']
+    }
+  )
+  assert(
+    withSg.regionalRegulatedCategories.includes('SINGAPORE_UNIVERSAL'),
+    'SG targeting must resolve SINGAPORE_UNIVERSAL'
+  )
+  assert(withSg.diagnostic.includedCountries.includes('SG'), 'Diagnostic should include SG')
+  assert(withSg.diagnostic.removedCountries.includes('TW'), 'Diagnostic should include removed countries')
+  assert(
+    resolveRegionalRegulatedCategories({ geo_locations: { countries: ['BR'] } }).length === 0,
+    'Non-SG targeting must not resolve regional category'
+  )
+}
+
+function validateRegionalComplianceErrorMapping() {
+  const err = new Error('Invalid parameter')
+  err.details = {
+    message: 'Invalid parameter',
+    code: 100,
+    error_subcode: 3858550,
+    error_data: '{"blame_field_specs":[["compliance_section"]]}',
+    error_user_title: 'Não há uma declaração universal de anúncios de Singapura',
+    error_user_msg:
+      'Valor necessário para categorias regulamentadas regionais: para publicar anúncios que incluem localizações em Singapura, use o seguinte valor para categorias regulamentadas regionais: SINGAPORE_UNIVERSAL'
+  }
+
+  const mapped = mapMetaRegionalComplianceError(err, {
+    regionalCompliance: {
+      marketCode: 'ARM',
+      includedCountries: ['AE', 'SG'],
+      regionalRegulatedCategories: ['SINGAPORE_UNIVERSAL']
+    }
+  })
+  assert(mapped?.originalMetaError?.error_subcode === 3858550, 'Compliance mapping must preserve original Meta error_subcode')
+  assert(mapped?.originalMetaError?.error_user_msg?.includes('SINGAPORE_UNIVERSAL'), 'Compliance mapping must preserve Meta user message')
+  assert(mapped?.regionalCompliance?.marketCode === 'ARM', 'Compliance mapping must include market diagnostic')
 }
 
 async function main() {
@@ -101,6 +210,7 @@ async function main() {
     optimizationGoal,
     promotedObject,
     complianceSection,
+    regionalRegulatedCategories,
     status
   }) => {
     createCalls += 1
@@ -121,7 +231,11 @@ async function main() {
     assert(optimizationGoal === 'OFFSITE_CONVERSIONS', 'Unexpected optimizationGoal in createAdSet stub')
     assert(promotedObject?.pixel_id === '123456789012345', 'Expected promotedObject.pixel_id')
     assert(promotedObject?.custom_event_type === 'PURCHASE', 'Expected promotedObject.custom_event_type')
-    assert(complianceSection === 'SINGAPORE_UNIVERSAL', 'ARM AdSet should include SINGAPORE_UNIVERSAL complianceSection')
+    assert(complianceSection === undefined, 'Operational AdSet should not use legacy complianceSection for SG')
+    assert(
+      Array.isArray(regionalRegulatedCategories) && regionalRegulatedCategories.includes('SINGAPORE_UNIVERSAL'),
+      'ARM AdSet should include SINGAPORE_UNIVERSAL regionalRegulatedCategories'
+    )
     assert(status === 'PAUSED', 'AdSet status should be forced to PAUSED')
     return {
       id: 'stub-meta-adset-p54',
@@ -265,6 +379,11 @@ async function main() {
     assert(result.metaAdSetId === 'stub-meta-adset-p54', 'metaAdSetId mismatch')
     assert(result.generatedCampaignId === generatedCampaignId, 'generatedCampaignId mismatch')
     assert(createCalls === 1, 'createAdSet should be called once')
+    assert(
+      result.regionalRegulatedCategories?.includes('SINGAPORE_UNIVERSAL'),
+      'Result should expose SINGAPORE_UNIVERSAL regional category'
+    )
+    assert(result.regionalCompliance?.includedCountries?.includes('SG'), 'Result compliance diagnostic should include SG')
 
     const { rows: gcRows, rowCount: gcCount } = await client.query(
       `
@@ -309,7 +428,39 @@ async function main() {
     assert(duplicate.metaAdSetId === result.metaAdSetId, 'Duplicate should return existing metaAdSetId')
     assert(createCalls === 1, 'Duplicate call must not call createAdSet again')
 
+    validateRegionalComplianceResolver()
+    validateRegionalComplianceErrorMapping()
     await validateMetaCreateAdSetPromotedObjectSerialization()
+    await validateMetaCreateAdSetWithoutSingaporeCategory()
+
+    const regressionMarkets = generateOperationalMarkets({
+      niche: 'PlantasBTN',
+      markets: ['BR', 'AREU', 'ENCA', 'ENAU'],
+      availableCountryCodes: countryRows.map((countryRow) => countryRow.code).filter(Boolean)
+    })
+    assert(regressionMarkets.ok, `Regression markets should generate: ${regressionMarkets.errors.join(', ')}`)
+    for (const market of regressionMarkets.markets) {
+      const compliance = applyMetaRegionalCompliance(
+        {
+          name: market.marketParam,
+          status: 'PAUSED',
+          targeting: {
+            geo_locations: {
+              countries: market.targetingPreview?.finalPayloadPreview?.targeting?.geo_locations?.countries ?? market.resolvedCountries
+            }
+          }
+        },
+        {
+          marketCode: market.marketCode,
+          marketParam: market.marketParam,
+          removedCountries: market.targetingPreview?.removedExcludedCountries
+        }
+      )
+      assert(
+        !compliance.regionalRegulatedCategories.includes('SINGAPORE_UNIVERSAL'),
+        `${market.marketCode} should not receive SINGAPORE_UNIVERSAL`
+      )
+    }
 
     await client.query('ROLLBACK')
 
@@ -331,14 +482,17 @@ async function main() {
           duplicateCreated: duplicate.created,
           createAdSetCalls: createCalls,
           metaCreateAdSetPromotedObjectSerialization: true,
-          complianceSection: result.complianceSection,
+          regionalCompliance: result.regionalCompliance,
+          regionalRegulatedCategories: result.regionalRegulatedCategories,
           targeting: {
             countryCount: result.targeting.geo_locations.countries.length,
+            includesSingapore: result.targeting.geo_locations.countries.includes('SG'),
             hasInvalidExcludedCountriesField: Object.prototype.hasOwnProperty.call(
               result.targeting.geo_locations,
               'excluded_countries'
             )
           },
+          regressionMarketsWithoutSingaporeCompliance: regressionMarkets.markets.map((market) => market.marketCode),
           promotedObject: {
             pixelId: result.promotedObject?.pixel_id,
             customEventType: result.promotedObject?.custom_event_type

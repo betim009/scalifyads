@@ -47,12 +47,19 @@ async function main() {
     assert(pageId === '123456789012345', 'Unexpected pageId in createCreative stub')
     assert(name === 'ENCA Plantas Headline', 'Creative name should use headline')
     assert(message === 'ENCA primary text', 'Unexpected primary text')
-    assert(link === 'https://example.com/enca?src=ENCA-PlantasBTN-FB', 'Unexpected destination URL')
+    const parsedLink = new URL(link)
+    assert(parsedLink.origin === 'https://example.com', 'Unexpected destination URL origin')
+    assert(parsedLink.pathname === '/enca', 'Unexpected destination URL path')
+    assert(parsedLink.searchParams.get('keep') === '1', 'Destination URL should preserve unrelated params')
+    assert(parsedLink.searchParams.get('src') === 'ENCA-PlantasBTN-FB', 'Unexpected destination URL src')
+    assert(parsedLink.searchParams.get('utm_source') === 'facebook', 'Unexpected destination URL utm_source')
+    assert(parsedLink.searchParams.get('utm_medium') === 'cpa', 'Unexpected destination URL utm_medium')
+    assert(parsedLink.searchParams.get('utm_campaign') === 'ENCA', 'Unexpected destination URL utm_campaign')
     assert(headline === 'ENCA Plantas Headline', 'Unexpected headline')
     assert(description === 'ENCA description', 'Unexpected description')
     assert(ctaType === 'LEARN_MORE', 'Unexpected ctaType')
-    assert(imageHash === undefined, 'Operational minimal Creative should not require imageHash')
-    assert(videoId === undefined, 'Operational minimal Creative should not require videoId')
+    assert(imageHash == null, 'Operational minimal Creative should not require imageHash')
+    assert(videoId == null, 'Operational minimal Creative should not require videoId')
     return {
       id: 'stub-meta-creative-p56',
       name,
@@ -102,7 +109,7 @@ async function main() {
       primaryText: 'ENCA primary text',
       headline: 'ENCA Plantas Headline',
       description: 'ENCA description',
-      destinationUrl: 'https://example.com/enca?src=ENCA-PlantasBTN-FB',
+      destinationUrl: 'https://example.com/enca?utm_campaign=ARM&src=ARM-PlantasBTN-FB&keep=1',
       ctaType: 'LEARN_MORE',
       confirmPublishCreative: true
     }
@@ -172,6 +179,32 @@ async function main() {
     )
     const generatedCampaignId = insertedGenerated.rows[0].id
 
+    await client.query(
+      `
+        INSERT INTO creative_drafts (
+          generated_campaign_id,
+          primary_text,
+          headline,
+          description,
+          cta_type,
+          destination_url,
+          status,
+          meta_creative_id
+        )
+        VALUES (
+          $1::uuid,
+          'Old contaminated primary text',
+          'Old contaminated headline',
+          'Old contaminated description',
+          'LEARN_MORE',
+          'https://example.com/enca?utm_campaign=ARM&src=ARM-PlantasBTN-FB',
+          'meta_published',
+          'stub-meta-creative-old-arm'
+        )
+      `,
+      [generatedCampaignId]
+    )
+
     await expectError(
       'missing pageId',
       () => publishOperationalCreative({ ...base, body: { ...baseBody, pageId: null, page_id: null } }),
@@ -202,9 +235,14 @@ async function main() {
       `,
       [generatedCampaignId]
     )
-    assert(draftCount === 1, 'Expected one creative_drafts row')
-    assert(draftRows[0].meta_creative_id === 'stub-meta-creative-p56', 'meta_creative_id should be persisted')
-    assert(draftRows[0].status === 'meta_published', 'Creative draft status should be meta_published')
+    assert(draftCount === 2, 'Expected old contaminated draft plus one corrected creative_drafts row')
+    const correctedDraft = draftRows.find((draft) => draft.meta_creative_id === 'stub-meta-creative-p56')
+    const contaminatedDraft = draftRows.find((draft) => draft.meta_creative_id === 'stub-meta-creative-old-arm')
+    assert(correctedDraft, 'Corrected creative draft should be persisted')
+    assert(contaminatedDraft, 'Contaminated legacy creative draft should remain untouched')
+    assert(correctedDraft.status === 'meta_published', 'Corrected creative draft status should be meta_published')
+    assert(correctedDraft.destination_url.includes('utm_campaign=ENCA'), 'Corrected creative draft should have ENCA utm_campaign')
+    assert(correctedDraft.destination_url.includes('src=ENCA-PlantasBTN-FB'), 'Corrected creative draft should have ENCA src')
 
     const { rowCount: adCount } = await client.query(
       `SELECT 1 FROM generated_ads WHERE generated_campaign_id = $1::uuid`,
@@ -216,6 +254,7 @@ async function main() {
     assert(duplicate.ok === true, 'Duplicate result should be ok')
     assert(duplicate.created?.creative === false, 'Duplicate call must not create another Creative')
     assert(duplicate.metaCreativeId === result.metaCreativeId, 'Duplicate should return existing metaCreativeId')
+    assert(duplicate.metaCreativeId !== 'stub-meta-creative-old-arm', 'Duplicate must not reuse contaminated legacy Creative')
     assert(createCalls === 1, 'Duplicate call must not call createCreative again')
 
     await client.query('ROLLBACK')
