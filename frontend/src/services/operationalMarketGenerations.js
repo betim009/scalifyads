@@ -51,8 +51,9 @@ export async function publishOperationalCreative(
   });
 }
 
-export async function publishOperationalAd(id) {
+export async function publishOperationalAd(id, { variantKey } = {}) {
   return apiPost(`/api/operational-market-generations/${normalizeId(id)}/publish-ad`, {
+    ...(variantKey ? { variantKey } : null),
     confirmPublishPausedAd: true,
   });
 }

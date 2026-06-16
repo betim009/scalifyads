@@ -1,5 +1,5 @@
 import { buildOperationalMarketTargeting } from './marketTargeting.js'
-import { buildMarketTracking, parseNicheParamFromMarketParam } from './marketTracking.js'
+import { buildMarketDestinationUrl, parseNicheParamFromMarketParam } from './marketTracking.js'
 
 function isPlainObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -63,7 +63,7 @@ function resolveDestinationUrl({ payload, marketCode, operationalGeneration }) {
     normalizeNonEmptyString(payload?.nicheParam) ??
     normalizeNonEmptyString(payload?.niche_param)
 
-  const url = firstNonEmpty(
+  const legacyUrl = firstNonEmpty(
     marketTranslation?.destinationUrl,
     marketTranslation?.destination_url,
     payload?.destinationUrl,
@@ -72,9 +72,14 @@ function resolveDestinationUrl({ payload, marketCode, operationalGeneration }) {
     readPath(payload, ['creative', 'destination_url'])
   )
 
-  if (!url) return null
-
-  return buildMarketTracking({ marketCode, nicheParam, destinationUrl: url })?.finalUrl ?? url
+  return buildMarketDestinationUrl({
+    domain: firstNonEmpty(payload?.domain, payload?.baseDomain, payload?.base_domain),
+    brazilPermalink: firstNonEmpty(payload?.brazilPermalink, payload?.brazil_permalink, payload?.brPermalink, payload?.br_permalink),
+    internationalPermalink: firstNonEmpty(payload?.internationalPermalink, payload?.international_permalink),
+    marketCode,
+    nicheParam,
+    destinationUrl: legacyUrl
+  })
 }
 
 function resolveTemplatePayload(template) {

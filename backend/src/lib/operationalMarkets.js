@@ -1,4 +1,5 @@
 import {
+  buildMarketDestinationUrl,
   buildMarketTracking,
   generateMarketParam as buildGeneratedMarketParam
 } from './marketTracking.js';
@@ -221,6 +222,7 @@ export function generateTrackingParams(marketCode, nicheParam) {
         utm_medium: tracking.utm_medium,
         utm_campaign: tracking.utm_campaign,
         src: tracking.src,
+        niche: tracking.niche,
       }
     : {
         utm_source: "facebook",
@@ -256,6 +258,7 @@ export function buildFinalUrl(baseDomain, slug, trackingParams) {
 }
 
 export { buildMarketTracking };
+export { buildMarketDestinationUrl };
 
 export function buildMarketPreview({ markets, nicheParam, brSlug, internationalSlug, baseDomain }) {
   return (markets || [])
@@ -271,7 +274,13 @@ export function buildMarketPreview({ markets, nicheParam, brSlug, internationalS
         utm_campaign: trackingParams.utm_campaign,
         src: trackingParams.src,
         slug,
-        finalUrl: buildFinalUrl(baseDomain, slug, trackingParams),
+        finalUrl: buildMarketDestinationUrl({
+          domain: baseDomain,
+          brazilPermalink: brSlug,
+          internationalPermalink: internationalSlug,
+          marketCode: market.code,
+          nicheParam
+        }),
         targetingPreview,
       };
     });

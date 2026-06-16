@@ -51,6 +51,208 @@ Se uma seção não tiver data, ela deve ser considerada desatualizada.
 
 Construir o **Campaign Builder**, uma aplicação web que substitui a planilha operacional (XLSX) usada pelo cliente para criar, organizar e acompanhar campanhas de anúncios, evoluindo para integração real com Meta Ads (sincronização de métricas, ROI e automações).
 
+## P57 — Template operacional com URL automática por país + parâmetro do nicho
+
+Última atualização: [2026-06-16 08:18]
+
+Status: Concluída.
+
+Objetivo:
+Evoluir o template operacional de `/templates-mercado` para montar automaticamente a URL final por mercado a partir de domínio, permalink BR, permalink internacional e parâmetro do nicho, mantendo compatibilidade com templates antigos que possuem apenas `destinationUrl` e `nicheParam`.
+
+Contexto:
+
+- O cliente solicitou aproximar o template do fluxo operacional real da planilha.
+- O campo manual `URL de destino` não escala bem para múltiplos mercados.
+- P45 já exige tracking por mercado com `utm_source=facebook`, `utm_medium=cpa`, `utm_campaign={marketCode}` e `src={marketCode}-{nicheParam}-FB`.
+- Templates antigos podem continuar carregando apenas `destinationUrl`.
+
+Escopo:
+
+- Adicionar ao payload do template os campos operacionais `domain`, `brazilPermalink`, `internationalPermalink`, `pixel`, `pageId`, `beneficiary` e `nicheParam`.
+- Manter `nicheParam` como nome interno e exibir na UI como `Parâmetro do Nicho`.
+- Criar helper central para montar URL final com regra BR sem prefixo e regra internacional com sigla operacional resolvida.
+- Adicionar tracking obrigatório por mercado e parâmetro `niche={nicheParam}`.
+- Aplicar a regra em preview operacional, geração/publicação operacional e Creative Meta.
+- Preservar fallback para `destinationUrl` antigo quando domínio/permalink não estiverem completos.
+- Criar/atualizar validação automatizada da montagem de URL.
+
+Riscos:
+
+- Divergência entre helper frontend e backend se a regra for duplicada.
+- Mercados compostos podem exigir sigla operacional específica além do fallback por prefixo.
+- Templates antigos sem campos novos precisam continuar publicáveis com tracking.
+- URLs inválidas devem falhar de forma compatível com o comportamento atual.
+
+Critérios de aceite:
+
+- BR gera `{dominio}/{permalinkBrasil}` com tracking e `niche=`.
+- DE gera `{dominio}/DE/{permalinkInternacional}` com tracking e `niche=`.
+- FRAF gera `{dominio}/FR/{permalinkInternacional}` com tracking e `niche=`.
+- Template antigo com `destinationUrl` recebe tracking obrigatório sem perder query string existente.
+- UI mostra campos operacionais e preview simples para BR e internacional.
+- `npm --prefix frontend run build` passa.
+- Arquivos backend alterados passam em `node --check`.
+- Script `validate-market-url-builder.js` passa nos cenários obrigatórios.
+
+Implementação:
+
+- Criado helper central backend `buildMarketDestinationUrl` em `backend/src/lib/marketTracking.js`.
+- Criado espelho frontend `buildMarketDestinationUrl` em `frontend/src/utils/operationalMarkets.js` para preview operacional.
+- A URL automática usa BR sem prefixo: `{domain}/{brazilPermalink}`.
+- Mercados internacionais usam `{domain}/{SIGLA_URL}/{internationalPermalink}`.
+- `FRAF` resolve para `FR`, `ESAMNA` para `ES`, `ARAF` para `AR` e `ENAF` para `EN`.
+- Fallback de mercados compostos sem mapeamento explícito: código de 2 letras usa o próprio código; códigos maiores usam os 2 primeiros caracteres.
+- Tracking obrigatório passa a incluir `utm_source=facebook`, `utm_medium=cpa`, `utm_campaign={marketCode}`, `src={marketCode}-{nicheParam}-FB` e `niche={nicheParam}`.
+- Preview operacional e publisher de Creative Meta passam a resolver `URL base automática ou destinationUrl antigo + tracking por mercado`.
+- `/templates-mercado` passou a salvar `domain`, `brazilPermalink`, `internationalPermalink`, `pixel`, `pageId`, `beneficiary` e `nicheParam`.
+- A UI exibe `Parâmetro do Nicho`, mantendo `nicheParam` internamente para compatibilidade.
+- O campo `ID da Página` do template pode preencher `pageId`, sem remover o fallback da conta Meta.
+
+Arquivos alterados:
+
+- `PLANS.md`
+- `backend/src/lib/marketTracking.js`
+- `backend/src/lib/operationalMarkets.js`
+- `backend/src/lib/operationalPublishPreview.js`
+- `backend/src/services/operationalMarketCreativePublisher.js`
+- `backend/scripts/validate-market-url-builder.js`
+- `frontend/src/utils/operationalMarkets.js`
+- `frontend/src/pages/TemplatesMercado.jsx`
+
+Decisões tomadas:
+
+- Query escolhida para o parâmetro do nicho: `niche={nicheParam}`.
+- `nicheParam` permanece como nome interno e payload compatível; a UI exibe `Parâmetro do Nicho`.
+- `destinationUrl` antigo permanece salvo e usado apenas como fallback quando domínio/permalinks não existem.
+- O mapa de siglas operacionais foi iniciado com os casos explícitos exigidos e fallback simples documentado no helper.
+
+Validações executadas:
+
+- [2026-06-16 08:18] `node backend/scripts/validate-market-url-builder.js` (OK; BR, DE, FRAF e template antigo).
+- [2026-06-16 08:18] `node --check backend/src/lib/marketTracking.js` (OK).
+- [2026-06-16 08:18] `node --check backend/src/lib/operationalMarkets.js` (OK).
+- [2026-06-16 08:18] `node --check backend/src/lib/operationalPublishPreview.js` (OK).
+- [2026-06-16 08:18] `node --check backend/src/services/operationalMarketCreativePublisher.js` (OK).
+- [2026-06-16 08:18] `node --check backend/scripts/validate-market-url-builder.js` (OK).
+- [2026-06-16 08:18] `node backend/scripts/validate-market-tracking-and-ad-diagnostic.js` (OK; P45 preservada e adicionou `niche=`).
+- [2026-06-16 08:18] `npm --prefix frontend run build` (OK; aviso existente de chunk acima de 500 kB).
+
+Limitações:
+
+- `validate-operational-publish-preview.js` e `validate-operational-publish-creative.js` foram tentados, mas bloqueados por ausência de `DATABASE_URL`.
+- O catálogo de siglas URL ainda tem apenas mapeamentos explícitos iniciais; demais códigos compostos usam fallback dos dois primeiros caracteres.
+- Não houve validação visual autenticada em navegador; validação frontend foi por build.
+
+Próximos passos:
+
+- Completar o catálogo operacional de siglas URL se o cliente trouxer exceções por mercado.
+- Rodar validações de preview/publicação com `DATABASE_URL` configurado no ambiente de integração.
+
+## P58 — Publicar Ads 1–5 por mercado na Meta
+
+Última atualização: [2026-06-16 08:43]
+
+Status: Concluída.
+
+Objetivo:
+Evoluir a publicação Meta REAL em `/templates-mercado` para publicar todas as variações completas de Ads 1–5 por mercado, mantendo 1 Campaign e 1 AdSet por mercado e criando/reutilizando 1 Creative + 1 Ad por variação completa.
+
+Contexto:
+
+- O sistema já suporta Template Base, criativos Ads 1–5, traduções Ads 1–5, mídias Ads 1–5, mercados e publicação Meta REAL.
+- O fluxo atual publica apenas 1 Creative e 1 Ad por mercado usando o Ad 1 (`variantKey=A`).
+- O fluxo esperado é `1 mercado -> 1 Campaign -> 1 AdSet -> até 5 Creatives -> até 5 Ads`.
+- Templates antigos podem ter apenas Ad 1 completo e não devem quebrar.
+
+Escopo:
+
+- Mapear Ads 1–5 para `variantKey` interno `A-E`.
+- Publicar somente variações completas, exigindo texto principal, título, descrição e mídia correspondente.
+- Ignorar/registrar variações incompletas sem bloquear as completas do mesmo mercado.
+- Persistir múltiplos IDs por variação de forma idempotente.
+- Manter campos antigos `metaCreativeId`/`metaAdId` apontando para Ad 1 para compatibilidade.
+- Atualizar resultado consolidado e UI de resultados para mostrar Creatives/Ads por variação.
+- Preservar P45 tracking/UTM e P57 URL Builder.
+
+Estratégia de persistência:
+
+- Usar as tabelas existentes `creative_drafts` e `generated_ads`, criando coluna `variant_key`.
+- Criar uma linha por variação publicada.
+- Usar índices parciais não únicos por `generated_campaign_id + variant_key` quando houver Meta ID, evitando falha de migration por duplicidades históricas.
+- Não criar nova tabela `generated_market_ads`, porque as tabelas atuais já representam Creative Draft e Ad publicado e reduzem blast radius.
+
+Riscos:
+
+- Idempotência antiga buscava o primeiro Creative/Ad do mercado; precisa passar a buscar por `variant_key`.
+- Erro individual em uma variação não pode derrubar o mercado inteiro na UI.
+- Diagnóstico/status antigo usa apenas um `metaCreativeId` e `metaAdId`; deve continuar funcional para Ad 1.
+- Scripts existentes podem assumir 1 Creative/Ad e precisar de compatibilidade.
+
+Critérios de aceite:
+
+- BR com Ads 1–5 completos resulta em 1 Campaign, 1 AdSet, 5 Creatives e 5 Ads, todos PAUSED.
+- BR + DE com Ads 1–5 completos resulta em 2 Campaigns, 2 AdSets, 10 Creatives e 10 Ads.
+- Template antigo com apenas Ad 1 publica 1 Creative e 1 Ad sem erro por Ads 2–5 ausentes.
+- Ad incompleto é marcado/registrado como ignorado ou incompleto e não bloqueia Ads completos.
+- Resultado consolidado passa a incluir arrays `creatives` e `ads` por mercado, mantendo `creativeId` e `adId` legados.
+- `npm --prefix frontend run build` passa.
+- Arquivos backend alterados passam em `node --check`.
+- `validate-market-url-builder`, `validate-market-tracking-and-ad-diagnostic` e `validate-operational-publish-multiple-ads` passam quando aplicável.
+
+Implementação:
+
+- Criada migration `0027_operational_variant_keys.sql` para adicionar `variant_key` em `creative_drafts` e `generated_ads`.
+- `publishOperationalCreative` passou a buscar, inserir e retornar Creative por `variantKey`.
+- `publishPausedOperationalAd` passou a receber `variantKey`, buscar o Creative correspondente e criar/reutilizar o Ad da mesma variação.
+- `generated_campaigns.meta_ad_id` continua sendo atualizado apenas para `variantKey=A`, preservando compatibilidade dos campos antigos com Ad 1.
+- `/templates-mercado` passou a calcular Ads publicáveis por mercado com base em texto principal, título, descrição e mídia da variação.
+- Ads incompletos entram em `skippedAds` com lista de campos ausentes, sem bloquear Ads completos.
+- O resultado consolidado passou a incluir `creatives`, `ads` e `skippedAds` por mercado, mantendo `creativeId` e `adId` legados.
+- A UI de resultados passou a exibir status por Ad 1–5: Creative criado, Ad criado, incompleto, pendente ou erro.
+
+Arquivos alterados:
+
+- `PLANS.md`
+- `backend/migrations/0027_operational_variant_keys.sql`
+- `backend/src/routes/operationalMarketGenerations.js`
+- `backend/src/services/operationalMarketCreativePublisher.js`
+- `backend/src/services/operationalMarketAdPublisher.js`
+- `backend/scripts/validate-operational-publish-multiple-ads.js`
+- `frontend/src/services/operationalMarketGenerations.js`
+- `frontend/src/pages/TemplatesMercado.jsx`
+
+Decisões tomadas:
+
+- Persistência escolhida: usar tabelas existentes `creative_drafts` e `generated_ads` com `variant_key`, sem criar nova tabela.
+- Não foi criado índice único para `variant_key`, para evitar risco de migration falhar com duplicidades históricas; a idempotência fica no código.
+- Mapeamento mantido: Ad 1=A, Ad 2=B, Ad 3=C, Ad 4=D, Ad 5=E.
+- Erros por variação são registrados no item do Ad, e não derrubam o mercado inteiro.
+- Campos antigos `creativeId`/`adId` continuam apontando para Ad 1.
+
+Validações executadas:
+
+- [2026-06-16 08:43] `node --check backend/src/services/operationalMarketCreativePublisher.js` (OK).
+- [2026-06-16 08:43] `node --check backend/src/services/operationalMarketAdPublisher.js` (OK).
+- [2026-06-16 08:43] `node --check backend/src/routes/operationalMarketGenerations.js` (OK).
+- [2026-06-16 08:43] `node --check backend/scripts/validate-operational-publish-multiple-ads.js` (OK).
+- [2026-06-16 08:43] `node backend/scripts/validate-operational-publish-multiple-ads.js` (OK; valida 1 mercado x 5 Ads, 2 mercados x 5 Ads, template legado com 1 Ad e Ad incompleto).
+- [2026-06-16 08:43] `node backend/scripts/validate-market-url-builder.js` (OK; P57 preservada).
+- [2026-06-16 08:43] `node backend/scripts/validate-market-tracking-and-ad-diagnostic.js` (OK; P45 preservada).
+- [2026-06-16 08:43] `npm --prefix frontend run build` (OK; aviso existente de chunk acima de 500 kB).
+
+Limitações:
+
+- `npm --prefix backend run migrate` foi tentado, mas bloqueado porque `DATABASE_URL` não está configurado neste ambiente.
+- Os scripts de publicação real com Postgres não foram executados pelo mesmo motivo.
+- A sincronização remota de status Meta ainda usa diagnóstico legado principal para Ad 1; a UI preserva o diagnóstico antigo e adiciona visão local por Ad 1–5.
+
+Próximos passos:
+
+- Rodar `npm --prefix backend run migrate` em ambiente com `DATABASE_URL`.
+- Executar validação integrada com banco para confirmar persistência real de `variant_key`.
+- Evoluir sincronização remota para buscar status de todos os Ads por variação, se o cliente precisar dessa auditoria detalhada.
+
 ## P46 — Redesign final de UX/UI do /templates-mercado
 
 Última atualização: [2026-06-10 17:45]

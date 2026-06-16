@@ -15,7 +15,7 @@ import {
   publishOperationalCreative,
   syncOperationalMetaStatus,
 } from "../services/operationalMarketGenerations.js";
-import { OPERATIONAL_MARKETS, getOperationalMarketLanguageGroup } from "../utils/operationalMarkets.js";
+import { OPERATIONAL_MARKETS, buildMarketDestinationUrl, getOperationalMarketLanguageGroup } from "../utils/operationalMarkets.js";
 import { getAuthMe } from "../services/auth.js";
 import { normalizeLanguageKey } from "../utils/operationalLanguages.js";
 import {
@@ -40,6 +40,14 @@ function adLabel(adKey) {
   return `Ad ${adNumber(adKey)}`;
 }
 
+function emptyVariantState() {
+  return AD_KEYS.map((key) => ({
+    adNumber: adNumber(key),
+    variantKey: key,
+    status: "pendente",
+  }));
+}
+
 const LANGUAGE_GROUP_ORDER = ["Português", "Inglês", "Árabe", "Espanhol", "Alemão", "Francês"];
 const LANGUAGE_GROUP_META = {
   Português: { icon: "🇧🇷", tone: "portuguese" },
@@ -62,6 +70,12 @@ const EMPTY_FORM = {
   name: "",
   nicheParam: "",
   destinationUrl: "",
+  domain: "",
+  brazilPermalink: "",
+  internationalPermalink: "",
+  pixel: "",
+  pageId: "",
+  beneficiary: "",
   ctaType: "LEARN_MORE",
   objective: "OUTCOME_TRAFFIC",
   dailyBudgetCents: 1000,
@@ -205,27 +219,15 @@ function mediaTypeLabel(entry) {
   return media.creativeAssetId ? "mídia" : "link";
 }
 
-function buildOperationalDestinationUrl(destinationUrl, marketCode, nicheParam) {
-  const url = normalizeNonEmptyString(destinationUrl);
-  if (!url) return "";
-  const code = String(marketCode || "").trim().toUpperCase();
-  const niche = normalizeNonEmptyString(nicheParam);
-  const marketParam = code && niche ? `${code}-${niche}-FB` : "";
-  try {
-    const parsed = new URL(url);
-    const tracking = {
-      utm_source: "facebook",
-      utm_medium: "cpa",
-      utm_campaign: code,
-      src: marketParam,
-    };
-    for (const [key, value] of Object.entries(tracking)) {
-      if (value) parsed.searchParams.set(key, value);
-    }
-    return parsed.toString();
-  } catch {
-    return url;
-  }
+function buildOperationalDestinationUrl(form, marketCode) {
+  return buildMarketDestinationUrl({
+    domain: form?.domain,
+    brazilPermalink: form?.brazilPermalink,
+    internationalPermalink: form?.internationalPermalink,
+    marketCode,
+    nicheParam: form?.nicheParam,
+    destinationUrl: form?.destinationUrl,
+  });
 }
 
 function getPayload(template) {
@@ -287,6 +289,12 @@ function templateToForm(template, { defaultMetaAccountId = "" } = {}) {
     name: template?.name || "",
     nicheParam: getNiche(payload),
     destinationUrl: normalizeNonEmptyString(payload.destinationUrl) || normalizeNonEmptyString(creative.destinationUrl),
+    domain: normalizeNonEmptyString(payload.domain) || normalizeNonEmptyString(payload.baseDomain),
+    brazilPermalink: normalizeNonEmptyString(payload.brazilPermalink) || normalizeNonEmptyString(payload.brPermalink),
+    internationalPermalink: normalizeNonEmptyString(payload.internationalPermalink),
+    pixel: normalizeNonEmptyString(payload.pixel) || normalizeNonEmptyString(payload.pixelId),
+    pageId: normalizeNonEmptyString(payload.pageId) || normalizeNonEmptyString(creative.pageId),
+    beneficiary: normalizeNonEmptyString(payload.beneficiary),
     ctaType: normalizeNonEmptyString(payload.ctaType) || normalizeNonEmptyString(creative.ctaType) || "LEARN_MORE",
     objective: normalizeNonEmptyString(payload.objective) || "OUTCOME_TRAFFIC",
     dailyBudgetCents: Number(payload.dailyBudgetCents) || 1000,
@@ -305,6 +313,12 @@ function buildPayload(form, basePayload = {}, selectedMarkets = []) {
   const creative = normalizeObject(base.creative);
   const nicheParam = normalizeNonEmptyString(form.nicheParam);
   const destinationUrl = normalizeNonEmptyString(form.destinationUrl);
+  const domain = normalizeNonEmptyString(form.domain);
+  const brazilPermalink = normalizeNonEmptyString(form.brazilPermalink);
+  const internationalPermalink = normalizeNonEmptyString(form.internationalPermalink);
+  const pixel = normalizeNonEmptyString(form.pixel);
+  const pageId = normalizeNonEmptyString(form.pageId);
+  const beneficiary = normalizeNonEmptyString(form.beneficiary);
   const adVariants = AD_KEYS.map((key, idx) => {
     const src = normalizeObject(form.adVariants?.[idx]);
     return {
@@ -325,6 +339,12 @@ function buildPayload(form, basePayload = {}, selectedMarkets = []) {
     nicheParam,
     niche: nicheParam,
     slug: nicheParam,
+    domain,
+    brazilPermalink,
+    internationalPermalink,
+    pixel,
+    pageId,
+    beneficiary,
     operationalMarket: {
       ...normalizeObject(base.operationalMarket),
       nicheParam,
@@ -346,6 +366,7 @@ function buildPayload(form, basePayload = {}, selectedMarkets = []) {
     creative: {
       ...creative,
       destinationUrl,
+      pageId: pageId || creative.pageId || "",
       ctaType: normalizeNonEmptyString(form.ctaType) || creative.ctaType || "LEARN_MORE",
     },
     mediaByMarket: normalizeObject(form.mediaByMarket),
@@ -502,7 +523,7 @@ function buildConsolidatedPublishResult({
     summary,
     mercadosProcessados: (rows || []).map((row) => {
       const market = marketOptions.find((item) => item.code === row.marketCode) ?? marketInfo(row.marketCode);
-      const finalUrl = buildOperationalDestinationUrl(form?.destinationUrl, row.marketCode, form?.nicheParam);
+      const finalUrl = buildOperationalDestinationUrl(form, row.marketCode);
       const media = AD_KEYS.reduce((acc, adKey) => {
         const entry = getMarketMediaEntry(mediaByMarket, row.marketCode, adKey);
         acc[adKey] = {
@@ -534,6 +555,9 @@ function buildConsolidatedPublishResult({
         adSetId: row.metaAdSetId || null,
         creativeId: row.metaCreativeId || null,
         adId: row.metaAdId || null,
+        creatives: Array.isArray(row.creatives) ? row.creatives : [],
+        ads: Array.isArray(row.ads) ? row.ads : [],
+        skippedAds: Array.isArray(row.skippedAds) ? row.skippedAds : [],
         configuredStatus: row.configuredStatus || null,
         effectiveStatus: row.effectiveStatus || null,
         finalUrl,
@@ -567,6 +591,9 @@ function mapGeneration(row) {
     metaAdSetId: "",
     metaCreativeId: "",
     metaAdId: "",
+    creatives: emptyVariantState(),
+    ads: emptyVariantState(),
+    skippedAds: [],
     configuredStatus: row?.configured_status ?? row?.status ?? "",
     effectiveStatus: row?.effective_status ?? "",
     step: "operacional gerado",
@@ -586,12 +613,42 @@ function mergeResult(row, result, step) {
   const adSetMeta = meta.adSet || {};
   const campaignMeta = meta.campaign || {};
 
+  const variantKey = normalizeNonEmptyString(result?.variantKey);
+  const nextCreatives = Array.isArray(row.creatives) ? [...row.creatives] : emptyVariantState();
+  const nextAds = Array.isArray(row.ads) ? [...row.ads] : emptyVariantState();
+  if (variantKey && result?.metaCreativeId) {
+    const index = AD_KEYS.indexOf(variantKey);
+    if (index >= 0) {
+      nextCreatives[index] = {
+        adNumber: adNumber(variantKey),
+        variantKey,
+        creativeId: result.metaCreativeId,
+        creativeDraftId: result.creativeDraftId || null,
+        status: result.status || "PAUSED",
+      };
+    }
+  }
+  if (variantKey && result?.metaAdId) {
+    const index = AD_KEYS.indexOf(variantKey);
+    if (index >= 0) {
+      nextAds[index] = {
+        adNumber: adNumber(variantKey),
+        variantKey,
+        adId: result.metaAdId,
+        generatedAdId: result.generatedAdId || null,
+        status: result.status || "PAUSED",
+      };
+    }
+  }
+
   return {
     ...row,
     metaCampaignId: result?.metaCampaignId || campaignMeta.id || generatedCampaign.meta_campaign_id || row.metaCampaignId || "",
     metaAdSetId: result?.metaAdSetId || adSetMeta.id || generatedCampaign.meta_adset_id || generatedAdSet.meta_adset_id || row.metaAdSetId || "",
-    metaCreativeId: result?.metaCreativeId || meta?.creative?.id || row.metaCreativeId || "",
-    metaAdId: result?.metaAdId || adMeta.id || generatedCampaign.meta_ad_id || generatedAd.meta_ad_id || row.metaAdId || "",
+    metaCreativeId: variantKey && variantKey !== "A" ? row.metaCreativeId || "" : result?.metaCreativeId || meta?.creative?.id || row.metaCreativeId || "",
+    metaAdId: variantKey && variantKey !== "A" ? row.metaAdId || "" : result?.metaAdId || adMeta.id || generatedCampaign.meta_ad_id || generatedAd.meta_ad_id || row.metaAdId || "",
+    creatives: nextCreatives,
+    ads: nextAds,
     configuredStatus:
       adMeta.configured_status ||
       adMeta.status ||
@@ -624,10 +681,11 @@ function rowsWith(rows, predicate) {
   return (rows || []).filter(predicate).length;
 }
 
-function actionState({ rows, busyStep, runningStep, canRun, completeCount, errorCount, blockedReason }) {
+function actionState({ rows, busyStep, runningStep, canRun, completeCount, errorCount, blockedReason, targetCount }) {
+  const target = Number(targetCount) || rows.length;
   if (busyStep === runningStep) return { label: "Em execução", tone: "info", disabled: true, title: "Etapa em execução." };
   if (!canRun) return { label: "Bloqueado", tone: "muted", disabled: true, title: blockedReason };
-  if (completeCount > 0 && completeCount === rows.length) return { label: "Concluído", tone: "good", disabled: false, title: "Etapa concluída para todos os mercados." };
+  if (completeCount > 0 && completeCount >= target) return { label: "Concluído", tone: "good", disabled: false, title: "Etapa concluída para todos os mercados." };
   if (errorCount > 0 || completeCount > 0) {
     return {
       label: "Parcial",
@@ -750,6 +808,39 @@ function MarketChipList({ markets }) {
 
 function mediaCountForMarket(mediaByMarket, marketCode) {
   return AD_KEYS.filter((key) => getMarketMediaEntry(mediaByMarket, marketCode, key).creativeAssetId).length;
+}
+
+function variantTextForMarket({ form, translationDrafts, marketCode, adKey }) {
+  const index = AD_KEYS.indexOf(String(adKey || "").trim().toUpperCase());
+  const translated = normalizeObject(translationDrafts?.[marketCode]);
+  const translatedVariant = normalizeObject(Array.isArray(translated.adVariants) ? translated.adVariants[index] : null);
+  const baseVariant = normalizeObject(Array.isArray(form?.adVariants) ? form.adVariants[index] : null);
+  return {
+    primaryText: normalizeNonEmptyString(translatedVariant.primaryText) || normalizeNonEmptyString(baseVariant.primaryText),
+    headline: normalizeNonEmptyString(translatedVariant.headline) || normalizeNonEmptyString(baseVariant.headline),
+    description: normalizeNonEmptyString(translatedVariant.description) || normalizeNonEmptyString(baseVariant.description),
+  };
+}
+
+function publishableVariantsForRow({ form, translationDrafts, row }) {
+  return AD_KEYS.map((adKey) => {
+    const text = variantTextForMarket({ form, translationDrafts, marketCode: row?.marketCode, adKey });
+    const media = getMarketMediaEntry(form?.mediaByMarket, row?.marketCode, adKey);
+    const missing = [
+      !text.primaryText ? "texto" : "",
+      !text.headline ? "título" : "",
+      !text.description ? "descrição" : "",
+      !media.creativeAssetId ? "mídia" : "",
+    ].filter(Boolean);
+    return {
+      adNumber: adNumber(adKey),
+      variantKey: adKey,
+      text,
+      media,
+      complete: missing.length === 0,
+      missing,
+    };
+  });
 }
 
 function translationEntryStatus(entry) {
@@ -981,15 +1072,39 @@ export default function TemplatesMercado() {
     [metaAccounts, form.metaAccountId],
   );
   const metaAdAccountId = selectedMetaAccount?.metaAdAccountId || "";
-  const pageId = selectedMetaAccount?.metaPageId || "";
+  const pageId = normalizeNonEmptyString(form.pageId) || selectedMetaAccount?.metaPageId || "";
   const instagramActorId = selectedMetaAccount?.metaInstagramActorId || "";
   const hasBaseText = adVariantsWithText(form.adVariants).length > 0;
   const canUseRows = rows.length > 0;
   const campaignCount = rowsWith(rows, (row) => row.metaCampaignId);
   const adSetCount = rowsWith(rows, (row) => row.metaAdSetId);
-  const creativeCount = rowsWith(rows, (row) => row.metaCreativeId);
-  const adCount = rowsWith(rows, (row) => row.metaAdId);
-  const anyMetaCount = rowsWith(rows, (row) => row.metaCampaignId || row.metaAdSetId || row.metaCreativeId || row.metaAdId);
+  const publishableSlotsByMarket = useMemo(
+    () =>
+      rows.reduce((acc, row) => {
+        acc[row.id] = publishableVariantsForRow({ form, translationDrafts, row });
+        return acc;
+      }, {}),
+    [rows, form, translationDrafts],
+  );
+  const expectedAdCount = Object.values(publishableSlotsByMarket).reduce((sum, slots) => sum + slots.filter((slot) => slot.complete).length, 0);
+  const creativeCount = rows.reduce(
+    (sum, row) => sum + (Array.isArray(row.creatives) ? row.creatives.filter((item) => item.creativeId).length : row.metaCreativeId ? 1 : 0),
+    0,
+  );
+  const adCount = rows.reduce(
+    (sum, row) => sum + (Array.isArray(row.ads) ? row.ads.filter((item) => item.adId).length : row.metaAdId ? 1 : 0),
+    0,
+  );
+  const anyMetaCount = rowsWith(
+    rows,
+    (row) =>
+      row.metaCampaignId ||
+      row.metaAdSetId ||
+      row.metaCreativeId ||
+      row.metaAdId ||
+      (Array.isArray(row.creatives) && row.creatives.some((item) => item.creativeId)) ||
+      (Array.isArray(row.ads) && row.ads.some((item) => item.adId)),
+  );
   const campaignErrorCount = rowsWith(rows, (row) => row.error && row.failedStep === "Campaign publicada");
   const adSetErrorCount = rowsWith(rows, (row) => row.error && row.failedStep === "AdSet publicado");
   const creativeErrorCount = rowsWith(rows, (row) => row.error && row.failedStep === "Creative publicado");
@@ -1017,10 +1132,11 @@ export default function TemplatesMercado() {
       rows,
       busyStep,
       runningStep: "creative",
-      canRun: canUseRows && adSetCount > 0,
+      canRun: canUseRows && adSetCount > 0 && expectedAdCount > 0,
       completeCount: creativeCount,
       errorCount: creativeErrorCount,
       blockedReason: "Publique o AdSet primeiro.",
+      targetCount: expectedAdCount,
     }),
     ad: actionState({
       rows,
@@ -1030,6 +1146,7 @@ export default function TemplatesMercado() {
       completeCount: adCount,
       errorCount: adErrorCount,
       blockedReason: "Publique o Creative primeiro.",
+      targetCount: expectedAdCount,
     }),
     sync: actionState({
       rows,
@@ -1045,8 +1162,10 @@ export default function TemplatesMercado() {
   const incompleteTranslationCount = marketOptions.filter((market) => translationEntryStatus(translationDrafts?.[market.code]) === "incompleta").length;
   const selectedMediaMarkets = marketOptions.filter((market) => mediaCountForMarket(form.mediaByMarket, market.code) > 0).length;
   const completeMediaGroups = mediaGroupSummary.filter((item) => item.complete).length;
-  const publicationDone = rows.length > 0 && adCount === rows.length;
-  const baseReady = Boolean(normalizeNonEmptyString(form.name) && normalizeNonEmptyString(form.nicheParam) && normalizeNonEmptyString(form.destinationUrl));
+  const publicationDone = rows.length > 0 && expectedAdCount > 0 && adCount >= expectedAdCount;
+  const hasAutomaticUrlBase = Boolean(normalizeNonEmptyString(form.domain) && normalizeNonEmptyString(form.brazilPermalink) && normalizeNonEmptyString(form.internationalPermalink));
+  const hasLegacyDestinationUrl = Boolean(normalizeNonEmptyString(form.destinationUrl));
+  const baseReady = Boolean(normalizeNonEmptyString(form.name) && normalizeNonEmptyString(form.nicheParam) && (hasAutomaticUrlBase || hasLegacyDestinationUrl));
   const creativeReady = hasBaseText;
   const marketsReady = selectedMarkets.length > 0;
   const canGenerateTranslations = Boolean(selectedId) && hasBaseText && marketsReady;
@@ -1061,17 +1180,17 @@ export default function TemplatesMercado() {
         ? { label: "Associe mídias", onClick: () => {}, disabled: true }
       : !operationalReady
         ? { label: busyStep === "operational" ? "Preparando..." : "Preparar publicação", onClick: generateOperational, disabled: Boolean(busyStep) || !selectedId }
-        : campaignCount < rows.length
+          : campaignCount < rows.length
           ? { label: busyStep === "campaign" ? "Publicando..." : "Publicar campanha em PAUSED", onClick: publishCampaigns, disabled: actions.campaign.disabled }
           : adSetCount < rows.length
             ? { label: busyStep === "adset" ? "Publicando..." : "Publicar conjunto em PAUSED", onClick: publishAdSets, disabled: actions.adset.disabled }
-            : creativeCount < rows.length
+            : creativeCount < expectedAdCount
               ? { label: busyStep === "creative" ? "Publicando..." : "Publicar criativo em PAUSED", onClick: publishCreatives, disabled: actions.creative.disabled }
-              : adCount < rows.length
+              : adCount < expectedAdCount
                 ? { label: busyStep === "ad" ? "Publicando..." : "Publicar anúncio em PAUSED", onClick: publishAds, disabled: actions.ad.disabled }
                 : { label: busyStep === "sync" ? "Sincronizando..." : "Sincronizar status", onClick: syncStatus, disabled: actions.sync.disabled };
   const nextStepText = !baseReady
-    ? "Preencha nome, operação e URL de destino."
+    ? "Preencha nome, parâmetro do nicho e URL automática."
     : !creativeReady
       ? "Crie pelo menos o texto do Ad 1."
     : !marketsReady
@@ -1087,6 +1206,8 @@ export default function TemplatesMercado() {
                 : "Sincronize status e diagnostique os objetos Meta.";
   const selectedMarketLanguages = Array.from(new Set(marketOptions.map((market) => market.language).filter(Boolean))).slice(0, 8);
   const selectedMediaGroups = Array.from(new Set(marketOptions.map((market) => mediaGroupForMarket(market.code)).filter(Boolean))).sort();
+  const brUrlPreview = buildOperationalDestinationUrl(form, "BR");
+  const internationalUrlPreview = buildOperationalDestinationUrl(form, "DE");
   const finalSummary = {
     processedMarkets: rows.length,
     campaigns: campaignCount,
@@ -1096,12 +1217,13 @@ export default function TemplatesMercado() {
     allPaused: rows.length > 0 && rows.every((row) => !row.configuredStatus || row.configuredStatus === "PAUSED"),
     validUtm: rows.filter((row) => {
       try {
-        const parsed = new URL(buildOperationalDestinationUrl(form.destinationUrl, row.marketCode, form.nicheParam));
+        const parsed = new URL(buildOperationalDestinationUrl(form, row.marketCode));
         return (
           parsed.searchParams.get("utm_source") === "facebook" &&
           parsed.searchParams.get("utm_medium") === "cpa" &&
           parsed.searchParams.get("utm_campaign") === row.marketCode &&
-          parsed.searchParams.get("src") === `${row.marketCode}-${form.nicheParam}-FB`
+          parsed.searchParams.get("src") === `${row.marketCode}-${form.nicheParam}-FB` &&
+          parsed.searchParams.get("niche") === form.nicheParam
         );
       } catch {
         return false;
@@ -1486,8 +1608,8 @@ export default function TemplatesMercado() {
     await runStep("template", async () => {
       const name = normalizeNonEmptyString(form.name);
       if (!name) throw new Error("Informe o nome do template.");
-      if (!normalizeNonEmptyString(form.nicheParam)) throw new Error("Informe a operação.");
-      if (!normalizeNonEmptyString(form.destinationUrl)) throw new Error("Informe a URL de destino.");
+      if (!normalizeNonEmptyString(form.nicheParam)) throw new Error("Informe o parâmetro do nicho.");
+      if (!hasAutomaticUrlBase && !hasLegacyDestinationUrl) throw new Error("Informe domínio e permalinks ou mantenha uma URL legada.");
       if (!hasBaseText) throw new Error("Falta texto base. Preencha pelo menos uma variação de anúncio.");
 
       const payload = buildPayload(form, selectedPayload, selectedMarkets);
@@ -1730,6 +1852,54 @@ export default function TemplatesMercado() {
     }
   }
 
+  function variantEntry(row, collection, variantKey) {
+    const list = Array.isArray(row?.[collection]) ? row[collection] : [];
+    return list.find((item) => item.variantKey === variantKey) || {};
+  }
+
+  function setSkippedVariants(rowId, slots) {
+    const skippedAds = slots
+      .filter((slot) => !slot.complete)
+      .map((slot) => ({
+        adNumber: slot.adNumber,
+        variantKey: slot.variantKey,
+        status: "incompleto",
+        missing: slot.missing,
+      }));
+    updateRow(rowId, (current) => ({ ...current, skippedAds }));
+  }
+
+  function markVariantFailure(rowId, collection, slot, step, err) {
+    const formatted = formatBackendError(err);
+    updateRow(rowId, (current) => {
+      const next = Array.isArray(current[collection]) ? [...current[collection]] : emptyVariantState();
+      const index = AD_KEYS.indexOf(slot.variantKey);
+      if (index >= 0) {
+        next[index] = {
+          adNumber: slot.adNumber,
+          variantKey: slot.variantKey,
+          status: "erro",
+          error: formatted,
+        };
+      }
+      return {
+        ...current,
+        [collection]: next,
+        step: `${step} parcial`,
+        ok: true,
+        lastResult: {
+          ...(normalizeObject(current.lastResult)),
+          partialError: {
+            adNumber: slot.adNumber,
+            variantKey: slot.variantKey,
+            step,
+            message: formatted,
+          },
+        },
+      };
+    });
+  }
+
   async function publishCampaigns() {
     await runStep("campaign", async () => {
       if (!metaAdAccountId) throw new Error("Falta conta Meta / metaAdAccountId.");
@@ -1754,22 +1924,56 @@ export default function TemplatesMercado() {
     await runStep("creative", async () => {
       if (adSetCount === 0) throw new Error("Publique o AdSet primeiro.");
       if (!pageId) throw new Error("Falta Page ID para publicar Creative.");
-      const missingMedia = rows
-        .filter((row) => !row.metaCreativeId)
-        .filter((row) => !getMarketMediaEntry(form.mediaByMarket, row.marketCode, "A").creativeAssetId)
-        .map((row) => row.marketCode || row.marketParam || row.id);
-      if (missingMedia.length) {
-        throw new Error(`Mídia ausente no Ad 1 para: ${missingMedia.join(", ")}. Associe imagem/vídeo antes de publicar Creative.`);
-      }
       await saveTranslationsOnly();
-      await runRows("Creative publicado", (row) => publishOperationalCreative(row.id, { pageId, instagramActorId, ctaType: form.ctaType, variantKey: "A" }));
+      let queued = 0;
+      for (const row of rows) {
+        const slots = publishableSlotsByMarket[row.id] || publishableVariantsForRow({ form, translationDrafts, row });
+        setSkippedVariants(row.id, slots);
+        const completeSlots = slots.filter((slot) => slot.complete);
+        queued += completeSlots.length;
+        updateRow(row.id, (current) => ({ ...current, step: "Creative publicado...", error: "", failedStep: "" }));
+        for (const slot of completeSlots) {
+          if (variantEntry(row, "creatives", slot.variantKey).creativeId) continue;
+          try {
+            const result = await publishOperationalCreative(row.id, {
+              pageId,
+              instagramActorId,
+              ctaType: form.ctaType,
+              variantKey: slot.variantKey,
+            });
+            updateRow(row.id, (current) => mergeResult(current, result, "Creative publicado"));
+          } catch (err) {
+            markVariantFailure(row.id, "creatives", slot, "Creative publicado", err);
+          }
+        }
+      }
+      if (!queued) throw new Error("Nenhum Ad completo para publicar Creative.");
     });
   }
 
   async function publishAds() {
     await runStep("ad", async () => {
       if (creativeCount === 0) throw new Error("Publique o Creative primeiro.");
-      await runRows("Ad publicado", (row) => publishOperationalAd(row.id));
+      let queued = 0;
+      for (const row of rows) {
+        const slots = publishableSlotsByMarket[row.id] || publishableVariantsForRow({ form, translationDrafts, row });
+        setSkippedVariants(row.id, slots);
+        const completeSlots = slots.filter((slot) => slot.complete);
+        updateRow(row.id, (current) => ({ ...current, step: "Ad publicado...", error: "", failedStep: "" }));
+        for (const slot of completeSlots) {
+          const currentRow = rows.find((item) => item.id === row.id) || row;
+          if (variantEntry(currentRow, "ads", slot.variantKey).adId) continue;
+          if (!variantEntry(currentRow, "creatives", slot.variantKey).creativeId && !(slot.variantKey === "A" && currentRow.metaCreativeId)) continue;
+          queued += 1;
+          try {
+            const result = await publishOperationalAd(row.id, { variantKey: slot.variantKey });
+            updateRow(row.id, (current) => mergeResult(current, result, "Ad publicado"));
+          } catch (err) {
+            markVariantFailure(row.id, "ads", slot, "Ad publicado", err);
+          }
+        }
+      }
+      if (!queued) throw new Error("Nenhum Creative disponível para publicar Ads.");
     });
   }
 
@@ -1912,11 +2116,58 @@ export default function TemplatesMercado() {
             >
               <div className="opsFormGrid">
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
-                  <Field label="Nome do template">
-                    <InputLike value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} placeholder="Plantas BTN" />
+                  <Field label="Nome da campanha">
+                    <InputLike value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} placeholder="Futebol BTN" />
                 </Field>
-                <Field label="Operação">
-                  <InputLike value={form.nicheParam} onChange={(e) => setForm((prev) => ({ ...prev, nicheParam: e.target.value }))} placeholder="PlantasBTN" />
+                <Field label="Domínio">
+                  <InputLike value={form.domain} onChange={(e) => setForm((prev) => ({ ...prev, domain: e.target.value }))} placeholder="https://menteinformada.com" />
+                </Field>
+                <Field label="Permalink Brasil">
+                  <InputLike value={form.brazilPermalink} onChange={(e) => setForm((prev) => ({ ...prev, brazilPermalink: e.target.value }))} placeholder="aplicativos-para-assistir-jogos-de-futebol" />
+                </Field>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+                <Field label="Permalink Internacional">
+                  <InputLike value={form.internationalPermalink} onChange={(e) => setForm((prev) => ({ ...prev, internationalPermalink: e.target.value }))} placeholder="apps-to-watch-football-games-2" />
+                </Field>
+                <Field label="Parâmetro do Nicho">
+                  <InputLike value={form.nicheParam} onChange={(e) => setForm((prev) => ({ ...prev, nicheParam: e.target.value }))} placeholder="FutebolBTN3" />
+                </Field>
+                <Field label="Pixel">
+                  <InputLike value={form.pixel} onChange={(e) => setForm((prev) => ({ ...prev, pixel: e.target.value }))} />
+                </Field>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+                <Field label="ID da Página">
+                  <InputLike value={form.pageId} onChange={(e) => setForm((prev) => ({ ...prev, pageId: e.target.value }))} />
+                </Field>
+                <Field label="Beneficiário">
+                  <InputLike value={form.beneficiary} onChange={(e) => setForm((prev) => ({ ...prev, beneficiary: e.target.value }))} />
+                </Field>
+                <Field label="CTA">
+                  <SelectLike
+                    value={form.ctaType}
+                    onChange={(e) => setForm((prev) => ({ ...prev, ctaType: e.target.value }))}
+                    options={[
+                      { value: "LEARN_MORE", label: "Saiba mais" },
+                      { value: "SHOP_NOW", label: "Comprar agora" },
+                      { value: "SIGN_UP", label: "Inscrever-se" },
+                    ]}
+                  />
+                </Field>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+                <Field label="Orçamento diário (R$)">
+                  <InputLike
+                    value={form.dailyBudgetBrl}
+                    onChange={(e) => {
+                      const cents = parseBrlToCents(e.target.value);
+                      setForm((prev) => ({ ...prev, dailyBudgetBrl: e.target.value, dailyBudgetCents: cents ?? 0 }));
+                    }}
+                  />
                 </Field>
                 <Field label="Conta Meta">
                   <SelectLike
@@ -1931,31 +2182,11 @@ export default function TemplatesMercado() {
                     ]}
                   />
                 </Field>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
-                <Field label="URL de destino">
-                  <InputLike value={form.destinationUrl} onChange={(e) => setForm((prev) => ({ ...prev, destinationUrl: e.target.value }))} />
+                <Field label="Preview BR">
+                  <InputLike value={brUrlPreview} readOnly />
                 </Field>
-                <Field label="CTA">
-                  <SelectLike
-                    value={form.ctaType}
-                    onChange={(e) => setForm((prev) => ({ ...prev, ctaType: e.target.value }))}
-                    options={[
-                      { value: "LEARN_MORE", label: "Saiba mais" },
-                      { value: "SHOP_NOW", label: "Comprar agora" },
-                      { value: "SIGN_UP", label: "Inscrever-se" },
-                    ]}
-                  />
-                </Field>
-                <Field label="Orçamento diário (R$)">
-                  <InputLike
-                    value={form.dailyBudgetBrl}
-                    onChange={(e) => {
-                      const cents = parseBrlToCents(e.target.value);
-                      setForm((prev) => ({ ...prev, dailyBudgetBrl: e.target.value, dailyBudgetCents: cents ?? 0 }));
-                    }}
-                  />
+                <Field label="Preview internacional">
+                  <InputLike value={internationalUrlPreview} readOnly />
                 </Field>
               </div>
               </div>
@@ -2301,8 +2532,8 @@ export default function TemplatesMercado() {
                     <OpsMetric label="Mercados" value={String(finalSummary.processedMarkets)} tone="good" detail="processados" />
                     <OpsMetric label="Campaigns" value={String(finalSummary.campaigns)} tone={finalSummary.campaigns === rows.length ? "good" : "warn"} detail="criadas" />
                     <OpsMetric label="AdSets" value={String(finalSummary.adSets)} tone={finalSummary.adSets === rows.length ? "good" : "warn"} detail="criados" />
-                    <OpsMetric label="Creatives" value={String(finalSummary.creatives)} tone={finalSummary.creatives === rows.length ? "good" : "warn"} detail="criados" />
-                    <OpsMetric label="Ads" value={String(finalSummary.ads)} tone={finalSummary.ads === rows.length ? "good" : "warn"} detail="criados" />
+                    <OpsMetric label="Creatives" value={String(finalSummary.creatives)} tone={finalSummary.creatives >= expectedAdCount ? "good" : "warn"} detail={`de ${expectedAdCount}`} />
+                    <OpsMetric label="Ads" value={String(finalSummary.ads)} tone={finalSummary.ads >= expectedAdCount ? "good" : "warn"} detail={`de ${expectedAdCount}`} />
                     <OpsMetric label="UTM válida" value={`${finalSummary.validUtm}/${rows.length}`} tone={finalSummary.validUtm === rows.length ? "good" : "warn"} detail="por mercado" />
                     <OpsMetric label="Mídia" value={`${finalSummary.mediaDetected}/${rows.length}`} tone={finalSummary.mediaDetected === rows.length ? "good" : "warn"} detail="detectada" />
                     <OpsMetric label="Diagnóstico" value={`${finalSummary.diagnosticsWithoutCriticalAlert}/${rows.length}`} tone={finalSummary.diagnosticsWithoutCriticalAlert === rows.length ? "good" : "warn"} detail="sem erro local" />
@@ -2325,8 +2556,8 @@ export default function TemplatesMercado() {
                   const objects = [
                     { key: "Campaign", id: row.metaCampaignId },
                     { key: "AdSet", id: row.metaAdSetId },
-                    { key: "Creative", id: row.metaCreativeId },
-                    { key: "Ad", id: row.metaAdId },
+                    { key: "Creatives", id: creativeCount ? `${(row.creatives || []).filter((item) => item.creativeId).length}/${(publishableSlotsByMarket[row.id] || []).filter((slot) => slot.complete).length}` : "" },
+                    { key: "Ads", id: adCount ? `${(row.ads || []).filter((item) => item.adId).length}/${(publishableSlotsByMarket[row.id] || []).filter((slot) => slot.complete).length}` : "" },
                   ];
                   return (
                     <article key={row.id} className="opsResultCard">
@@ -2353,6 +2584,29 @@ export default function TemplatesMercado() {
                             <strong>{object.id ? "pronto" : "pendente"}</strong>
                           </button>
                         ))}
+                      </div>
+                      <div className="opsResultProgress">
+                        {AD_KEYS.map((adKey) => {
+                          const slot = (publishableSlotsByMarket[row.id] || []).find((item) => item.variantKey === adKey);
+                          const creative = variantEntry(row, "creatives", adKey);
+                          const ad = variantEntry(row, "ads", adKey);
+                          const skipped = (row.skippedAds || []).find((item) => item.variantKey === adKey);
+                          const tone = ad?.adId ? "opsResultObjectDone" : creative?.creativeId ? "opsResultObjectPartial" : skipped ? "" : "";
+                          const label = ad?.adId ? "Ad criado" : creative?.creativeId ? "Creative criado" : skipped ? `Incompleto: ${skipped.missing?.join(", ")}` : slot?.complete ? "pronto para publicar" : "pendente";
+                          return (
+                            <button
+                              key={adKey}
+                              type="button"
+                              className={`opsResultObject ${tone}`}
+                              disabled={!(ad?.adId || creative?.creativeId)}
+                              onClick={() => copyId(ad?.adId ? `${adLabel(adKey)} Ad` : `${adLabel(adKey)} Creative`, ad?.adId || creative?.creativeId)}
+                              title={ad?.adId || creative?.creativeId ? "Copiar ID" : label}
+                            >
+                              <span>{adLabel(adKey)}</span>
+                              <strong>{label}</strong>
+                            </button>
+                          );
+                        })}
                       </div>
                       {row.error ? (
                         <div className="opsResultError">Falhou em {row.failedStep || row.step || "etapa desconhecida"}: {row.error}</div>

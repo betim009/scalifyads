@@ -1,9 +1,31 @@
 import { normalizeMarketCode } from './marketTargeting.js'
 
+const MARKET_URL_PREFIXES = {
+  ARAF: 'AR',
+  ENAF: 'EN',
+  ESAMNA: 'ES',
+  FRAF: 'FR'
+}
+
 function normalizeNonEmptyString(value) {
   if (typeof value !== 'string') return null
   const trimmed = value.trim()
   return trimmed ? trimmed : null
+}
+
+function stripTrailingSlash(value) {
+  return String(value || '').replace(/\/+$/, '')
+}
+
+function stripBoundarySlash(value) {
+  return String(value || '').replace(/^\/+|\/+$/g, '')
+}
+
+export function resolveMarketUrlPrefix(marketCode) {
+  const code = normalizeMarketCode(marketCode)
+  if (!code) return null
+  if (MARKET_URL_PREFIXES[code]) return MARKET_URL_PREFIXES[code]
+  return code.length === 2 ? code : code.slice(0, 2)
 }
 
 export function generateMarketParam(marketCode, nicheParam) {
@@ -32,7 +54,8 @@ export function buildMarketTracking({ marketCode, nicheParam, destinationUrl } =
     utm_source: 'facebook',
     utm_medium: 'cpa',
     utm_campaign: code,
-    src: marketParam
+    src: marketParam,
+    niche: normalizeNonEmptyString(nicheParam)
   }
 
   const rawUrl = normalizeNonEmptyString(destinationUrl)
@@ -41,10 +64,35 @@ export function buildMarketTracking({ marketCode, nicheParam, destinationUrl } =
   try {
     const parsed = new URL(rawUrl)
     for (const [key, value] of Object.entries(tracking)) {
-      parsed.searchParams.set(key, value)
+      if (value) parsed.searchParams.set(key, value)
     }
     return { ...tracking, finalUrl: parsed.toString() }
   } catch {
     return { ...tracking, finalUrl: rawUrl }
   }
+}
+
+export function buildMarketDestinationUrl({
+  domain,
+  brazilPermalink,
+  internationalPermalink,
+  marketCode,
+  nicheParam,
+  destinationUrl
+} = {}) {
+  const code = normalizeMarketCode(marketCode)
+  const normalizedDomain = normalizeNonEmptyString(domain)
+  const brPath = stripBoundarySlash(normalizeNonEmptyString(brazilPermalink))
+  const internationalPath = stripBoundarySlash(normalizeNonEmptyString(internationalPermalink))
+  const legacyUrl = normalizeNonEmptyString(destinationUrl)
+
+  let baseUrl = legacyUrl
+  if (normalizedDomain && code === 'BR' && brPath) {
+    baseUrl = `${stripTrailingSlash(normalizedDomain)}/${brPath}`
+  } else if (normalizedDomain && code && code !== 'BR' && internationalPath) {
+    baseUrl = `${stripTrailingSlash(normalizedDomain)}/${resolveMarketUrlPrefix(code)}/${internationalPath}`
+  }
+
+  const tracking = buildMarketTracking({ marketCode: code, nicheParam, destinationUrl: baseUrl })
+  return tracking?.finalUrl ?? baseUrl ?? null
 }

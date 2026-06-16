@@ -1,6 +1,6 @@
 import path from 'node:path'
 import fsp from 'node:fs/promises'
-import { buildMarketTracking, parseNicheParamFromMarketParam } from '../lib/marketTracking.js'
+import { buildMarketDestinationUrl, buildMarketTracking, parseNicheParamFromMarketParam } from '../lib/marketTracking.js'
 
 function normalizeNonEmptyString(value, { maxLen } = {}) {
   if (typeof value !== 'string') return null
@@ -111,8 +111,15 @@ function resolveMarketCreativeInput({ row, campaignConfig, templatePayload, body
     payloadCreative.destinationUrl,
     payloadCreative.destination_url
   )
-  const tracking = buildMarketTracking({ marketCode, nicheParam, destinationUrl: rawDestinationUrl })
-  const destinationUrl = tracking?.finalUrl ?? rawDestinationUrl
+  const destinationUrl = buildMarketDestinationUrl({
+    domain: firstNonEmpty(payload.domain, payload.baseDomain, payload.base_domain),
+    brazilPermalink: firstNonEmpty(payload.brazilPermalink, payload.brazil_permalink, payload.brPermalink, payload.br_permalink),
+    internationalPermalink: firstNonEmpty(payload.internationalPermalink, payload.international_permalink),
+    marketCode,
+    nicheParam,
+    destinationUrl: rawDestinationUrl
+  })
+  const tracking = buildMarketTracking({ marketCode, nicheParam, destinationUrl })
 
   return {
     pageId: firstNonEmpty(
@@ -256,17 +263,18 @@ async function findGeneratedCampaign(client, row) {
   return rows?.[0] ?? null
 }
 
-async function findExistingPublishedCreativeDraft(client, generatedCampaignId, row) {
+async function findExistingPublishedCreativeDraft(client, generatedCampaignId, row, variantKey = 'A') {
   const { rows } = await client.query(
     `
-      SELECT id, meta_creative_id, destination_url
+      SELECT id, meta_creative_id, destination_url, variant_key
       FROM creative_drafts
       WHERE generated_campaign_id = $1::uuid
+        AND COALESCE(variant_key, 'A') = $2
         AND meta_creative_id IS NOT NULL
       ORDER BY created_at DESC
       LIMIT 20
     `,
-    [generatedCampaignId]
+    [generatedCampaignId, normalizeVariantKey(variantKey)]
   )
   return rows.find((item) => hasCurrentMarketTracking(item.destination_url, row)) ?? null
 }
@@ -420,9 +428,10 @@ async function insertCreativeDraft(client, generatedCampaignId, creativeInput, m
         description,
         cta_type,
         destination_url,
+        variant_key,
         status
       )
-      VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7, $8, 'draft')
+      VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7, $8, $9, 'draft')
       RETURNING
         id,
         generated_campaign_id,
@@ -431,6 +440,7 @@ async function insertCreativeDraft(client, generatedCampaignId, creativeInput, m
         description,
         cta_type,
         destination_url,
+        variant_key,
         status,
         meta_creative_id,
         created_at
@@ -443,7 +453,8 @@ async function insertCreativeDraft(client, generatedCampaignId, creativeInput, m
       creativeInput.headline,
       creativeInput.description,
       creativeInput.ctaType,
-      creativeInput.destinationUrl
+      creativeInput.destinationUrl,
+      creativeInput.source?.variantKey ?? 'A'
     ]
   )
   return rows[0]
@@ -465,6 +476,7 @@ async function markCreativePublished(client, creativeDraftId, metaCreativeId) {
         description,
         cta_type,
         destination_url,
+        variant_key,
         status,
         meta_creative_id,
         created_at
@@ -524,7 +536,8 @@ export async function publishOperationalCreative({
       throw err
     }
 
-    const existing = await findExistingPublishedCreativeDraft(client, generatedCampaign.id, row)
+    const requestedVariantKey = normalizeVariantKey(firstNonEmpty(body?.variantKey, body?.variant_key))
+    const existing = await findExistingPublishedCreativeDraft(client, generatedCampaign.id, row, requestedVariantKey)
     if (existing?.meta_creative_id) {
       if (manageTransaction) await client.query('COMMIT')
       return {
@@ -532,6 +545,7 @@ export async function publishOperationalCreative({
         status: 'PAUSED',
         metaCreativeId: existing.meta_creative_id,
         creativeDraftId: existing.id,
+        variantKey: existing.variant_key ?? requestedVariantKey,
         generatedCampaignId: generatedCampaign.id,
         operationalMarketGenerationId: row.id,
         duplicated: false,
@@ -611,6 +625,7 @@ export async function publishOperationalCreative({
       status: 'PAUSED',
       metaCreativeId: createdCreative.id,
       creativeDraftId: publishedDraft.id,
+      variantKey: publishedDraft.variant_key ?? creativeInput.source?.variantKey ?? requestedVariantKey,
       generatedCampaignId: generatedCampaign.id,
       operationalMarketGenerationId: row.id,
       creativeDraft: publishedDraft,

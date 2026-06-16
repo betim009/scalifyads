@@ -108,6 +108,13 @@ export const OPERATIONAL_MARKETS = OFFICIAL_OPERATIONAL_MARKETS.map((market) => 
 
 export const OPERATIONAL_MARKET_CODES = OPERATIONAL_MARKETS.map((market) => market.code);
 
+const MARKET_URL_PREFIXES = {
+  ARAF: "AR",
+  ENAF: "EN",
+  ESAMNA: "ES",
+  FRAF: "FR",
+};
+
 export function getOperationalMarketLanguageGroup(market) {
   const language = normalizeText(market?.language);
   const code = normalizeText(market?.code).toUpperCase();
@@ -213,12 +220,20 @@ export function generateMarketParam(marketCode, nicheParam) {
 
 export function generateTrackingParams(marketCode, nicheParam) {
   const code = normalizeText(marketCode).toUpperCase();
+  const niche = normalizeText(nicheParam);
   return {
     utm_source: "facebook",
     utm_medium: "cpa",
     utm_campaign: code,
-    src: generateMarketParam(code, nicheParam),
+    src: generateMarketParam(code, niche),
+    niche,
   };
+}
+
+export function resolveMarketUrlPrefix(marketCode) {
+  const code = normalizeText(marketCode).toUpperCase();
+  if (!code) return "";
+  return MARKET_URL_PREFIXES[code] || (code.length === 2 ? code : code.slice(0, 2));
 }
 
 export function resolveSlug(marketCode, brSlug, internationalSlug) {
@@ -244,6 +259,40 @@ export function buildFinalUrl(baseDomain, slug, trackingParams) {
     if (normalized) url.searchParams.set(key, normalized);
   });
   return url.toString();
+}
+
+export function buildMarketDestinationUrl({
+  domain,
+  brazilPermalink,
+  internationalPermalink,
+  marketCode,
+  nicheParam,
+  destinationUrl,
+} = {}) {
+  const code = normalizeText(marketCode).toUpperCase();
+  const cleanDomain = normalizeText(domain);
+  const brPath = stripBoundarySlash(brazilPermalink);
+  const internationalPath = stripBoundarySlash(internationalPermalink);
+  const legacyUrl = normalizeText(destinationUrl);
+
+  let baseUrl = legacyUrl;
+  if (cleanDomain && code === "BR" && brPath) {
+    baseUrl = `${stripTrailingSlash(cleanDomain)}/${brPath}`;
+  } else if (cleanDomain && code && code !== "BR" && internationalPath) {
+    baseUrl = `${stripTrailingSlash(cleanDomain)}/${resolveMarketUrlPrefix(code)}/${internationalPath}`;
+  }
+
+  if (!baseUrl) return "";
+  try {
+    const parsed = new URL(baseUrl);
+    Object.entries(generateTrackingParams(code, nicheParam)).forEach(([key, value]) => {
+      const normalized = normalizeText(value);
+      if (normalized) parsed.searchParams.set(key, normalized);
+    });
+    return parsed.toString();
+  } catch {
+    return baseUrl;
+  }
 }
 
 export function buildMarketPreview({ markets, nicheParam, brSlug, internationalSlug, baseDomain }) {

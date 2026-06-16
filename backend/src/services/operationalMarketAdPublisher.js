@@ -4,6 +4,15 @@ function normalizeNonEmptyString(value) {
   return trimmed ? trimmed : null
 }
 
+function normalizeVariantKey(value) {
+  const key = normalizeNonEmptyString(value)?.toUpperCase()
+  return ['A', 'B', 'C', 'D', 'E'].includes(key) ? key : 'A'
+}
+
+function adNumberForVariantKey(variantKey) {
+  return { A: 1, B: 2, C: 3, D: 4, E: 5 }[normalizeVariantKey(variantKey)] ?? 1
+}
+
 function normalizeCreatedAd(created) {
   const id = normalizeNonEmptyString(created?.id)
   if (!id) {
@@ -61,17 +70,18 @@ async function findGeneratedCampaign(client, row) {
   return rows?.[0] ?? null
 }
 
-async function findPublishedCreativeDraft(client, generatedCampaignId) {
+async function findPublishedCreativeDraft(client, generatedCampaignId, variantKey = 'A') {
   const { rows } = await client.query(
     `
-      SELECT id, meta_creative_id
+      SELECT id, meta_creative_id, variant_key
       FROM creative_drafts
       WHERE generated_campaign_id = $1::uuid
+        AND COALESCE(variant_key, 'A') = $2
         AND meta_creative_id IS NOT NULL
       ORDER BY created_at DESC
       LIMIT 1
     `,
-    [generatedCampaignId]
+    [generatedCampaignId, normalizeVariantKey(variantKey)]
   )
   return rows?.[0] ?? null
 }
@@ -91,29 +101,32 @@ async function findGeneratedAdSet(client, generatedCampaignId, metaAdSetId) {
   return rows?.[0] ?? null
 }
 
-async function findExistingGeneratedAd(client, generatedCampaignId) {
+async function findExistingGeneratedAd(client, generatedCampaignId, variantKey = 'A') {
   const { rows } = await client.query(
     `
-      SELECT id, meta_ad_id
+      SELECT id, meta_ad_id, variant_key
       FROM generated_ads
       WHERE generated_campaign_id = $1::uuid
+        AND COALESCE(variant_key, 'A') = $2
         AND meta_ad_id IS NOT NULL
       ORDER BY created_at DESC
       LIMIT 1
     `,
-    [generatedCampaignId]
+    [generatedCampaignId, normalizeVariantKey(variantKey)]
   )
   return rows?.[0] ?? null
 }
 
-async function persistAd(client, { generatedCampaign, generatedAdSetId, creativeDraftId, name, createdAd }) {
+async function persistAd(client, { generatedCampaign, generatedAdSetId, creativeDraftId, name, createdAd, variantKey }) {
+  const normalizedVariantKey = normalizeVariantKey(variantKey)
+  const shouldUpdateLegacyAd = normalizedVariantKey === 'A'
   const { rows: updatedRows } = await client.query(
     `
       UPDATE generated_campaigns
       SET
-        meta_ad_id = $2,
-        meta_ad_status = $3,
-        meta_ad_effective_status = $4,
+        meta_ad_id = CASE WHEN $5::boolean THEN $2 ELSE meta_ad_id END,
+        meta_ad_status = CASE WHEN $5::boolean THEN $3 ELSE meta_ad_status END,
+        meta_ad_effective_status = CASE WHEN $5::boolean THEN $4 ELSE meta_ad_effective_status END,
         meta_run_mode = 'REAL',
         status = 'PAUSED',
         ops_last_action = 'operational_market.ad.publish',
@@ -122,7 +135,7 @@ async function persistAd(client, { generatedCampaign, generatedAdSetId, creative
       WHERE id = $1::uuid
       RETURNING id
     `,
-    [generatedCampaign.id, createdAd.id, createdAd.status, createdAd.effectiveStatus]
+    [generatedCampaign.id, createdAd.id, createdAd.status, createdAd.effectiveStatus, shouldUpdateLegacyAd]
   )
 
   const { rows: adRows } = await client.query(
@@ -133,11 +146,12 @@ async function persistAd(client, { generatedCampaign, generatedAdSetId, creative
         creative_draft_id,
         meta_ad_id,
         name,
+        variant_key,
         run_mode,
         status,
         effective_status
       )
-      VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, 'REAL', $6, $7)
+      VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6, 'REAL', $7, $8)
       RETURNING id
     `,
     [
@@ -146,6 +160,7 @@ async function persistAd(client, { generatedCampaign, generatedAdSetId, creative
       creativeDraftId,
       createdAd.id,
       name,
+      normalizedVariantKey,
       createdAd.status,
       createdAd.effectiveStatus
     ]
@@ -162,6 +177,7 @@ export async function publishPausedOperationalAd({
   client: providedClient,
   operationalMarketGenerationId,
   confirmPublishPausedAd,
+  variantKey,
   accessToken,
   createAd
 } = {}) {
@@ -200,9 +216,10 @@ export async function publishPausedOperationalAd({
       throw err
     }
 
-    const existingGeneratedAd = await findExistingGeneratedAd(client, generatedCampaign.id)
+    const requestedVariantKey = normalizeVariantKey(variantKey)
+    const existingGeneratedAd = await findExistingGeneratedAd(client, generatedCampaign.id, requestedVariantKey)
     const existingAdId =
-      normalizeNonEmptyString(generatedCampaign.meta_ad_id) ??
+      (requestedVariantKey === 'A' ? normalizeNonEmptyString(generatedCampaign.meta_ad_id) : null) ??
       normalizeNonEmptyString(existingGeneratedAd?.meta_ad_id)
     if (existingAdId) {
       if (manageTransaction) await client.query('COMMIT')
@@ -212,6 +229,7 @@ export async function publishPausedOperationalAd({
         metaCampaignId: generatedCampaign.meta_campaign_id,
         metaAdSetId: generatedCampaign.meta_adset_id,
         metaAdId: existingAdId,
+        variantKey: existingGeneratedAd?.variant_key ?? requestedVariantKey,
         generatedCampaignId: generatedCampaign.id,
         generatedAdId: existingGeneratedAd?.id ?? null,
         operationalMarketGenerationId: row.id,
@@ -239,7 +257,7 @@ export async function publishPausedOperationalAd({
       throw err
     }
 
-    const creativeDraft = await findPublishedCreativeDraft(client, generatedCampaign.id)
+    const creativeDraft = await findPublishedCreativeDraft(client, generatedCampaign.id, requestedVariantKey)
     const creativeId = normalizeNonEmptyString(creativeDraft?.meta_creative_id)
     if (!creativeId) {
       const err = new Error('Operational market generation has no published Meta Creative')
@@ -248,7 +266,8 @@ export async function publishPausedOperationalAd({
     }
 
     const generatedAdSet = await findGeneratedAdSet(client, generatedCampaign.id, metaAdSetId)
-    const name = normalizeNonEmptyString(row.market_param) ?? `Operational Ad ${row.id}`
+    const baseName = normalizeNonEmptyString(row.market_param) ?? `Operational Ad ${row.id}`
+    const name = requestedVariantKey === 'A' ? baseName : `${baseName} Ad ${adNumberForVariantKey(requestedVariantKey)}`
     const createdAd = normalizeCreatedAd(
       await createAd({
         metaAdAccountId,
@@ -265,7 +284,8 @@ export async function publishPausedOperationalAd({
       generatedAdSetId: generatedAdSet?.id ?? null,
       creativeDraftId: creativeDraft.id,
       name,
-      createdAd
+      createdAd,
+      variantKey: requestedVariantKey
     })
 
     if (manageTransaction) await client.query('COMMIT')
@@ -276,6 +296,7 @@ export async function publishPausedOperationalAd({
       metaAdSetId,
       metaCreativeId: creativeId,
       metaAdId: createdAd.id,
+      variantKey: requestedVariantKey,
       generatedCampaignId: persisted.generatedCampaignId,
       generatedAdId: persisted.generatedAdId,
       creativeDraftId: creativeDraft.id,

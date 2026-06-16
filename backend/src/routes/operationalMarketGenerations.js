@@ -312,6 +312,7 @@ export function operationalMarketGenerationsRouter() {
           pool,
           operationalMarketGenerationId: id,
           confirmPublishPausedAd: req.body?.confirmPublishPausedAd,
+          variantKey: req.body?.variantKey ?? req.body?.variant_key,
           accessToken,
           createAd: metaCreateAd
         })
